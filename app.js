@@ -6,10 +6,10 @@ import {
   resetSeedDataIfNeeded,
   saveTaskOrder,
   updateTask
-} from "./db.js?v=20260521-dnd";
-import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260521-dnd";
-import { openTaskModal } from "./modal.js?v=20260521-dnd";
-import { renderBoard } from "./ui.js?v=20260521-dnd";
+} from "./db.js?v=20260521-dnd2";
+import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260521-dnd2";
+import { openTaskModal } from "./modal.js?v=20260521-dnd2";
+import { renderBoard } from "./ui.js?v=20260521-dnd2";
 
 const state = {
   columns: [],

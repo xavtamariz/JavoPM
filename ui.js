@@ -1,7 +1,8 @@
-import { formatDateRange, sortByOrder } from "./models.js?v=20260521-dnd";
+import { formatDateRange, sortByOrder } from "./models.js?v=20260521-dnd2";
 
 let lastDragEndedAt = 0;
-let pointerDrag = null;
+let activeDrag = null;
+let moveMode = null;
 
 export function renderBoard({ boardElement, columns, tasks, onAddTask, onOpenTask, onMoveTask }) {
   boardElement.innerHTML = "";
@@ -34,6 +35,22 @@ function createColumn(column, tasks, onAddTask, onOpenTask, onMoveTask) {
   const taskList = document.createElement("div");
   taskList.className = "task-list";
   taskList.dataset.columnId = column.id;
+  taskList.addEventListener("click", (event) => {
+    if (!moveMode) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const taskId = moveMode.taskId;
+    const sourceColumnId = moveMode.sourceColumnId;
+    clearMoveMode();
+
+    if (sourceColumnId !== column.id) {
+      onMoveTask(taskId, column.id);
+    }
+  }, true);
 
   if (tasks.length === 0) {
     const empty = document.createElement("div");
@@ -58,13 +75,18 @@ function createColumn(column, tasks, onAddTask, onOpenTask, onMoveTask) {
 }
 
 function createTaskCard(task, onOpenTask) {
-  const card = document.createElement("button");
+  const card = document.createElement("article");
   card.className = "task-card";
-  card.type = "button";
+  card.role = "button";
+  card.tabIndex = 0;
   card.dataset.taskId = task.id;
   card.title = "Mantén click y arrastra para mover la tarea";
   card.setAttribute("aria-label", `${task.shortDescription}. Arrastrable entre columnas.`);
   card.addEventListener("click", (event) => {
+    if (event.target.closest(".move-handle")) {
+      return;
+    }
+
     if (Date.now() - lastDragEndedAt < 240) {
       event.preventDefault();
       return;
@@ -72,11 +94,28 @@ function createTaskCard(task, onOpenTask) {
 
     onOpenTask(task.id);
   });
-  card.addEventListener("pointerdown", (event) => startPointerCandidate(event, card, task.id));
-  card.addEventListener("pointermove", (event) => movePointerCandidate(event, onMoveTask));
-  card.addEventListener("pointerup", (event) => finishPointerCandidate(event, onMoveTask));
-  card.addEventListener("pointercancel", cancelPointerCandidate);
-  card.addEventListener("mousedown", (event) => startMouseCandidate(event, card, task.id, onMoveTask));
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onOpenTask(task.id);
+    }
+  });
+  card.addEventListener("mousedown", (event) => startDragCandidate(event, card, task.id, onMoveTask));
+
+  const moveHandle = document.createElement("button");
+  moveHandle.className = "move-handle";
+  moveHandle.type = "button";
+  moveHandle.title = "Mover tarea";
+  moveHandle.setAttribute("aria-label", "Mover tarea a otra columna");
+  moveHandle.innerHTML = '<span aria-hidden="true"></span>';
+  moveHandle.addEventListener("mousedown", (event) => {
+    event.stopPropagation();
+  });
+  moveHandle.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleMoveMode(task, card);
+  });
 
   const title = document.createElement("p");
   title.className = "task-title";
@@ -111,7 +150,7 @@ function createTaskCard(task, onOpenTask) {
   responsible.textContent = task.responsible;
 
   meta.append(type, folio, dateRange);
-  card.append(title, project, meta, points, responsible);
+  card.append(moveHandle, title, project, meta, points, responsible);
   return card;
 }
 
@@ -121,138 +160,139 @@ function clearDragTargets() {
   });
 }
 
-function startPointerCandidate(event, card, taskId) {
-  if (pointerDrag || event.button !== 0) {
+function toggleMoveMode(task, card) {
+  if (moveMode?.taskId === task.id) {
+    clearMoveMode();
     return;
   }
 
-  pointerDrag = {
+  clearMoveMode();
+  moveMode = {
+    sourceColumnId: task.columnId,
+    taskId: task.id
+  };
+
+  document.body.classList.add("is-move-mode");
+  card.classList.add("is-selected-for-move");
+  document.querySelectorAll(".column").forEach((column) => {
+    column.classList.add("is-move-target");
+  });
+  document.addEventListener("keydown", handleMoveModeKeydown);
+}
+
+function clearMoveMode() {
+  moveMode = null;
+  document.body.classList.remove("is-move-mode");
+  document.querySelectorAll(".is-selected-for-move").forEach((card) => {
+    card.classList.remove("is-selected-for-move");
+  });
+  document.querySelectorAll(".column.is-move-target").forEach((column) => {
+    column.classList.remove("is-move-target");
+  });
+  document.removeEventListener("keydown", handleMoveModeKeydown);
+}
+
+function handleMoveModeKeydown(event) {
+  if (event.key === "Escape") {
+    clearMoveMode();
+  }
+}
+
+function startDragCandidate(event, card, taskId, onMoveTask) {
+  if (event.target.closest(".move-handle")) {
+    return;
+  }
+
+  if (activeDrag || event.button !== 0) {
+    return;
+  }
+
+  activeDrag = {
     card,
     ghost: null,
     isDragging: false,
     offsetX: 0,
     offsetY: 0,
-    pointerId: event.pointerId,
-    source: "pointer",
+    onMoveTask,
     startX: event.clientX,
     startY: event.clientY,
     taskId
   };
 
-  card.setPointerCapture(event.pointerId);
+  window.addEventListener("mousemove", handleDragMove);
+  window.addEventListener("mouseup", handleDragEnd, { once: true });
 }
 
-function movePointerCandidate(event) {
-  if (!pointerDrag || !isActiveDragEvent(event)) {
+function handleDragMove(event) {
+  if (!activeDrag) {
     return;
   }
 
-  const distance = Math.hypot(event.clientX - pointerDrag.startX, event.clientY - pointerDrag.startY);
+  const distance = Math.hypot(event.clientX - activeDrag.startX, event.clientY - activeDrag.startY);
 
-  if (!pointerDrag.isDragging && distance > 8) {
-    beginPointerDrag(event);
+  if (!activeDrag.isDragging && distance > 5) {
+    beginDrag(event);
   }
 
-  if (!pointerDrag.isDragging) {
+  if (!activeDrag.isDragging) {
     return;
   }
 
   event.preventDefault();
-  moveDragGhost(event);
+  moveDragGhost(event.clientX, event.clientY);
   highlightDropColumn(event.clientX, event.clientY);
   autoScrollBoard(event.clientX);
 }
 
-function finishPointerCandidate(event, onMoveTask) {
-  if (!pointerDrag || !isActiveDragEvent(event)) {
+function handleDragEnd(event) {
+  if (!activeDrag) {
     return;
   }
 
-  if (!pointerDrag.isDragging) {
-    window.removeEventListener("mousemove", handleMouseMove);
-    pointerDrag = null;
+  if (!activeDrag.isDragging) {
+    cleanupDrag();
     return;
   }
 
   event.preventDefault();
-  const taskId = pointerDrag.taskId;
+  const taskId = activeDrag.taskId;
+  const onMoveTask = activeDrag.onMoveTask;
   const dropColumn = getDropColumn(event.clientX, event.clientY);
-  cleanupPointerDrag();
+
+  cleanupDrag();
 
   if (dropColumn?.dataset.columnId) {
     onMoveTask(taskId, dropColumn.dataset.columnId);
   }
 }
 
-function cancelPointerCandidate() {
-  if (pointerDrag?.isDragging) {
-    cleanupPointerDrag();
-    return;
-  }
+function beginDrag(event) {
+  const rect = activeDrag.card.getBoundingClientRect();
+  const ghost = activeDrag.card.cloneNode(true);
 
-  window.removeEventListener("mousemove", handleMouseMove);
-  pointerDrag = null;
-}
-
-function startMouseCandidate(event, card, taskId, onMoveTask) {
-  if (pointerDrag || event.button !== 0) {
-    return;
-  }
-
-  pointerDrag = {
-    card,
-    ghost: null,
-    isDragging: false,
-    offsetX: 0,
-    offsetY: 0,
-    pointerId: null,
-    source: "mouse",
-    startX: event.clientX,
-    startY: event.clientY,
-    taskId
-  };
-
-  window.addEventListener("mousemove", handleMouseMove);
-  window.addEventListener("mouseup", (mouseEvent) => handleMouseUp(mouseEvent, onMoveTask), {
-    once: true
-  });
-}
-
-function handleMouseMove(event) {
-  movePointerCandidate(event);
-}
-
-function handleMouseUp(event, onMoveTask) {
-  finishPointerCandidate(event, onMoveTask);
-}
-
-function beginPointerDrag(event) {
-  const rect = pointerDrag.card.getBoundingClientRect();
-  const ghost = pointerDrag.card.cloneNode(true);
-
-  pointerDrag.isDragging = true;
-  pointerDrag.offsetX = event.clientX - rect.left;
-  pointerDrag.offsetY = event.clientY - rect.top;
-  pointerDrag.ghost = ghost;
+  activeDrag.isDragging = true;
+  activeDrag.offsetX = event.clientX - rect.left;
+  activeDrag.offsetY = event.clientY - rect.top;
+  activeDrag.ghost = ghost;
 
   ghost.classList.add("drag-ghost");
   ghost.style.width = `${rect.width}px`;
   ghost.style.height = `${rect.height}px`;
   document.body.append(ghost);
 
-  pointerDrag.card.classList.add("is-dragging");
+  activeDrag.card.classList.add("is-dragging");
   document.body.classList.add("is-task-dragging");
-  moveDragGhost(event);
+  moveDragGhost(event.clientX, event.clientY);
 }
 
-function moveDragGhost(event) {
-  if (!pointerDrag?.ghost) {
+function moveDragGhost(x, y) {
+  if (!activeDrag?.ghost) {
     return;
   }
 
-  pointerDrag.ghost.style.transform = `translate3d(${
-    event.clientX - pointerDrag.offsetX
-  }px, ${event.clientY - pointerDrag.offsetY}px, 0) rotate(-1deg)`;
+  activeDrag.ghost.style.transform = `translate3d(${
+    x - activeDrag.offsetX
+  }px, ${y - activeDrag.offsetY}px, 0) rotate(-1deg)`;
 }
 
 function highlightDropColumn(x, y) {
@@ -272,27 +312,14 @@ function getDropColumn(x, y) {
   return element?.closest(".column")?.querySelector(".task-list") || null;
 }
 
-function cleanupPointerDrag() {
+function cleanupDrag() {
   lastDragEndedAt = Date.now();
-  pointerDrag.card.classList.remove("is-dragging");
-  pointerDrag.ghost?.remove();
+  activeDrag.card.classList.remove("is-dragging");
+  activeDrag.ghost?.remove();
   document.body.classList.remove("is-task-dragging");
   clearDragTargets();
-
-  try {
-    if (pointerDrag.source === "pointer") {
-      pointerDrag.card.releasePointerCapture(pointerDrag.pointerId);
-    }
-  } catch {
-    // Pointer capture may already be released by the browser.
-  }
-
-  window.removeEventListener("mousemove", handleMouseMove);
-  pointerDrag = null;
-}
-
-function isActiveDragEvent(event) {
-  return pointerDrag.pointerId === null || pointerDrag.pointerId === event.pointerId;
+  window.removeEventListener("mousemove", handleDragMove);
+  activeDrag = null;
 }
 
 function autoScrollBoard(pointerX) {
