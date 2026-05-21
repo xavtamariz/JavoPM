@@ -1,4 +1,4 @@
-import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js";
+import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js?v=20260521-dnd";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 1;
@@ -95,7 +95,7 @@ export async function deleteTask(id) {
 }
 
 export async function saveTaskOrder(tasks) {
-  const orderedTasks = tasks.map((task, index) => normalizeTask({ ...task, order: index }));
+  const orderedTasks = tasks.map(normalizeTask);
   const db = await initDB();
   await writeMany(db, STORES.tasks, orderedTasks);
   return orderedTasks;

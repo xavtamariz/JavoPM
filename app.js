@@ -4,11 +4,12 @@ import {
   getTasks,
   initDB,
   resetSeedDataIfNeeded,
+  saveTaskOrder,
   updateTask
-} from "./db.js";
-import { createTaskModel, generateFolio, sortByOrder } from "./models.js";
-import { openTaskModal } from "./modal.js";
-import { renderBoard } from "./ui.js";
+} from "./db.js?v=20260521-dnd";
+import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260521-dnd";
+import { openTaskModal } from "./modal.js?v=20260521-dnd";
+import { renderBoard } from "./ui.js?v=20260521-dnd";
 
 const state = {
   columns: [],
@@ -40,7 +41,8 @@ function render() {
     columns: state.columns,
     tasks: state.tasks,
     onAddTask: handleAddTask,
-    onOpenTask: handleOpenTask
+    onOpenTask: handleOpenTask,
+    onMoveTask: handleMoveTask
   });
 }
 
@@ -77,6 +79,44 @@ async function handleSaveTask(task) {
     state.tasks.map((currentTask) => (currentTask.id === savedTask.id ? savedTask : currentTask))
   );
   render();
+}
+
+async function handleMoveTask(taskId, targetColumnId) {
+  const taskToMove = state.tasks.find((task) => task.id === taskId);
+
+  if (!taskToMove || taskToMove.columnId === targetColumnId) {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const movedTask = {
+    ...taskToMove,
+    columnId: targetColumnId,
+    updatedAt: now
+  };
+
+  const nextTasks = state.tasks.map((task) => (task.id === taskId ? movedTask : task));
+  const orderedTasks = normalizeOrdersByColumn(nextTasks);
+
+  state.tasks = sortByOrder(orderedTasks);
+  render();
+
+  try {
+    await saveTaskOrder(orderedTasks);
+  } catch (error) {
+    await loadState();
+    render();
+    renderBootError(error);
+  }
+}
+
+function normalizeOrdersByColumn(tasks) {
+  return state.columns.flatMap((column) =>
+    sortByOrder(tasks.filter((task) => task.columnId === column.id)).map((task, index) => ({
+      ...task,
+      order: index
+    }))
+  );
 }
 
 function renderBootError(error) {
