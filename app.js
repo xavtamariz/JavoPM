@@ -6,10 +6,10 @@ import {
   resetSeedDataIfNeeded,
   saveTaskOrder,
   updateTask
-} from "./db.js?v=20260521-pointer-dnd";
-import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260521-pointer-dnd";
-import { openTaskModal } from "./modal.js?v=20260521-pointer-dnd";
-import { renderBoard } from "./ui.js?v=20260521-pointer-dnd";
+} from "./db.js?v=20260521-grip-dnd";
+import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260521-grip-dnd";
+import { openTaskModal } from "./modal.js?v=20260521-grip-dnd";
+import { renderBoard } from "./ui.js?v=20260521-grip-dnd";
 
 const state = {
   columns: [],

@@ -1,4 +1,4 @@
-import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js?v=20260521-pointer-dnd";
+import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js?v=20260521-grip-dnd";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 1;

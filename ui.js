@@ -1,4 +1,4 @@
-import { formatDateRange, sortByOrder } from "./models.js?v=20260521-pointer-dnd";
+import { formatDateRange, sortByOrder } from "./models.js?v=20260521-grip-dnd";
 
 let lastDragEndedAt = 0;
 let activeDrag = null;
@@ -80,8 +80,8 @@ function createTaskCard(task, onOpenTask, onMoveTask) {
   card.role = "button";
   card.tabIndex = 0;
   card.dataset.taskId = task.id;
-  card.title = "Mantén click y arrastra para mover la tarea";
-  card.setAttribute("aria-label", `${task.shortDescription}. Arrastrable entre columnas.`);
+  card.title = "Abrir detalle de tarea";
+  card.setAttribute("aria-label", `${task.shortDescription}. Click para abrir detalle.`);
   card.addEventListener("click", (event) => {
     if (event.target.closest(".move-handle")) {
       return;
@@ -100,13 +100,17 @@ function createTaskCard(task, onOpenTask, onMoveTask) {
       onOpenTask(task.id);
     }
   });
-  card.addEventListener("pointerdown", (event) => startDragCandidate(event, card, task.id, onMoveTask));
 
   const moveHandle = document.createElement("button");
   moveHandle.className = "move-handle";
   moveHandle.type = "button";
-  moveHandle.title = "Mover tarea";
-  moveHandle.setAttribute("aria-label", "Mover tarea a otra columna");
+  moveHandle.title = "Arrastrar tarea";
+  moveHandle.setAttribute("aria-label", "Arrastrar tarea a otra columna");
+  moveHandle.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    startDragCandidate(event, card, task.id, onMoveTask);
+  });
   moveHandle.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -321,7 +325,10 @@ function getDropColumn(x, y) {
 }
 
 function cleanupDrag() {
-  lastDragEndedAt = Date.now();
+  if (activeDrag.isDragging) {
+    lastDragEndedAt = Date.now();
+  }
+
   if (activeDrag.card.hasPointerCapture?.(activeDrag.pointerId)) {
     activeDrag.card.releasePointerCapture(activeDrag.pointerId);
   }

@@ -188,9 +188,8 @@ h1 {
   background: var(--surface);
   box-shadow: 0 10px 24px -22px rgba(32, 36, 42, 0.36);
   color: var(--ink);
-  cursor: grab;
+  cursor: pointer;
   text-align: left;
-  touch-action: none;
   -webkit-user-select: none;
   user-select: none;
   transition:
@@ -209,7 +208,7 @@ h1 {
 }
 
 .task-card:active {
-  cursor: grabbing;
+  cursor: pointer;
   transform: translateY(-1px) scale(0.99);
 }
 
@@ -225,7 +224,7 @@ h1 {
 }
 
 .is-task-dragging .task-card:not(.is-dragging) {
-  cursor: grab;
+  cursor: pointer;
 }
 
 .is-task-dragging .column {
@@ -260,6 +259,9 @@ h1 {
   color: var(--muted);
   cursor: grab;
   opacity: 0.62;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
   transition:
     opacity 160ms cubic-bezier(0.16, 1, 0.3, 1),
     background 160ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -273,6 +275,10 @@ h1 {
   background-position: 0 0;
   background-size: 6px 6px;
   content: "";
+}
+
+.move-handle:active {
+  cursor: grabbing;
 }
 
 .task-card:hover .move-handle,
