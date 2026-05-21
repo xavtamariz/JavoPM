@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: javo-pm
+    runtime: static
+    buildCommand: echo "JavoPM static site ready"
+    staticPublishPath: .
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
