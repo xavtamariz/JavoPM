@@ -263,10 +263,11 @@ export function openTaskModal({ task, onSave, onClose }) {
   }
 
   function updateWorkingTask(changes) {
-    workingTask = normalizeTask({
+    workingTask = {
       ...workingTask,
-      ...changes
-    });
+      ...changes,
+      updatedAt: new Date().toISOString()
+    };
 
     if (!validate()) {
       return;

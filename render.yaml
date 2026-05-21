@@ -2,7 +2,7 @@ services:
   - type: web
     name: javo-pm
     runtime: static
-    buildCommand: echo "JavoPM static site ready"
+    buildCommand: "true"
     staticPublishPath: .
     routes:
       - type: rewrite
