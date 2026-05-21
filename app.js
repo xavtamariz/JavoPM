@@ -6,10 +6,10 @@ import {
   resetSeedDataIfNeeded,
   saveTaskOrder,
   updateTask
-} from "./db.js?v=20260521-card-tune";
-import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260521-card-tune";
-import { openTaskModal } from "./modal.js?v=20260521-card-tune";
-import { renderBoard } from "./ui.js?v=20260521-card-tune";
+} from "./db.js?v=20260521-full-board";
+import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260521-full-board";
+import { openTaskModal } from "./modal.js?v=20260521-full-board";
+import { renderBoard } from "./ui.js?v=20260521-full-board";
 
 const state = {
   columns: [],

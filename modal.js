@@ -1,5 +1,5 @@
-import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260521-card-tune";
-import { renderChecklists } from "./checklist.js?v=20260521-card-tune";
+import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260521-full-board";
+import { renderChecklists } from "./checklist.js?v=20260521-full-board";
 
 export function openTaskModal({ task, onSave, onClose }) {
   const root = document.querySelector("#modal-root");

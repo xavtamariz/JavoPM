@@ -63,8 +63,8 @@ button {
   align-items: end;
   justify-content: space-between;
   gap: 20px;
-  max-width: 1680px;
-  margin: 0 auto 20px;
+  width: 100%;
+  margin: 0 0 20px;
 }
 
 .eyebrow {
@@ -105,16 +105,15 @@ h1 {
 }
 
 .board-wrap {
-  max-width: 1680px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   overflow-x: auto;
   padding: 0 0 18px;
 }
 
 .board {
   display: grid;
-  grid-auto-columns: minmax(340px, 360px);
-  grid-auto-flow: column;
+  grid-template-columns: repeat(6, minmax(220px, 1fr));
   align-items: start;
   gap: 14px;
   min-height: calc(100dvh - 146px);
@@ -122,6 +121,7 @@ h1 {
 
 .column {
   display: flex;
+  min-width: 0;
   min-height: calc(100dvh - 168px);
   flex-direction: column;
   border: 1px solid var(--line);
@@ -731,7 +731,7 @@ h1 {
   }
 
   .board {
-    grid-auto-columns: minmax(300px, 88vw);
+    grid-template-columns: repeat(6, minmax(300px, 88vw));
     min-height: calc(100dvh - 164px);
   }
 

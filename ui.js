@@ -1,4 +1,4 @@
-import { formatDateRange, sortByOrder } from "./models.js?v=20260521-card-tune";
+import { formatDateRange, sortByOrder } from "./models.js?v=20260521-full-board";
 
 let lastDragEndedAt = 0;
 let activeDrag = null;
