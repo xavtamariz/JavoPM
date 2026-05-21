@@ -243,7 +243,7 @@ h1 {
 .move-handle {
   position: absolute;
   top: 13px;
-  right: 68px;
+  right: 12px;
   display: grid;
   width: 24px;
   height: 24px;
@@ -253,41 +253,20 @@ h1 {
   background: transparent;
   color: var(--muted);
   cursor: grab;
-  opacity: 0.42;
+  opacity: 0.62;
   transition:
     opacity 160ms cubic-bezier(0.16, 1, 0.3, 1),
     background 160ms cubic-bezier(0.16, 1, 0.3, 1),
     border-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.move-handle span,
-.move-handle span::before,
-.move-handle span::after {
-  display: block;
-  width: 3px;
-  height: 3px;
-  border-radius: 999px;
-  background: currentColor;
-  box-shadow: 6px 0 0 currentColor;
+.move-handle::before {
+  width: 12px;
+  height: 18px;
+  background-image: radial-gradient(circle, currentColor 1.45px, transparent 1.6px);
+  background-position: 0 0;
+  background-size: 6px 6px;
   content: "";
-}
-
-.move-handle span {
-  position: relative;
-}
-
-.move-handle span::before,
-.move-handle span::after {
-  position: absolute;
-  left: 0;
-}
-
-.move-handle span::before {
-  top: -6px;
-}
-
-.move-handle span::after {
-  top: 6px;
 }
 
 .task-card:hover .move-handle,
@@ -302,7 +281,7 @@ h1 {
   display: -webkit-box;
   margin: 0 0 10px;
   overflow: hidden;
-  padding-right: 104px;
+  padding-right: 116px;
   color: var(--ink);
   font-size: 15px;
   font-weight: 760;
@@ -371,13 +350,16 @@ h1 {
 }
 
 .date-badge {
-  max-width: 170px;
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  max-width: calc(100% - 178px);
 }
 
 .points-badge {
   position: absolute;
   top: 13px;
-  right: 12px;
+  right: 42px;
   justify-content: center;
   min-width: 48px;
   padding: 0 9px;
@@ -388,8 +370,11 @@ h1 {
 
 .responsible {
   position: absolute;
+  display: inline-flex;
+  align-items: center;
   right: 14px;
   bottom: 12px;
+  min-height: 24px;
   max-width: 128px;
   overflow: hidden;
   color: var(--ink-soft);

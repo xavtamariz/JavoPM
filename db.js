@@ -1,4 +1,4 @@
-import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js?v=20260521-dnd2";
+import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js?v=20260521-card-tune";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 1;

@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260521-dnd2";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260521-card-tune";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

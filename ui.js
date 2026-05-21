@@ -1,4 +1,4 @@
-import { formatDateRange, sortByOrder } from "./models.js?v=20260521-dnd2";
+import { formatDateRange, sortByOrder } from "./models.js?v=20260521-card-tune";
 
 let lastDragEndedAt = 0;
 let activeDrag = null;
@@ -107,7 +107,6 @@ function createTaskCard(task, onOpenTask) {
   moveHandle.type = "button";
   moveHandle.title = "Mover tarea";
   moveHandle.setAttribute("aria-label", "Mover tarea a otra columna");
-  moveHandle.innerHTML = '<span aria-hidden="true"></span>';
   moveHandle.addEventListener("mousedown", (event) => {
     event.stopPropagation();
   });
@@ -149,8 +148,8 @@ function createTaskCard(task, onOpenTask) {
   responsible.className = "responsible";
   responsible.textContent = task.responsible;
 
-  meta.append(type, folio, dateRange);
-  card.append(moveHandle, title, project, meta, points, responsible);
+  meta.append(type, folio);
+  card.append(title, project, meta, dateRange, points, moveHandle, responsible);
   return card;
 }
 
