@@ -1,7 +1,7 @@
-import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260521-wide-columns";
-import { renderChecklists } from "./checklist.js?v=20260521-wide-columns";
+import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260521-delete-task";
+import { renderChecklists } from "./checklist.js?v=20260521-delete-task";
 
-export function openTaskModal({ task, onSave, onClose }) {
+export function openTaskModal({ task, onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
   root.innerHTML = "";
 
@@ -28,7 +28,7 @@ export function openTaskModal({ task, onSave, onClose }) {
 
   function render() {
     form.innerHTML = "";
-    form.append(createHeader(), createBody());
+    form.append(createHeader(), createBody(), createFooter());
     requestAnimationFrame(() => {
       const firstInput = form.querySelector("[data-autofocus]");
       firstInput?.focus({ preventScroll: true });
@@ -67,6 +67,21 @@ export function openTaskModal({ task, onSave, onClose }) {
 
     header.append(left, right, closeButton);
     return header;
+  }
+
+  function createFooter() {
+    const footer = document.createElement("footer");
+    footer.className = "modal-footer";
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "delete-task-button";
+    deleteButton.type = "button";
+    deleteButton.textContent = "Eliminar";
+    deleteButton.setAttribute("aria-label", "Eliminar tarea");
+    deleteButton.addEventListener("click", handleDelete);
+
+    footer.append(deleteButton);
+    return footer;
   }
 
   function createBody() {
@@ -320,6 +335,21 @@ export function openTaskModal({ task, onSave, onClose }) {
     if (validate()) {
       onSave(workingTask);
     }
+    destroyModal();
+  }
+
+  async function handleDelete() {
+    const confirmed = window.confirm("¿Eliminar esta tarea? Esta acción no se puede deshacer.");
+    if (!confirmed) {
+      return;
+    }
+
+    clearTimeout(saveTimer);
+    await onDelete?.(workingTask.id);
+    destroyModal();
+  }
+
+  function destroyModal() {
     root.innerHTML = "";
     document.removeEventListener("keydown", handleKeyDown);
     onClose?.();

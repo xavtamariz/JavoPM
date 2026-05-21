@@ -1,4 +1,4 @@
-import { formatDateRange, sortByOrder } from "./models.js?v=20260521-wide-columns";
+import { formatDateRange, sortByOrder } from "./models.js?v=20260521-delete-task";
 
 let lastDragEndedAt = 0;
 let activeDrag = null;

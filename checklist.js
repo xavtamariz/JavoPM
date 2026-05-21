@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260521-wide-columns";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260521-delete-task";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

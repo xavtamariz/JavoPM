@@ -572,6 +572,7 @@ h1 {
 }
 
 .close-button,
+.delete-task-button,
 .toolbar-button,
 .small-button,
 .danger-button {
@@ -597,13 +598,26 @@ h1 {
   line-height: 1;
 }
 
+.delete-task-button {
+  padding: 0 12px;
+  border: 1px solid #edcbc6;
+  background: var(--danger-soft);
+  color: var(--danger);
+  white-space: nowrap;
+}
+
 .close-button:hover,
 .toolbar-button:hover,
 .small-button:hover {
   background: var(--surface-2);
 }
 
+.delete-task-button:hover {
+  background: #f2d6d1;
+}
+
 .close-button:focus-visible,
+.delete-task-button:focus-visible,
 .toolbar-button:focus-visible,
 .small-button:focus-visible,
 .danger-button:focus-visible {
@@ -613,9 +627,19 @@ h1 {
 
 .modal-body {
   display: grid;
+  flex: 1;
   gap: 18px;
+  min-height: 0;
   overflow: auto;
   padding: 20px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 20px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .description-grid {

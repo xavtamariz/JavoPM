@@ -1,15 +1,16 @@
 import {
   createTask,
+  deleteTask,
   getColumns,
   getTasks,
   initDB,
   resetSeedDataIfNeeded,
   saveTaskOrder,
   updateTask
-} from "./db.js?v=20260521-wide-columns";
-import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260521-wide-columns";
-import { openTaskModal } from "./modal.js?v=20260521-wide-columns";
-import { renderBoard } from "./ui.js?v=20260521-wide-columns";
+} from "./db.js?v=20260521-delete-task";
+import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260521-delete-task";
+import { openTaskModal } from "./modal.js?v=20260521-delete-task";
+import { renderBoard } from "./ui.js?v=20260521-delete-task";
 
 const state = {
   columns: [],
@@ -68,6 +69,7 @@ function handleOpenTask(taskId) {
 
   openTaskModal({
     task,
+    onDelete: handleDeleteTask,
     onSave: handleSaveTask,
     onClose: () => render()
   });
@@ -102,6 +104,23 @@ async function handleMoveTask(taskId, targetColumnId) {
   render();
 
   try {
+    await saveTaskOrder(orderedTasks);
+  } catch (error) {
+    await loadState();
+    render();
+    renderBootError(error);
+  }
+}
+
+async function handleDeleteTask(taskId) {
+  const nextTasks = state.tasks.filter((task) => task.id !== taskId);
+  const orderedTasks = normalizeOrdersByColumn(nextTasks);
+
+  state.tasks = sortByOrder(orderedTasks);
+  render();
+
+  try {
+    await deleteTask(taskId);
     await saveTaskOrder(orderedTasks);
   } catch (error) {
     await loadState();

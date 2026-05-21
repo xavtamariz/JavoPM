@@ -1,4 +1,4 @@
-import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js?v=20260521-wide-columns";
+import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js?v=20260521-delete-task";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 1;
