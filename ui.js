@@ -1,4 +1,4 @@
-import { formatDateRange, sortByOrder } from "./models.js?v=20260521-grip-dnd";
+import { formatDateRange, sortByOrder } from "./models.js?v=20260521-fixed-columns";
 
 let lastDragEndedAt = 0;
 let activeDrag = null;

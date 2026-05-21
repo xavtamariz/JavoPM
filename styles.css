@@ -18,6 +18,7 @@
   --event: #8a6a1f;
   --shadow: 0 20px 45px -28px rgba(32, 36, 42, 0.28);
   --radius: 8px;
+  --column-width: 274px;
   --font: "Aptos", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
 }
@@ -113,7 +114,9 @@ h1 {
 
 .board {
   display: grid;
-  grid-template-columns: repeat(6, minmax(220px, 1fr));
+  width: max-content;
+  min-width: max-content;
+  grid-template-columns: repeat(6, var(--column-width));
   align-items: start;
   gap: 14px;
   min-height: calc(100dvh - 146px);
@@ -121,7 +124,8 @@ h1 {
 
 .column {
   display: flex;
-  min-width: 0;
+  width: var(--column-width);
+  min-width: var(--column-width);
   min-height: calc(100dvh - 168px);
   flex-direction: column;
   border: 1px solid var(--line);
@@ -743,7 +747,6 @@ h1 {
   }
 
   .board {
-    grid-template-columns: repeat(6, minmax(300px, 88vw));
     min-height: calc(100dvh - 164px);
   }
 

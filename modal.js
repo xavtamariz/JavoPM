@@ -1,5 +1,5 @@
-import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260521-grip-dnd";
-import { renderChecklists } from "./checklist.js?v=20260521-grip-dnd";
+import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260521-fixed-columns";
+import { renderChecklists } from "./checklist.js?v=20260521-fixed-columns";
 
 export function openTaskModal({ task, onSave, onClose }) {
   const root = document.querySelector("#modal-root");
