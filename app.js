@@ -6,10 +6,10 @@ import {
   resetSeedDataIfNeeded,
   saveTaskOrder,
   updateTask
-} from "./db.js?v=20260521-fixed-columns";
-import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260521-fixed-columns";
-import { openTaskModal } from "./modal.js?v=20260521-fixed-columns";
-import { renderBoard } from "./ui.js?v=20260521-fixed-columns";
+} from "./db.js?v=20260521-wide-columns";
+import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260521-wide-columns";
+import { openTaskModal } from "./modal.js?v=20260521-wide-columns";
+import { renderBoard } from "./ui.js?v=20260521-wide-columns";
 
 const state = {
   columns: [],

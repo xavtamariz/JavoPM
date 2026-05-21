@@ -18,7 +18,7 @@
   --event: #8a6a1f;
   --shadow: 0 20px 45px -28px rgba(32, 36, 42, 0.28);
   --radius: 8px;
-  --column-width: 274px;
+  --column-width: 365px;
   --font: "Aptos", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
 }
@@ -784,5 +784,11 @@ h1 {
 
   .danger-button {
     width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  :root {
+    --column-width: calc(100vw - 32px);
   }
 }
