@@ -191,6 +191,7 @@ h1 {
   cursor: grab;
   text-align: left;
   touch-action: none;
+  -webkit-user-select: none;
   user-select: none;
   transition:
     opacity 180ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -229,6 +230,11 @@ h1 {
 
 .is-task-dragging .column {
   border-style: dashed;
+}
+
+.is-task-dragging {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .drag-ghost {

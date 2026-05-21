@@ -1,4 +1,4 @@
-import { formatDateRange, sortByOrder } from "./models.js?v=20260521-full-board";
+import { formatDateRange, sortByOrder } from "./models.js?v=20260521-pointer-dnd";
 
 let lastDragEndedAt = 0;
 let activeDrag = null;
@@ -60,7 +60,7 @@ function createColumn(column, tasks, onAddTask, onOpenTask, onMoveTask) {
   }
 
   tasks.forEach((task) => {
-    taskList.append(createTaskCard(task, onOpenTask));
+    taskList.append(createTaskCard(task, onOpenTask, onMoveTask));
   });
 
   const addButton = document.createElement("button");
@@ -74,7 +74,7 @@ function createColumn(column, tasks, onAddTask, onOpenTask, onMoveTask) {
   return section;
 }
 
-function createTaskCard(task, onOpenTask) {
+function createTaskCard(task, onOpenTask, onMoveTask) {
   const card = document.createElement("article");
   card.className = "task-card";
   card.role = "button";
@@ -100,19 +100,21 @@ function createTaskCard(task, onOpenTask) {
       onOpenTask(task.id);
     }
   });
-  card.addEventListener("mousedown", (event) => startDragCandidate(event, card, task.id, onMoveTask));
+  card.addEventListener("pointerdown", (event) => startDragCandidate(event, card, task.id, onMoveTask));
 
   const moveHandle = document.createElement("button");
   moveHandle.className = "move-handle";
   moveHandle.type = "button";
   moveHandle.title = "Mover tarea";
   moveHandle.setAttribute("aria-label", "Mover tarea a otra columna");
-  moveHandle.addEventListener("mousedown", (event) => {
-    event.stopPropagation();
-  });
   moveHandle.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
+
+    if (Date.now() - lastDragEndedAt < 240) {
+      return;
+    }
+
     toggleMoveMode(task, card);
   });
 
@@ -198,11 +200,7 @@ function handleMoveModeKeydown(event) {
 }
 
 function startDragCandidate(event, card, taskId, onMoveTask) {
-  if (event.target.closest(".move-handle")) {
-    return;
-  }
-
-  if (activeDrag || event.button !== 0) {
+  if (activeDrag || !event.isPrimary || event.button !== 0) {
     return;
   }
 
@@ -213,17 +211,20 @@ function startDragCandidate(event, card, taskId, onMoveTask) {
     offsetX: 0,
     offsetY: 0,
     onMoveTask,
+    pointerId: event.pointerId,
     startX: event.clientX,
     startY: event.clientY,
     taskId
   };
 
-  window.addEventListener("mousemove", handleDragMove);
-  window.addEventListener("mouseup", handleDragEnd, { once: true });
+  card.setPointerCapture?.(event.pointerId);
+  window.addEventListener("pointermove", handleDragMove, { passive: false });
+  window.addEventListener("pointerup", handleDragEnd, { once: true });
+  window.addEventListener("pointercancel", handleDragCancel, { once: true });
 }
 
 function handleDragMove(event) {
-  if (!activeDrag) {
+  if (!activeDrag || event.pointerId !== activeDrag.pointerId) {
     return;
   }
 
@@ -244,7 +245,7 @@ function handleDragMove(event) {
 }
 
 function handleDragEnd(event) {
-  if (!activeDrag) {
+  if (!activeDrag || event.pointerId !== activeDrag.pointerId) {
     return;
   }
 
@@ -263,6 +264,14 @@ function handleDragEnd(event) {
   if (dropColumn?.dataset.columnId) {
     onMoveTask(taskId, dropColumn.dataset.columnId);
   }
+}
+
+function handleDragCancel(event) {
+  if (!activeDrag || event.pointerId !== activeDrag.pointerId) {
+    return;
+  }
+
+  cleanupDrag();
 }
 
 function beginDrag(event) {
@@ -313,11 +322,16 @@ function getDropColumn(x, y) {
 
 function cleanupDrag() {
   lastDragEndedAt = Date.now();
+  if (activeDrag.card.hasPointerCapture?.(activeDrag.pointerId)) {
+    activeDrag.card.releasePointerCapture(activeDrag.pointerId);
+  }
   activeDrag.card.classList.remove("is-dragging");
   activeDrag.ghost?.remove();
   document.body.classList.remove("is-task-dragging");
   clearDragTargets();
-  window.removeEventListener("mousemove", handleDragMove);
+  window.removeEventListener("pointermove", handleDragMove);
+  window.removeEventListener("pointerup", handleDragEnd);
+  window.removeEventListener("pointercancel", handleDragCancel);
   activeDrag = null;
 }
 

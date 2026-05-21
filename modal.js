@@ -1,5 +1,5 @@
-import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260521-full-board";
-import { renderChecklists } from "./checklist.js?v=20260521-full-board";
+import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260521-pointer-dnd";
+import { renderChecklists } from "./checklist.js?v=20260521-pointer-dnd";
 
 export function openTaskModal({ task, onSave, onClose }) {
   const root = document.querySelector("#modal-root");
