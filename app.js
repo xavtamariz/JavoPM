@@ -7,10 +7,10 @@ import {
   resetSeedDataIfNeeded,
   saveTaskOrder,
   updateTask
-} from "./db.js?v=20260521-delete-task";
-import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260521-delete-task";
-import { openTaskModal } from "./modal.js?v=20260521-delete-task";
-import { renderBoard } from "./ui.js?v=20260521-delete-task";
+} from "./db.js?v=20260522-modal-scroll";
+import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260522-modal-scroll";
+import { openTaskModal } from "./modal.js?v=20260522-modal-scroll";
+import { renderBoard } from "./ui.js?v=20260522-modal-scroll";
 
 const state = {
   columns: [],

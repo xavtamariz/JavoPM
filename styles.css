@@ -477,16 +477,17 @@ h1 {
 .modal {
   width: min(1040px, 100%);
   max-height: min(900px, calc(100dvh - 48px));
-  overflow: hidden;
+  overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: 0 35px 90px -44px rgba(5, 10, 18, 0.7);
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-form {
   display: flex;
-  max-height: inherit;
+  max-height: none;
   flex-direction: column;
 }
 
@@ -627,10 +628,10 @@ h1 {
 
 .modal-body {
   display: grid;
-  flex: 1;
+  flex: none;
   gap: 18px;
-  min-height: 0;
-  overflow: auto;
+  min-height: auto;
+  overflow: visible;
   padding: 20px;
 }
 

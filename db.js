@@ -1,4 +1,4 @@
-import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js?v=20260521-delete-task";
+import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js?v=20260522-modal-scroll";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 1;
