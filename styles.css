@@ -494,11 +494,22 @@ h1 {
 }
 
 .modal-topbar {
-  display: flex;
-  justify-content: flex-end;
-  padding: 14px 20px 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
+}
+
+.modal-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 780;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
 }
 
 .modal-header {

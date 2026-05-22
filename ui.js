@@ -1,4 +1,4 @@
-import { formatDateRange, sortByOrder } from "./models.js?v=20260522-modal-wrap";
+import { formatDateRange, sortByOrder } from "./models.js?v=20260522-modal-title";
 
 let lastDragEndedAt = 0;
 let activeDrag = null;

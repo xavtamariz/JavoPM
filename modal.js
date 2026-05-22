@@ -1,5 +1,5 @@
-import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260522-modal-wrap";
-import { renderChecklists } from "./checklist.js?v=20260522-modal-wrap";
+import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260522-modal-title";
+import { renderChecklists } from "./checklist.js?v=20260522-modal-title";
 
 export function openTaskModal({ task, onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
@@ -20,7 +20,7 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
   modal.className = "modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
-  modal.setAttribute("aria-label", "Detalle de tarea");
+  modal.setAttribute("aria-labelledby", "task-modal-title");
 
   const form = document.createElement("form");
   form.className = "modal-form";
@@ -39,6 +39,12 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
     const topbar = document.createElement("div");
     topbar.className = "modal-topbar";
 
+    const title = document.createElement("h2");
+    title.id = "task-modal-title";
+    title.className = "modal-title";
+    title.dataset.modalTitle = "true";
+    title.textContent = getModalTitle();
+
     const closeButton = document.createElement("button");
     closeButton.className = "close-button";
     closeButton.type = "button";
@@ -46,7 +52,7 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
     closeButton.setAttribute("aria-label", "Cerrar modal");
     closeButton.addEventListener("click", close);
 
-    topbar.append(closeButton);
+    topbar.append(title, closeButton);
     return topbar;
   }
 
@@ -292,12 +298,27 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
       updatedAt: new Date().toISOString()
     };
 
+    if (Object.hasOwn(changes, "shortDescription")) {
+      syncTopbarTitle();
+    }
+
     if (!validate()) {
       return;
     }
 
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => onSave(workingTask), 180);
+  }
+
+  function getModalTitle() {
+    return workingTask.shortDescription.trim() || "Sin descripción";
+  }
+
+  function syncTopbarTitle() {
+    const title = form.querySelector("[data-modal-title]");
+    if (title) {
+      title.textContent = getModalTitle();
+    }
   }
 
   function saveNowAndRender() {
