@@ -960,15 +960,6 @@ h1 {
     padding: 16px;
   }
 
-  .app-header {
-    align-items: start;
-    flex-direction: column;
-  }
-
-  .header-actions {
-    justify-items: start;
-  }
-
   .board {
     min-height: calc(100dvh - clamp(74px, 14.5dvh, 122px));
   }
@@ -1008,5 +999,18 @@ h1 {
 @media (max-width: 600px) {
   :root {
     --column-width: calc(100vw - 32px);
+  }
+}
+
+@media (max-width: 520px) {
+  .app-header {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .header-actions {
+    grid-row: 1;
+    justify-items: start;
+    margin-bottom: 12px;
   }
 }
