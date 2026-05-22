@@ -1,4 +1,4 @@
-import { formatDateRange, sortByOrder } from "./models.js?v=20260522-uniform-controls";
+import { formatDateRange, sortByOrder } from "./models.js?v=20260522-modal-close-space";
 
 let lastDragEndedAt = 0;
 let activeDrag = null;

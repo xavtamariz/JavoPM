@@ -493,11 +493,12 @@ h1 {
 }
 
 .modal-header {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.72fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.72fr);
   gap: 18px;
   align-items: start;
-  padding: 20px;
+  padding: 20px 76px 20px 20px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -627,6 +628,9 @@ h1 {
 }
 
 .close-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
   width: 38px;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -824,18 +828,13 @@ h1 {
   }
 
   .modal-header {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr;
   }
 
   .modal-left-row,
   .modal-right-row {
     grid-column: 1 / -1;
     grid-template-columns: 1fr;
-  }
-
-  .close-button {
-    grid-column: 2;
-    grid-row: 1;
   }
 
   .checklist-header,

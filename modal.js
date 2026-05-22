@@ -1,5 +1,5 @@
-import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260522-uniform-controls";
-import { renderChecklists } from "./checklist.js?v=20260522-uniform-controls";
+import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260522-modal-close-space";
+import { renderChecklists } from "./checklist.js?v=20260522-modal-close-space";
 
 export function openTaskModal({ task, onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");

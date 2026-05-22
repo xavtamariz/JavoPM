@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260522-uniform-controls";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260522-modal-close-space";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");
