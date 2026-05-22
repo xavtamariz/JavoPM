@@ -1,4 +1,4 @@
-import { formatDateRange, sortByOrder } from "./models.js?v=20260522-modal-title";
+import { formatDateRange, sortByOrder } from "./models.js?v=20260522-short-description-grow";
 
 let lastDragEndedAt = 0;
 let activeDrag = null;

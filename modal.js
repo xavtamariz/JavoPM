@@ -1,5 +1,5 @@
-import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260522-modal-title";
-import { renderChecklists } from "./checklist.js?v=20260522-modal-title";
+import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260522-short-description-grow";
+import { renderChecklists } from "./checklist.js?v=20260522-short-description-grow";
 
 export function openTaskModal({ task, onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
@@ -7,6 +7,7 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
 
   let workingTask = normalizeTask(task);
   let saveTimer;
+  let cleanupCallbacks = [];
 
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
@@ -27,6 +28,7 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
   form.addEventListener("submit", (event) => event.preventDefault());
 
   function render() {
+    cleanupTransientListeners();
     form.innerHTML = "";
     form.append(createTopBar(), createHeader(), createBody(), createFooter());
     requestAnimationFrame(() => {
@@ -108,12 +110,7 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
 
     const descriptions = document.createElement("section");
     descriptions.className = "description-grid";
-    descriptions.append(
-      createField("Descripción corta", "shortDescription", "text", workingTask.shortDescription, {
-        autofocus: true
-      }),
-      createLongDescriptionField()
-    );
+    descriptions.append(createShortDescriptionField(), createLongDescriptionField());
 
     const checklistCallbacks = {
       addChecklist(checklist) {
@@ -238,6 +235,41 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
     return wrapper;
   }
 
+  function createShortDescriptionField() {
+    const wrapper = document.createElement("div");
+    wrapper.className = "field";
+
+    const label = document.createElement("label");
+    label.htmlFor = "task-shortDescription";
+    label.textContent = "Descripción corta";
+
+    const textarea = document.createElement("textarea");
+    textarea.id = "task-shortDescription";
+    textarea.className = "short-description-textarea";
+    textarea.rows = 1;
+    textarea.value = workingTask.shortDescription;
+    textarea.dataset.autofocus = "true";
+
+    const resize = () => resizeAutoTextarea(textarea);
+    textarea.addEventListener("input", () => {
+      updateWorkingTask({ shortDescription: textarea.value });
+      resize();
+    });
+
+    if ("ResizeObserver" in window) {
+      const observer = new ResizeObserver(resize);
+      observer.observe(wrapper);
+      cleanupCallbacks.push(() => observer.disconnect());
+    } else {
+      window.addEventListener("resize", resize);
+      cleanupCallbacks.push(() => window.removeEventListener("resize", resize));
+    }
+
+    requestAnimationFrame(resize);
+    wrapper.append(label, textarea);
+    return wrapper;
+  }
+
   function createLongDescriptionField() {
     const wrapper = document.createElement("div");
     wrapper.className = "field";
@@ -289,6 +321,11 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
     const replacement = before + selected + after;
     textarea.setRangeText(replacement, start, end, "end");
     textarea.focus();
+  }
+
+  function resizeAutoTextarea(textarea) {
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
   }
 
   function updateWorkingTask(changes) {
@@ -379,9 +416,15 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
   }
 
   function destroyModal() {
+    cleanupTransientListeners();
     root.innerHTML = "";
     document.removeEventListener("keydown", handleKeyDown);
     onClose?.();
+  }
+
+  function cleanupTransientListeners() {
+    cleanupCallbacks.forEach((callback) => callback());
+    cleanupCallbacks = [];
   }
 
   function handleKeyDown(event) {

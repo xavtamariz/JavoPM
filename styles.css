@@ -619,6 +619,14 @@ h1 {
   line-height: 1.5;
 }
 
+.field .short-description-textarea {
+  min-height: var(--field-control-height);
+  overflow: hidden;
+  resize: none;
+  padding: 7px 10px;
+  line-height: 1.35;
+}
+
 .field input:focus,
 .field select:focus,
 .field textarea:focus,
