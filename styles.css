@@ -865,11 +865,11 @@ h1 {
   }
 
   .board {
-    min-height: calc(100dvh - 122px);
+    min-height: calc(100dvh - clamp(74px, 14.5dvh, 122px));
   }
 
   .column {
-    min-height: calc(100dvh - 144px);
+    min-height: calc(100dvh - clamp(96px, 17dvh, 144px));
   }
 
   .modal-overlay {
