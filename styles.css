@@ -187,7 +187,7 @@ h1 {
   position: relative;
   min-height: 132px;
   width: 100%;
-  padding: 14px 14px 34px;
+  padding: 14px 14px 58px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -372,8 +372,8 @@ h1 {
 
 .points-badge {
   position: absolute;
-  top: 13px;
-  right: 42px;
+  right: 14px;
+  bottom: 38px;
   justify-content: center;
   min-width: 48px;
   padding: 0 9px;
@@ -387,7 +387,7 @@ h1 {
   display: inline-flex;
   align-items: center;
   right: 14px;
-  bottom: 12px;
+  bottom: 10px;
   min-height: 24px;
   max-width: 128px;
   overflow: hidden;
