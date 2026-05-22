@@ -187,7 +187,7 @@ h1 {
   position: relative;
   min-height: 132px;
   width: 100%;
-  padding: 14px 14px 66px;
+  padding: 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -314,8 +314,32 @@ h1 {
   white-space: nowrap;
 }
 
+.task-card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
 .task-meta-row {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.task-date-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.task-meta-left {
+  display: flex;
+  flex: 1 1 auto;
   align-items: center;
   gap: 7px;
   min-width: 0;
@@ -358,19 +382,21 @@ h1 {
 .folio-badge,
 .date-badge {
   overflow: hidden;
-  max-width: 102px;
   color: var(--muted);
   text-overflow: ellipsis;
 }
 
+.folio-badge {
+  max-width: 102px;
+}
+
 .date-badge {
-  max-width: min(154px, 100%);
+  flex: 1 1 auto;
+  max-width: 154px;
 }
 
 .points-badge {
-  position: absolute;
-  right: 14px;
-  bottom: 38px;
+  flex: 0 0 auto;
   justify-content: center;
   min-width: 48px;
   padding: 0 9px;
@@ -380,11 +406,9 @@ h1 {
 }
 
 .responsible {
-  position: absolute;
   display: inline-flex;
+  flex: 0 1 auto;
   align-items: center;
-  right: 14px;
-  bottom: 10px;
   min-height: 24px;
   max-width: 128px;
   overflow: hidden;

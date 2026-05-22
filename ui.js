@@ -130,8 +130,14 @@ function createTaskCard(task, onOpenTask, onMoveTask) {
   project.className = "task-project";
   project.textContent = task.project;
 
+  const footer = document.createElement("div");
+  footer.className = "task-card-footer";
+
   const meta = document.createElement("div");
   meta.className = "task-meta-row";
+
+  const metaLeft = document.createElement("div");
+  metaLeft.className = "task-meta-left";
 
   const type = document.createElement("span");
   type.className = "type-badge";
@@ -154,8 +160,14 @@ function createTaskCard(task, onOpenTask, onMoveTask) {
   responsible.className = "responsible";
   responsible.textContent = task.responsible;
 
-  meta.append(type, folio, dateRange);
-  card.append(title, project, meta, points, moveHandle, responsible);
+  const dateRow = document.createElement("div");
+  dateRow.className = "task-date-row";
+
+  metaLeft.append(type, folio);
+  meta.append(metaLeft, points);
+  dateRow.append(dateRange, responsible);
+  footer.append(meta, dateRow);
+  card.append(title, project, footer, moveHandle);
   return card;
 }
 
