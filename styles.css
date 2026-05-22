@@ -965,7 +965,7 @@ h1 {
   }
 
   .column {
-    min-height: calc(100dvh - clamp(96px, 17dvh, 144px));
+    min-height: calc(100dvh - clamp(72px, 13.5dvh, 116px));
   }
 
   .modal-overlay {
