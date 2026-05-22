@@ -222,8 +222,13 @@ function startDragCandidate(event, card, taskId, onMoveTask) {
 
   activeDrag = {
     card,
+    captureElement: event.currentTarget,
+    dropColumn: null,
+    frameId: 0,
     ghost: null,
     isDragging: false,
+    latestX: event.clientX,
+    latestY: event.clientY,
     offsetX: 0,
     offsetY: 0,
     onMoveTask,
@@ -233,7 +238,7 @@ function startDragCandidate(event, card, taskId, onMoveTask) {
     taskId
   };
 
-  card.setPointerCapture?.(event.pointerId);
+  activeDrag.captureElement?.setPointerCapture?.(event.pointerId);
   window.addEventListener("pointermove", handleDragMove, { passive: false });
   window.addEventListener("pointerup", handleDragEnd, { once: true });
   window.addEventListener("pointercancel", handleDragCancel, { once: true });
@@ -244,6 +249,8 @@ function handleDragMove(event) {
     return;
   }
 
+  activeDrag.latestX = event.clientX;
+  activeDrag.latestY = event.clientY;
   const distance = Math.hypot(event.clientX - activeDrag.startX, event.clientY - activeDrag.startY);
 
   if (!activeDrag.isDragging && distance > 5) {
@@ -255,9 +262,7 @@ function handleDragMove(event) {
   }
 
   event.preventDefault();
-  moveDragGhost(event.clientX, event.clientY);
-  highlightDropColumn(event.clientX, event.clientY);
-  autoScrollBoard(event.clientX);
+  scheduleDragFrame();
 }
 
 function handleDragEnd(event) {
@@ -309,20 +314,49 @@ function beginDrag(event) {
   moveDragGhost(event.clientX, event.clientY);
 }
 
+function scheduleDragFrame() {
+  if (!activeDrag || activeDrag.frameId) {
+    return;
+  }
+
+  activeDrag.frameId = requestAnimationFrame(updateDragFrame);
+}
+
+function updateDragFrame() {
+  if (!activeDrag) {
+    return;
+  }
+
+  activeDrag.frameId = 0;
+  const x = activeDrag.latestX;
+  const y = activeDrag.latestY;
+
+  moveDragGhost(x, y);
+  highlightDropColumn(x, y);
+  autoScrollBoard(x);
+}
+
 function moveDragGhost(x, y) {
   if (!activeDrag?.ghost) {
     return;
   }
 
-  activeDrag.ghost.style.transform = `translate3d(${
+  activeDrag.ghost.style.transform = `translate3d(${Math.round(
     x - activeDrag.offsetX
-  }px, ${y - activeDrag.offsetY}px, 0) rotate(-1deg)`;
+  )}px, ${Math.round(y - activeDrag.offsetY)}px, 0) rotate(-1deg)`;
 }
 
 function highlightDropColumn(x, y) {
-  clearDragTargets();
   const dropColumn = getDropColumn(x, y);
-  dropColumn?.closest(".column")?.classList.add("is-drag-over");
+  const nextColumn = dropColumn?.closest(".column") || null;
+
+  if (activeDrag.dropColumn === nextColumn) {
+    return;
+  }
+
+  activeDrag.dropColumn?.classList.remove("is-drag-over");
+  activeDrag.dropColumn = nextColumn;
+  nextColumn?.classList.add("is-drag-over");
 }
 
 function getDropColumn(x, y) {
@@ -337,12 +371,19 @@ function getDropColumn(x, y) {
 }
 
 function cleanupDrag() {
+  if (!activeDrag) {
+    return;
+  }
+
   if (activeDrag.isDragging) {
     lastDragEndedAt = Date.now();
   }
 
-  if (activeDrag.card.hasPointerCapture?.(activeDrag.pointerId)) {
-    activeDrag.card.releasePointerCapture(activeDrag.pointerId);
+  if (activeDrag.frameId) {
+    cancelAnimationFrame(activeDrag.frameId);
+  }
+  if (activeDrag.captureElement?.hasPointerCapture?.(activeDrag.pointerId)) {
+    activeDrag.captureElement.releasePointerCapture(activeDrag.pointerId);
   }
   activeDrag.card.classList.remove("is-dragging");
   activeDrag.ghost?.remove();

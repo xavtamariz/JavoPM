@@ -10,7 +10,7 @@ import {
 } from "./db.js?v=20260522-short-description-grow";
 import { createTaskModel, generateFolio, sortByOrder } from "./models.js?v=20260522-short-description-grow";
 import { openTaskModal } from "./modal.js?v=20260522-short-description-grow";
-import { renderBoard } from "./ui.js?v=20260522-short-description-grow";
+import { renderBoard } from "./ui.js?v=20260522-safari-drag-smooth";
 
 const state = {
   columns: [],
