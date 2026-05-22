@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260522-modal-topbar";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260522-modal-wrap";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

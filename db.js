@@ -1,4 +1,4 @@
-import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js?v=20260522-modal-topbar";
+import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js?v=20260522-modal-wrap";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 1;

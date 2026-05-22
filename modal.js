@@ -1,5 +1,5 @@
-import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260522-modal-topbar";
-import { renderChecklists } from "./checklist.js?v=20260522-modal-topbar";
+import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260522-modal-wrap";
+import { renderChecklists } from "./checklist.js?v=20260522-modal-wrap";
 
 export function openTaskModal({ task, onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
