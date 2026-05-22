@@ -4,7 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>JavoPM</title>
-    <link rel="stylesheet" href="./styles.css?v=20260522-clean-grip-hover" />
+    <script>
+      (() => {
+        try {
+          const theme = localStorage.getItem("javopm-theme");
+          if (theme === "dark" || theme === "light") {
+            document.documentElement.dataset.theme = theme;
+          }
+        } catch (error) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="./styles.css?v=20260522-theme-toggle" />
   </head>
   <body>
     <div class="app-shell">
@@ -13,9 +25,21 @@
           <p class="eyebrow">Local-first Kanban</p>
           <h1>JavoPM</h1>
         </div>
-        <div class="header-status" aria-live="polite">
-          <span class="status-dot" aria-hidden="true"></span>
-          Guardado local
+        <div class="header-actions">
+          <button
+            class="theme-toggle"
+            type="button"
+            data-theme-toggle
+            aria-label="Cambiar a tema oscuro"
+            aria-pressed="false"
+          >
+            <span class="theme-dot" aria-hidden="true"></span>
+            <span data-theme-label>Tema claro</span>
+          </button>
+          <div class="header-status" aria-live="polite">
+            <span class="status-dot" aria-hidden="true"></span>
+            Guardado local
+          </div>
         </div>
       </header>
 
@@ -26,6 +50,6 @@
 
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260522-safari-drag-smooth"></script>
+    <script type="module" src="./app.js?v=20260522-theme-toggle"></script>
   </body>
 </html>

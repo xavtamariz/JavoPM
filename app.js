@@ -18,15 +18,58 @@ const state = {
 };
 
 const boardElement = document.querySelector("#board");
+const themeToggle = document.querySelector("[data-theme-toggle]");
+const themeLabel = document.querySelector("[data-theme-label]");
+const THEME_STORAGE_KEY = "javopm-theme";
 
 async function startApp() {
   try {
+    initThemeToggle();
     await initDB();
     await resetSeedDataIfNeeded();
     await loadState();
     render();
   } catch (error) {
     renderBootError(error);
+  }
+}
+
+function initThemeToggle() {
+  const currentTheme = getCurrentTheme();
+  applyTheme(currentTheme, { persist: false });
+  themeToggle?.addEventListener("click", () => {
+    applyTheme(getCurrentTheme() === "dark" ? "light" : "dark");
+  });
+}
+
+function getCurrentTheme() {
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+}
+
+function applyTheme(theme, options = {}) {
+  const nextTheme = theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = nextTheme;
+
+  if (themeLabel) {
+    themeLabel.textContent = nextTheme === "dark" ? "Tema oscuro" : "Tema claro";
+  }
+
+  if (themeToggle) {
+    themeToggle.setAttribute("aria-pressed", String(nextTheme === "dark"));
+    themeToggle.setAttribute(
+      "aria-label",
+      `Cambiar a tema ${nextTheme === "dark" ? "claro" : "oscuro"}`
+    );
+  }
+
+  if (options.persist === false) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+  } catch (error) {
+    // The theme still changes for the current session if storage is unavailable.
   }
 }
 

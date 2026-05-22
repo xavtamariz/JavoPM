@@ -16,12 +16,73 @@
   --bug: #b9473a;
   --task: #1f7a6f;
   --event: #8a6a1f;
+  --event-soft: #f5ecd1;
+  --page-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(247, 248, 250, 0) 280px);
+  --control-bg: rgba(255, 255, 255, 0.76);
+  --column-bg: rgba(255, 255, 255, 0.7);
+  --column-drag-bg: rgba(227, 243, 240, 0.62);
+  --add-bg: rgba(255, 255, 255, 0.62);
+  --overlay-bg: rgba(20, 24, 30, 0.52);
+  --modal-border: rgba(255, 255, 255, 0.72);
+  --focus-ring: rgba(31, 122, 111, 0.12);
+  --accent-inset: rgba(31, 122, 111, 0.18);
+  --selected-inset: rgba(31, 122, 111, 0.22);
+  --task-shadow: 0 10px 24px -22px rgba(32, 36, 42, 0.36);
+  --ghost-shadow: 0 28px 60px -32px rgba(32, 36, 42, 0.48);
+  --modal-shadow: 0 35px 90px -44px rgba(5, 10, 18, 0.7);
+  --danger-border: #edcbc6;
+  --danger-hover: #f2d6d1;
+  --checklist-bg: #fbfcfd;
+  --points-bg: var(--ink);
+  --points-fg: #ffffff;
+  --theme-dot: #20242a;
   --shadow: 0 20px 45px -28px rgba(32, 36, 42, 0.28);
   --radius: 8px;
   --column-width: 365px;
   --field-control-height: 38px;
   --font: "Aptos", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #050607;
+  --surface: #111418;
+  --surface-2: #1a2026;
+  --surface-3: #252c34;
+  --ink: #f4f6f8;
+  --ink-soft: #c4ccd5;
+  --muted: #8d98a5;
+  --line: #2b343d;
+  --line-strong: #465360;
+  --accent: #5fc0ae;
+  --accent-soft: #15342e;
+  --danger: #ff8a7b;
+  --danger-soft: #351b18;
+  --bug: #ff8a7b;
+  --task: #7ed8c8;
+  --event: #e6c76c;
+  --event-soft: #392f18;
+  --page-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(5, 6, 7, 0) 280px);
+  --control-bg: rgba(17, 20, 24, 0.78);
+  --column-bg: rgba(14, 17, 21, 0.86);
+  --column-drag-bg: rgba(21, 52, 46, 0.64);
+  --add-bg: rgba(17, 20, 24, 0.68);
+  --overlay-bg: rgba(0, 0, 0, 0.74);
+  --modal-border: rgba(255, 255, 255, 0.12);
+  --focus-ring: rgba(95, 192, 174, 0.22);
+  --accent-inset: rgba(95, 192, 174, 0.2);
+  --selected-inset: rgba(95, 192, 174, 0.28);
+  --task-shadow: 0 16px 34px -28px rgba(0, 0, 0, 0.92);
+  --ghost-shadow: 0 34px 70px -34px rgba(0, 0, 0, 0.9);
+  --modal-shadow: 0 35px 90px -44px rgba(0, 0, 0, 0.92);
+  --danger-border: rgba(255, 138, 123, 0.42);
+  --danger-hover: #4a241f;
+  --checklist-bg: #0d1014;
+  --points-bg: #f4f6f8;
+  --points-fg: #101318;
+  --theme-dot: #ffffff;
+  --shadow: 0 22px 50px -30px rgba(0, 0, 0, 0.92);
 }
 
 * {
@@ -36,9 +97,7 @@ html {
 body {
   margin: 0;
   min-height: 100dvh;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(247, 248, 250, 0) 280px),
-    var(--bg);
+  background: var(--page-gradient), var(--bg);
   color: var(--ink);
   font-family: var(--font);
   letter-spacing: 0;
@@ -69,6 +128,12 @@ button {
   margin: 0 0 20px;
 }
 
+.header-actions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   color: var(--accent);
@@ -85,7 +150,8 @@ h1 {
   line-height: 1;
 }
 
-.header-status {
+.header-status,
+.theme-toggle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -93,10 +159,36 @@ h1 {
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.76);
+  background: var(--control-bg);
   color: var(--ink-soft);
   font-size: 13px;
   white-space: nowrap;
+}
+
+.theme-toggle {
+  cursor: pointer;
+  transition:
+    border-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    background 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  transform: translateY(-1px);
+}
+
+.theme-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.theme-toggle:active {
+  transform: translateY(0) scale(0.99);
 }
 
 .status-dot {
@@ -104,6 +196,14 @@ h1 {
   height: 8px;
   border-radius: 999px;
   background: var(--accent);
+}
+
+.theme-dot {
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--theme-dot);
 }
 
 .board-wrap {
@@ -131,7 +231,7 @@ h1 {
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--column-bg);
   transition:
     border-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
     background 180ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -140,8 +240,8 @@ h1 {
 
 .column.is-drag-over {
   border-color: var(--accent);
-  background: rgba(227, 243, 240, 0.62);
-  box-shadow: inset 0 0 0 1px rgba(31, 122, 111, 0.18);
+  background: var(--column-drag-bg);
+  box-shadow: inset 0 0 0 1px var(--accent-inset);
 }
 
 .column.is-move-target {
@@ -191,7 +291,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: 0 10px 24px -22px rgba(32, 36, 42, 0.36);
+  box-shadow: var(--task-shadow);
   color: var(--ink);
   cursor: pointer;
   text-align: left;
@@ -225,7 +325,7 @@ h1 {
 
 .task-card.is-selected-for-move {
   border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px rgba(31, 122, 111, 0.22), var(--shadow);
+  box-shadow: inset 0 0 0 1px var(--selected-inset), var(--shadow);
 }
 
 .is-task-dragging .task-card:not(.is-dragging) {
@@ -247,7 +347,7 @@ h1 {
   left: 0;
   z-index: 20;
   pointer-events: none;
-  box-shadow: 0 28px 60px -32px rgba(32, 36, 42, 0.48);
+  box-shadow: var(--ghost-shadow);
   contain: layout style paint;
   transition: none;
   -webkit-user-select: none;
@@ -376,7 +476,7 @@ h1 {
 }
 
 .type-badge[data-type="Evento"] {
-  background: #f5ecd1;
+  background: var(--event-soft);
   color: var(--event);
 }
 
@@ -401,8 +501,8 @@ h1 {
   justify-content: center;
   min-width: 48px;
   padding: 0 9px;
-  background: var(--ink);
-  color: white;
+  background: var(--points-bg);
+  color: var(--points-fg);
   font-family: var(--mono);
 }
 
@@ -431,7 +531,7 @@ h1 {
   margin-top: auto;
   border: 1px dashed var(--line-strong);
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--add-bg);
   color: var(--ink-soft);
   cursor: pointer;
   font-size: 14px;
@@ -491,7 +591,7 @@ h1 {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(20, 24, 30, 0.52);
+  background: var(--overlay-bg);
 }
 
 .modal {
@@ -499,10 +599,10 @@ h1 {
   max-height: min(900px, calc(100dvh - 48px));
   overflow-x: hidden;
   overflow-y: auto;
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--modal-border);
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: 0 35px 90px -44px rgba(5, 10, 18, 0.7);
+  box-shadow: var(--modal-shadow);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -652,7 +752,7 @@ h1 {
 .checklist-title-input:focus,
 .checklist-item-text:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(31, 122, 111, 0.12);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .close-button,
@@ -684,7 +784,7 @@ h1 {
 
 .delete-task-button {
   padding: 0 12px;
-  border: 1px solid #edcbc6;
+  border: 1px solid var(--danger-border);
   background: var(--danger-soft);
   color: var(--danger);
   white-space: nowrap;
@@ -697,7 +797,7 @@ h1 {
 }
 
 .delete-task-button:hover {
-  background: #f2d6d1;
+  background: var(--danger-hover);
 }
 
 .close-button:focus-visible,
@@ -705,7 +805,7 @@ h1 {
 .toolbar-button:focus-visible,
 .small-button:focus-visible,
 .danger-button:focus-visible {
-  outline: 3px solid rgba(31, 122, 111, 0.18);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -776,7 +876,7 @@ h1 {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fbfcfd;
+  background: var(--checklist-bg);
 }
 
 .checklist-header {
@@ -797,13 +897,13 @@ h1 {
 
 .danger-button {
   width: 34px;
-  border: 1px solid #edcbc6;
+  border: 1px solid var(--danger-border);
   background: var(--danger-soft);
   color: var(--danger);
 }
 
 .danger-button:hover {
-  background: #f2d6d1;
+  background: var(--danger-hover);
 }
 
 .checklist-items {
@@ -832,7 +932,7 @@ h1 {
 .validation-message {
   display: none;
   padding: 10px 12px;
-  border: 1px solid #edcbc6;
+  border: 1px solid var(--danger-border);
   border-radius: var(--radius);
   background: var(--danger-soft);
   color: var(--danger);
@@ -863,6 +963,10 @@ h1 {
   .app-header {
     align-items: start;
     flex-direction: column;
+  }
+
+  .header-actions {
+    justify-items: start;
   }
 
   .board {
