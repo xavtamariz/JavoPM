@@ -187,7 +187,7 @@ h1 {
   position: relative;
   min-height: 132px;
   width: 100%;
-  padding: 14px 14px 58px;
+  padding: 14px 14px 66px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -297,7 +297,7 @@ h1 {
 .task-title {
   margin: 0 0 10px;
   overflow-wrap: anywhere;
-  padding-right: 116px;
+  padding-right: 44px;
   color: var(--ink);
   font-size: 15px;
   font-weight: 760;
@@ -364,10 +364,7 @@ h1 {
 }
 
 .date-badge {
-  position: absolute;
-  left: 14px;
-  bottom: 12px;
-  max-width: calc(100% - 178px);
+  max-width: min(154px, 100%);
 }
 
 .points-badge {

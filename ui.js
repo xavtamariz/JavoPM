@@ -154,8 +154,8 @@ function createTaskCard(task, onOpenTask, onMoveTask) {
   responsible.className = "responsible";
   responsible.textContent = task.responsible;
 
-  meta.append(type, folio);
-  card.append(title, project, meta, dateRange, points, moveHandle, responsible);
+  meta.append(type, folio, dateRange);
+  card.append(title, project, meta, points, moveHandle, responsible);
   return card;
 }
 
