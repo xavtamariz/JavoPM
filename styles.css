@@ -19,6 +19,7 @@
   --shadow: 0 20px 45px -28px rgba(32, 36, 42, 0.28);
   --radius: 8px;
   --column-width: 365px;
+  --field-control-height: 38px;
   --font: "Aptos", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
 }
@@ -552,8 +553,43 @@ h1 {
 .field select,
 .checklist-title-input,
 .checklist-item-text {
-  min-height: 38px;
+  height: var(--field-control-height);
+  min-height: var(--field-control-height);
   padding: 0 10px;
+  line-height: 1.2;
+}
+
+.field input[type="date"],
+.field input[type="number"],
+.field select {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.field input[type="date"] {
+  display: block;
+  max-width: 100%;
+  text-align: left;
+}
+
+.field input[type="date"]::-webkit-date-and-time-value {
+  margin: 0;
+  min-height: calc(var(--field-control-height) - 2px);
+  text-align: left;
+}
+
+.field select {
+  padding-right: 32px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+    linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size:
+    6px 6px,
+    6px 6px;
 }
 
 .field textarea {

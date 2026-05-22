@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260522-modal-scroll";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260522-uniform-controls";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

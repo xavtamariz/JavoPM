@@ -1,4 +1,4 @@
-import { formatDateRange, sortByOrder } from "./models.js?v=20260522-modal-scroll";
+import { formatDateRange, sortByOrder } from "./models.js?v=20260522-uniform-controls";
 
 let lastDragEndedAt = 0;
 let activeDrag = null;
