@@ -1004,13 +1004,35 @@ h1 {
 
 @media (max-width: 520px) {
   .app-header {
-    display: grid;
-    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .header-actions {
-    grid-row: 1;
-    justify-items: start;
-    margin-bottom: 12px;
+    gap: 6px;
+    justify-items: end;
+  }
+
+  .header-status,
+  .theme-toggle {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-header {
+    gap: 8px;
+  }
+
+  .eyebrow {
+    font-size: 10.5px;
+  }
+
+  .header-status,
+  .theme-toggle {
+    min-height: 30px;
+    padding: 0 8px;
+    font-size: 11.5px;
   }
 }
