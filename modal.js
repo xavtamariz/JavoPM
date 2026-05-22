@@ -1,5 +1,5 @@
-import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260522-modal-close-space";
-import { renderChecklists } from "./checklist.js?v=20260522-modal-close-space";
+import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260522-modal-topbar";
+import { renderChecklists } from "./checklist.js?v=20260522-modal-topbar";
 
 export function openTaskModal({ task, onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
@@ -28,11 +28,26 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
 
   function render() {
     form.innerHTML = "";
-    form.append(createHeader(), createBody(), createFooter());
+    form.append(createTopBar(), createHeader(), createBody(), createFooter());
     requestAnimationFrame(() => {
       const firstInput = form.querySelector("[data-autofocus]");
       firstInput?.focus({ preventScroll: true });
     });
+  }
+
+  function createTopBar() {
+    const topbar = document.createElement("div");
+    topbar.className = "modal-topbar";
+
+    const closeButton = document.createElement("button");
+    closeButton.className = "close-button";
+    closeButton.type = "button";
+    closeButton.textContent = "×";
+    closeButton.setAttribute("aria-label", "Cerrar modal");
+    closeButton.addEventListener("click", close);
+
+    topbar.append(closeButton);
+    return topbar;
   }
 
   function createHeader() {
@@ -58,14 +73,7 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
       })
     );
 
-    const closeButton = document.createElement("button");
-    closeButton.className = "close-button";
-    closeButton.type = "button";
-    closeButton.textContent = "×";
-    closeButton.setAttribute("aria-label", "Cerrar modal");
-    closeButton.addEventListener("click", close);
-
-    header.append(left, right, closeButton);
+    header.append(left, right);
     return header;
   }
 

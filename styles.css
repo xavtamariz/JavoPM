@@ -492,13 +492,20 @@ h1 {
   flex-direction: column;
 }
 
+.modal-topbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 20px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
 .modal-header {
-  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 0.72fr);
   gap: 18px;
   align-items: start;
-  padding: 20px 76px 20px 20px;
+  padding: 20px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -628,9 +635,6 @@ h1 {
 }
 
 .close-button {
-  position: absolute;
-  top: 20px;
-  right: 20px;
   width: 38px;
   border: 1px solid var(--line);
   background: var(--surface);
