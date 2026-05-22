@@ -57,7 +57,7 @@ button {
 
 .app-shell {
   min-height: 100dvh;
-  padding: 24px;
+  padding: 24px 24px 16px;
 }
 
 .app-header {
@@ -110,7 +110,7 @@ h1 {
   width: 100%;
   margin: 0;
   overflow-x: auto;
-  padding: 0 0 18px;
+  padding: 0;
 }
 
 .board {
@@ -120,14 +120,14 @@ h1 {
   grid-template-columns: repeat(6, var(--column-width));
   align-items: start;
   gap: 14px;
-  min-height: calc(100dvh - 146px);
+  min-height: calc(100dvh - 126px);
 }
 
 .column {
   display: flex;
   width: var(--column-width);
   min-width: var(--column-width);
-  min-height: calc(100dvh - 168px);
+  min-height: calc(100dvh - 126px);
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius);
