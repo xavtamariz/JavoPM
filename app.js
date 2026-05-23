@@ -32,13 +32,11 @@ const state = {
 };
 
 const boardElement = document.querySelector("#board");
-const headerActions = document.querySelector(".header-actions");
-const projectMenu = document.querySelector("[data-project-menu]");
 const projectMenuToggle = document.querySelector("[data-project-menu-toggle]");
 const themeToggle = document.querySelector("[data-theme-toggle]");
 const themeLabel = document.querySelector("[data-theme-label]");
 const THEME_STORAGE_KEY = "javopm-theme";
-let projectPopover;
+let projectModalKeydownHandler;
 
 async function startApp() {
   try {
@@ -114,46 +112,103 @@ function render() {
 }
 
 function initProjectMenu() {
-  if (!headerActions || !projectMenu || !projectMenuToggle || projectPopover) {
-    renderProjectMenu();
+  if (!projectMenuToggle) {
     return;
   }
 
-  projectPopover = document.createElement("div");
-  projectPopover.className = "project-popover";
-  projectPopover.hidden = true;
-  headerActions.append(projectPopover);
-
-  projectMenuToggle.addEventListener("click", (event) => {
-    event.stopPropagation();
-    setProjectMenuOpen(projectPopover.hidden);
-  });
-
-  document.addEventListener("click", (event) => {
-    if (!projectMenu.contains(event.target) && !projectPopover.contains(event.target)) {
-      setProjectMenuOpen(false);
-    }
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      setProjectMenuOpen(false);
-    }
-  });
-
-  renderProjectMenu();
+  projectMenuToggle.addEventListener("click", openProjectModal);
 }
 
-function renderProjectMenu(message = "") {
-  if (!projectPopover) {
+function openProjectModal() {
+  const root = document.querySelector("#modal-root");
+  if (!root) {
     return;
   }
 
-  projectPopover.innerHTML = "";
+  closeProjectModal({ clearRoot: false });
+  root.innerHTML = "";
 
-  const title = document.createElement("p");
-  title.className = "project-popover-title";
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) {
+      closeProjectModal();
+    }
+  });
+
+  const modal = document.createElement("section");
+  modal.className = "modal project-modal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "project-modal-title");
+
+  const shell = document.createElement("div");
+  shell.className = "modal-form";
+  shell.append(createProjectModalTopbar(), createProjectModalBody());
+
+  modal.append(shell);
+  overlay.append(modal);
+  root.append(overlay);
+
+  projectMenuToggle.setAttribute("aria-expanded", "true");
+  projectModalKeydownHandler = (event) => {
+    if (event.key === "Escape") {
+      closeProjectModal();
+    }
+  };
+  document.addEventListener("keydown", projectModalKeydownHandler);
+
+  requestAnimationFrame(() => {
+    overlay.querySelector("[data-project-create-input]")?.focus({ preventScroll: true });
+  });
+}
+
+function closeProjectModal(options = {}) {
+  const { clearRoot = true } = options;
+
+  if (projectModalKeydownHandler) {
+    document.removeEventListener("keydown", projectModalKeydownHandler);
+    projectModalKeydownHandler = null;
+  }
+
+  projectMenuToggle?.setAttribute("aria-expanded", "false");
+
+  if (clearRoot) {
+    const root = document.querySelector("#modal-root");
+    if (root) {
+      root.innerHTML = "";
+    }
+  }
+}
+
+function createProjectModalTopbar() {
+  const topbar = document.createElement("div");
+  topbar.className = "modal-topbar";
+
+  const title = document.createElement("h2");
+  title.id = "project-modal-title";
+  title.className = "modal-title";
   title.textContent = "Proyectos";
+
+  const closeButton = document.createElement("button");
+  closeButton.className = "close-button";
+  closeButton.type = "button";
+  closeButton.textContent = "×";
+  closeButton.setAttribute("aria-label", "Cerrar modal de proyectos");
+  closeButton.addEventListener("click", closeProjectModal);
+
+  topbar.append(title, closeButton);
+  return topbar;
+}
+
+function createProjectModalBody(message = "") {
+  const body = document.createElement("div");
+  body.className = "project-modal-body";
+  body.dataset.projectModalBody = "true";
+
+  const listTitle = document.createElement("p");
+  listTitle.className = "project-list-title";
+  listTitle.textContent = "Proyectos existentes";
 
   const list = document.createElement("ul");
   list.className = "project-list";
@@ -189,35 +244,33 @@ function renderProjectMenu(message = "") {
   validation.textContent = message;
 
   form.append(input, createButton);
-  projectPopover.append(title, list, form, validation);
+  body.append(listTitle, list, form, validation);
+  return body;
 }
 
-function setProjectMenuOpen(isOpen) {
-  if (!projectPopover || !projectMenuToggle) {
+function renderProjectModalBody(message = "") {
+  const currentBody = document.querySelector("[data-project-modal-body]");
+  if (!currentBody) {
     return;
   }
 
-  projectPopover.hidden = !isOpen;
-  projectMenuToggle.setAttribute("aria-expanded", String(isOpen));
-
-  if (isOpen) {
-    renderProjectMenu();
-    requestAnimationFrame(() => {
-      projectPopover.querySelector("[data-project-create-input]")?.focus({ preventScroll: true });
-    });
-  }
+  const nextBody = createProjectModalBody(message);
+  currentBody.replaceWith(nextBody);
+  requestAnimationFrame(() => {
+    nextBody.querySelector("[data-project-create-input]")?.focus({ preventScroll: true });
+  });
 }
 
 async function handleCreateProject(value) {
   const name = normalizeProjectName(value);
 
   if (!name) {
-    renderProjectMenu("Escribe un nombre de proyecto.");
+    renderProjectModalBody("Escribe un nombre de proyecto.");
     return null;
   }
 
   if (projectNameExists(name)) {
-    renderProjectMenu("Ese proyecto ya existe.");
+    renderProjectModalBody("Ese proyecto ya existe.");
     return null;
   }
 
@@ -229,7 +282,7 @@ async function handleCreateProject(value) {
   );
 
   state.projects = sortByOrder([...state.projects, savedProject]);
-  renderProjectMenu();
+  renderProjectModalBody();
   return savedProject;
 }
 

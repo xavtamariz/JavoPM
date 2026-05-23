@@ -269,26 +269,17 @@ h1 {
   background: var(--theme-dot);
 }
 
-.project-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 40;
+.modal.project-modal {
+  width: min(520px, 100%);
+}
+
+.project-modal-body {
   display: grid;
-  width: min(280px, calc(100vw - 32px));
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  gap: 12px;
+  padding: 20px;
 }
 
-.project-popover[hidden] {
-  display: none;
-}
-
-.project-popover-title {
+.project-list-title {
   margin: 0;
   color: var(--ink);
   font-size: 13px;
