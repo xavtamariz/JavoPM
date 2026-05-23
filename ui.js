@@ -37,8 +37,11 @@ export function renderBoard({
   boardElement.innerHTML = "";
   boardElement.style.gridTemplateColumns = `repeat(${columns.length}, var(--column-width))`;
 
+  const workflowTaskTotal = tasks.filter((task) => task.columnId !== METRICS_COLUMN_ID).length;
+
   columns.forEach((column) => {
     const cards = getColumnCards(column.id, tasks, chartCards);
+    const taskCount = tasks.filter((task) => task.columnId === column.id).length;
     boardElement.append(
       createColumn({
         cards,
@@ -48,9 +51,11 @@ export function renderBoard({
         onMoveCard,
         onOpenTask,
         onUpdateChartCard,
+        taskCount,
         taskEvents,
         tasks,
-        teamMembers
+        teamMembers,
+        workflowTaskTotal
       })
     );
   });
@@ -82,7 +87,9 @@ function createColumn({
   onAddTask,
   onOpenTask,
   onMoveCard,
-  onUpdateChartCard
+  onUpdateChartCard,
+  taskCount,
+  workflowTaskTotal
 }) {
   const section = document.createElement("section");
   section.className = `column${column.id === METRICS_COLUMN_ID ? " metrics-column" : ""}`;
@@ -95,12 +102,25 @@ function createColumn({
   title.className = "column-title";
   title.textContent = column.title;
 
+  const indicators = document.createElement("div");
+  indicators.className = "column-indicators";
+
+  if (column.id !== METRICS_COLUMN_ID) {
+    const percent = document.createElement("span");
+    percent.className = "column-percent";
+    const percentValue = workflowTaskTotal > 0 ? Math.round((taskCount / workflowTaskTotal) * 100) : 0;
+    percent.textContent = `${percentValue}%`;
+    percent.setAttribute("aria-label", `${percentValue}% de las tareas del tablero`);
+    indicators.append(percent);
+  }
+
   const count = document.createElement("span");
   count.className = "column-count";
-  count.textContent = String(cards.length);
-  count.setAttribute("aria-label", `${cards.length} tarjetas`);
+  count.textContent = String(taskCount);
+  count.setAttribute("aria-label", `${taskCount} tareas`);
 
-  header.append(title, count);
+  indicators.append(count);
+  header.append(title, indicators);
 
   const taskList = document.createElement("div");
   taskList.className = "task-list";

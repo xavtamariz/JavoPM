@@ -426,20 +426,43 @@ h1 {
 }
 
 .column-title {
+  min-width: 0;
   margin: 0;
   font-size: 15px;
   font-weight: 780;
 }
 
-.column-count {
+.column-indicators {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.column-count,
+.column-percent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 28px;
+  min-height: 24px;
   padding: 3px 8px;
   border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--ink-soft);
   font-family: var(--mono);
   font-size: 12px;
+  font-weight: 760;
   text-align: center;
+}
+
+.column-count {
+  background: var(--surface-2);
+  color: var(--ink-soft);
+}
+
+.column-percent {
+  min-width: 40px;
+  background: var(--accent-soft);
+  color: var(--task);
 }
 
 .task-list {

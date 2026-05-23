@@ -36,7 +36,7 @@ import {
   updateFolioProjectName
 } from "./models.js?v=20260523-metrics";
 import { openTaskModal } from "./modal.js?v=20260523-metrics";
-import { renderBoard } from "./ui.js?v=20260523-metrics";
+import { renderBoard } from "./ui.js?v=20260523-percent";
 
 const state = {
   chartCards: [],
