@@ -115,6 +115,7 @@ button {
 }
 
 .app-shell {
+  position: relative;
   min-height: 100dvh;
   padding: 24px 24px 16px;
 }
@@ -129,6 +130,7 @@ button {
 }
 
 .brand-block {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -148,12 +150,22 @@ button {
 }
 
 .eyebrow {
+  position: fixed;
+  top: 1px;
+  left: 50%;
+  z-index: 50;
+  max-width: calc(100vw - 16px);
+  transform: translateX(-50%);
   margin: 0;
   color: var(--accent);
-  font-size: 12px;
+  font-size: 8px;
   font-weight: 760;
-  letter-spacing: 0.08em;
+  line-height: 1;
+  letter-spacing: 0.07em;
+  pointer-events: none;
+  text-align: center;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 h1 {
@@ -1203,10 +1215,6 @@ h1 {
 @media (max-width: 360px) {
   .app-header {
     gap: 8px;
-  }
-
-  .eyebrow {
-    font-size: 10.5px;
   }
 
   .header-status,
