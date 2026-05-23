@@ -2,21 +2,28 @@ import {
   createProject,
   createTask,
   createTeamMember,
+  createTaskEvent,
   deleteTask,
+  getChartCards,
   getColumns,
   getProjects,
   getTeamMembers,
+  getTaskEvents,
   getTasks,
   initDB,
   resetSeedDataIfNeeded,
+  saveChartCards,
   saveProjects,
   saveTeamMembers,
   saveTaskOrder,
+  updateChartCard,
   updateTask
-} from "./db.js?v=20260522-team";
+} from "./db.js?v=20260523-metrics";
 import {
+  CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
   DEFAULT_RESPONSIBLE_NAME,
+  TASK_CARD_TYPE,
   createProjectModel,
   createTeamMemberModel,
   createTaskModel,
@@ -27,14 +34,16 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260522-team";
-import { openTaskModal } from "./modal.js?v=20260522-team";
-import { renderBoard } from "./ui.js?v=20260522-team";
+} from "./models.js?v=20260523-metrics";
+import { openTaskModal } from "./modal.js?v=20260523-metrics";
+import { renderBoard } from "./ui.js?v=20260523-metrics";
 
 const state = {
+  chartCards: [],
   columns: [],
   projects: [],
   teamMembers: [],
+  taskEvents: [],
   tasks: []
 };
 
@@ -101,11 +110,13 @@ function applyTheme(theme, options = {}) {
 }
 
 async function loadState() {
-  const [columns, tasks, projects, teamMembers] = await Promise.all([
+  const [columns, tasks, projects, teamMembers, chartCards, taskEvents] = await Promise.all([
     getColumns(),
     getTasks(),
     getProjects(),
-    getTeamMembers()
+    getTeamMembers(),
+    getChartCards(),
+    getTaskEvents()
   ]);
   const syncedProjects = await syncProjectsWithTasks(projects, tasks);
   const syncedTeamMembers = await syncTeamMembersWithTasks(teamMembers, tasks);
@@ -114,17 +125,44 @@ async function loadState() {
   state.columns = columns;
   state.projects = syncedProjects;
   state.teamMembers = syncedTeamMembers;
+  state.chartCards = sortByOrder(chartCards);
+  state.taskEvents = taskEvents;
+  state.tasks = syncedTasks;
+}
+
+async function reloadBoardState() {
+  const [columns, tasks, projects, teamMembers, chartCards, taskEvents] = await Promise.all([
+    getColumns(),
+    getTasks(),
+    getProjects(),
+    getTeamMembers(),
+    getChartCards(),
+    getTaskEvents()
+  ]);
+  const syncedProjects = await syncProjectsWithTasks(projects, tasks);
+  const syncedTeamMembers = await syncTeamMembersWithTasks(teamMembers, tasks);
+  const syncedTasks = await syncTaskFoliosWithProjects(tasks);
+
+  state.columns = columns;
+  state.projects = syncedProjects;
+  state.teamMembers = syncedTeamMembers;
+  state.chartCards = sortByOrder(chartCards);
+  state.taskEvents = taskEvents;
   state.tasks = syncedTasks;
 }
 
 function render() {
   renderBoard({
     boardElement,
+    chartCards: state.chartCards,
     columns: state.columns,
+    taskEvents: state.taskEvents,
+    teamMembers: state.teamMembers,
     tasks: state.tasks,
     onAddTask: handleAddTask,
     onOpenTask: handleOpenTask,
-    onMoveTask: handleMoveTask
+    onMoveCard: handleMoveCard,
+    onUpdateChartCard: handleUpdateChartCard
   });
 }
 
@@ -513,19 +551,32 @@ function getDefaultProjectName() {
 }
 
 async function handleAddTask(columnId) {
-  const columnTasks = state.tasks.filter((task) => task.columnId === columnId);
   const project = getDefaultProjectName();
   const task = createTaskModel({
     columnId,
-    order: columnTasks.length,
+    order: getColumnCardCount(columnId),
     project,
     folio: generateFolio(state.tasks, project)
   });
 
   const savedTask = await createTask(task);
   state.tasks = sortByOrder([...state.tasks, savedTask]);
+  const taskEvent = await createTaskEvent({
+    taskId: savedTask.id,
+    columnId: savedTask.columnId,
+    eventType: "created",
+    createdAt: savedTask.createdAt
+  });
+  state.taskEvents = [...state.taskEvents, taskEvent];
   render();
   handleOpenTask(savedTask.id);
+}
+
+function getColumnCardCount(columnId) {
+  return (
+    state.tasks.filter((task) => task.columnId === columnId).length +
+    state.chartCards.filter((chartCard) => chartCard.columnId === columnId).length
+  );
 }
 
 function handleOpenTask(taskId) {
@@ -552,6 +603,27 @@ async function handleSaveTask(task) {
   render();
 }
 
+async function handleUpdateChartCard(chartCard) {
+  const savedChartCard = await updateChartCard(chartCard);
+  state.chartCards = sortByOrder(
+    state.chartCards.map((currentChartCard) =>
+      currentChartCard.id === savedChartCard.id ? savedChartCard : currentChartCard
+    )
+  );
+  render();
+}
+
+async function handleMoveCard(cardType, cardId, targetColumnId) {
+  if (cardType === TASK_CARD_TYPE) {
+    await handleMoveTask(cardId, targetColumnId);
+    return;
+  }
+
+  if (cardType === CHART_CARD_TYPE) {
+    await handleMoveChartCard(cardId, targetColumnId);
+  }
+}
+
 async function handleMoveTask(taskId, targetColumnId) {
   const taskToMove = state.tasks.find((task) => task.id === taskId);
 
@@ -563,19 +635,60 @@ async function handleMoveTask(taskId, targetColumnId) {
   const movedTask = {
     ...taskToMove,
     columnId: targetColumnId,
+    order: getColumnCardCount(targetColumnId),
     updatedAt: now
   };
 
   const nextTasks = state.tasks.map((task) => (task.id === taskId ? movedTask : task));
-  const orderedTasks = normalizeOrdersByColumn(nextTasks);
+  const normalizedCards = normalizeOrdersByColumn(nextTasks, state.chartCards);
 
-  state.tasks = sortByOrder(orderedTasks);
+  state.tasks = sortByOrder(normalizedCards.tasks);
+  state.chartCards = sortByOrder(normalizedCards.chartCards);
   render();
 
   try {
-    await saveTaskOrder(orderedTasks);
+    await Promise.all([saveTaskOrder(normalizedCards.tasks), saveChartCards(normalizedCards.chartCards)]);
+    const taskEvent = await createTaskEvent({
+      taskId,
+      columnId: targetColumnId,
+      eventType: "moved"
+    });
+    state.taskEvents = [...state.taskEvents, taskEvent];
+    render();
   } catch (error) {
-    await loadState();
+    await reloadBoardState();
+    render();
+    renderBootError(error);
+  }
+}
+
+async function handleMoveChartCard(chartCardId, targetColumnId) {
+  const chartCardToMove = state.chartCards.find((chartCard) => chartCard.id === chartCardId);
+
+  if (!chartCardToMove || chartCardToMove.columnId === targetColumnId) {
+    return;
+  }
+
+  const movedChartCard = {
+    ...chartCardToMove,
+    columnId: targetColumnId,
+    order: getColumnCardCount(targetColumnId),
+    updatedAt: new Date().toISOString()
+  };
+
+  const nextChartCards = state.chartCards.map((chartCard) =>
+    chartCard.id === chartCardId ? movedChartCard : chartCard
+  );
+  const normalizedCards = normalizeOrdersByColumn(state.tasks, nextChartCards);
+
+  state.tasks = sortByOrder(normalizedCards.tasks);
+  state.chartCards = sortByOrder(normalizedCards.chartCards);
+  render();
+
+  try {
+    await Promise.all([saveTaskOrder(normalizedCards.tasks), saveChartCards(normalizedCards.chartCards)]);
+  } catch (error) {
+    await reloadBoardState();
     render();
     renderBootError(error);
   }
@@ -583,16 +696,17 @@ async function handleMoveTask(taskId, targetColumnId) {
 
 async function handleDeleteTask(taskId) {
   const nextTasks = state.tasks.filter((task) => task.id !== taskId);
-  const orderedTasks = normalizeOrdersByColumn(nextTasks);
+  const normalizedCards = normalizeOrdersByColumn(nextTasks, state.chartCards);
 
-  state.tasks = sortByOrder(orderedTasks);
+  state.tasks = sortByOrder(normalizedCards.tasks);
+  state.chartCards = sortByOrder(normalizedCards.chartCards);
   render();
 
   try {
     await deleteTask(taskId);
-    await saveTaskOrder(orderedTasks);
+    await Promise.all([saveTaskOrder(normalizedCards.tasks), saveChartCards(normalizedCards.chartCards)]);
   } catch (error) {
-    await loadState();
+    await reloadBoardState();
     render();
     renderBootError(error);
   }
@@ -723,13 +837,41 @@ function teamMembersNeedSaving(currentTeamMembers, nextTeamMembers) {
   );
 }
 
-function normalizeOrdersByColumn(tasks) {
-  return state.columns.flatMap((column) =>
-    sortByOrder(tasks.filter((task) => task.columnId === column.id)).map((task, index) => ({
-      ...task,
-      order: index
-    }))
-  );
+function normalizeOrdersByColumn(tasks, chartCards) {
+  const nextTasks = [];
+  const nextChartCards = [];
+
+  state.columns.forEach((column) => {
+    const columnCards = [
+      ...tasks
+        .filter((task) => task.columnId === column.id)
+        .map((task) => ({ ...task, cardType: TASK_CARD_TYPE })),
+      ...chartCards
+        .filter((chartCard) => chartCard.columnId === column.id)
+        .map((chartCard) => ({ ...chartCard, cardType: CHART_CARD_TYPE }))
+    ];
+
+    sortByOrder(columnCards).forEach((card, index) => {
+      const { cardType, ...orderedCard } = card;
+      if (cardType === TASK_CARD_TYPE) {
+        nextTasks.push({
+          ...orderedCard,
+          order: index
+        });
+        return;
+      }
+
+      nextChartCards.push({
+        ...orderedCard,
+        order: index
+      });
+    });
+  });
+
+  return {
+    chartCards: nextChartCards,
+    tasks: nextTasks
+  };
 }
 
 function renderBootError(error) {

@@ -4,12 +4,29 @@ export const DEFAULT_COLUMNS = [
   { id: "in_progress", title: "En Progreso", order: 2 },
   { id: "developed", title: "Desarrollado", order: 3 },
   { id: "verification", title: "En Verificación", order: 4 },
-  { id: "completed", title: "Completado", order: 5 }
+  { id: "completed", title: "Completado", order: 5 },
+  { id: "metrics", title: "Metrics", order: 6, allowTaskCreation: false }
 ];
 
 export const ALLOWED_TYPES = ["Bug", "Tarea", "Evento"];
 export const DEFAULT_PROJECT_NAME = "Proyecto";
 export const DEFAULT_RESPONSIBLE_NAME = "Sin asignar";
+export const METRICS_COLUMN_ID = "metrics";
+export const TASK_CARD_TYPE = "task";
+export const CHART_CARD_TYPE = "chart";
+export const TASK_PROGRESS_CHART_TYPE = "taskProgressByColumn";
+export const DEFAULT_CHART_PERIOD = "1D";
+export const DEFAULT_CHART_TEAM = "all";
+export const CHART_PERIODS = [
+  { label: "1D", value: "1D", days: 1 },
+  { label: "1W", value: "1W", days: 7 },
+  { label: "2W", value: "2W", days: 14 },
+  { label: "1M", value: "1M", days: 30 },
+  { label: "3M", value: "3M", days: 90 },
+  { label: "6M", value: "6M", days: 180 },
+  { label: "1Y", value: "1Y", days: 365 },
+  { label: "All", value: "ALL", days: null }
+];
 
 export function createId(prefix) {
   const randomPart = crypto.randomUUID
@@ -58,6 +75,39 @@ export function createTeamMemberModel({ name, order = 0 }) {
     createdAt: now,
     updatedAt: now,
     order
+  };
+}
+
+export function createChartCardModel({
+  columnId = METRICS_COLUMN_ID,
+  order = 0,
+  title = "Tareas por columna",
+  chartType = TASK_PROGRESS_CHART_TYPE,
+  settings = {}
+} = {}) {
+  const now = new Date().toISOString();
+
+  return {
+    id: createId("chart"),
+    columnId,
+    title: sanitizeText(title) || "Tareas por columna",
+    chartType,
+    settings: normalizeChartSettings(settings),
+    createdAt: now,
+    updatedAt: now,
+    order
+  };
+}
+
+export function createTaskEventModel({ taskId, columnId, eventType = "created", createdAt }) {
+  const now = createdAt || new Date().toISOString();
+
+  return {
+    id: createId("task_event"),
+    taskId: sanitizeText(taskId),
+    columnId: sanitizeText(columnId),
+    eventType: sanitizeText(eventType) || "created",
+    createdAt: now
   };
 }
 
@@ -124,6 +174,17 @@ export function normalizeProject(project, projectIndex = 0) {
   };
 }
 
+export function normalizeColumn(column, columnIndex = 0) {
+  const defaultColumn = DEFAULT_COLUMNS.find((item) => item.id === column.id);
+
+  return {
+    id: column.id || defaultColumn?.id || createId("column"),
+    title: sanitizeText(column.title) || defaultColumn?.title || "Columna",
+    order: Number.isFinite(Number(column.order)) ? Number(column.order) : columnIndex,
+    allowTaskCreation: column.allowTaskCreation ?? defaultColumn?.allowTaskCreation ?? true
+  };
+}
+
 export function normalizeTeamMember(teamMember, teamMemberIndex = 0) {
   const now = new Date().toISOString();
 
@@ -133,6 +194,42 @@ export function normalizeTeamMember(teamMember, teamMemberIndex = 0) {
     createdAt: teamMember.createdAt || now,
     updatedAt: teamMember.updatedAt || now,
     order: Number.isFinite(Number(teamMember.order)) ? Number(teamMember.order) : teamMemberIndex
+  };
+}
+
+export function normalizeChartCard(chartCard, chartCardIndex = 0) {
+  const now = new Date().toISOString();
+
+  return {
+    id: chartCard.id || createId("chart"),
+    columnId: chartCard.columnId || METRICS_COLUMN_ID,
+    title: sanitizeText(chartCard.title) || "Tareas por columna",
+    chartType: chartCard.chartType || TASK_PROGRESS_CHART_TYPE,
+    settings: normalizeChartSettings(chartCard.settings),
+    createdAt: chartCard.createdAt || now,
+    updatedAt: chartCard.updatedAt || now,
+    order: Number.isFinite(Number(chartCard.order)) ? Number(chartCard.order) : chartCardIndex
+  };
+}
+
+export function normalizeTaskEvent(taskEvent) {
+  return {
+    id: taskEvent.id || createId("task_event"),
+    taskId: sanitizeText(taskEvent.taskId),
+    columnId: sanitizeText(taskEvent.columnId),
+    eventType: sanitizeText(taskEvent.eventType) || "created",
+    createdAt: taskEvent.createdAt || new Date().toISOString()
+  };
+}
+
+export function normalizeChartSettings(settings = {}) {
+  const periodValues = CHART_PERIODS.map((period) => period.value);
+  const period = periodValues.includes(settings.period) ? settings.period : DEFAULT_CHART_PERIOD;
+  const teamMember = normalizeTeamMemberName(settings.teamMember);
+
+  return {
+    period,
+    teamMember: teamMember || DEFAULT_CHART_TEAM
   };
 }
 

@@ -1,17 +1,26 @@
 import {
   DEFAULT_COLUMNS,
+  METRICS_COLUMN_ID,
+  TASK_PROGRESS_CHART_TYPE,
+  createChartCardModel,
+  createTaskEventModel,
+  normalizeChartCard,
+  normalizeColumn,
   normalizeProject,
   normalizeTeamMember,
+  normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260522-team";
+} from "./models.js?v=20260523-metrics";
 
 const DB_NAME = "JavoPM";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORES = {
+  chartCards: "chartCards",
   columns: "columns",
   projects: "projects",
   teamMembers: "teamMembers",
+  taskEvents: "taskEvents",
   tasks: "tasks",
   meta: "meta"
 };
@@ -44,6 +53,19 @@ export function initDB() {
           db.createObjectStore(STORES.teamMembers, { keyPath: "id" });
         }
 
+        if (!db.objectStoreNames.contains(STORES.chartCards)) {
+          const chartCardStore = db.createObjectStore(STORES.chartCards, { keyPath: "id" });
+          chartCardStore.createIndex("columnId", "columnId", { unique: false });
+          chartCardStore.createIndex("order", "order", { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains(STORES.taskEvents)) {
+          const taskEventStore = db.createObjectStore(STORES.taskEvents, { keyPath: "id" });
+          taskEventStore.createIndex("taskId", "taskId", { unique: false });
+          taskEventStore.createIndex("columnId", "columnId", { unique: false });
+          taskEventStore.createIndex("createdAt", "createdAt", { unique: false });
+        }
+
         if (!db.objectStoreNames.contains(STORES.meta)) {
           db.createObjectStore(STORES.meta, { keyPath: "key" });
         }
@@ -65,18 +87,22 @@ export async function resetSeedDataIfNeeded() {
   if (!seeded || existingColumns.length === 0) {
     await saveColumns(DEFAULT_COLUMNS);
     await setValue(db, STORES.meta, { key: "seeded", value: true });
+  } else {
+    await ensureDefaultColumns(existingColumns);
   }
+
+  await ensureDefaultChartCards();
 }
 
 export async function getColumns() {
   const db = await initDB();
   const columns = await getAllFromStore(db, STORES.columns);
-  return sortByOrder(columns);
+  return sortByOrder(columns.map(normalizeColumn));
 }
 
 export async function saveColumns(columns) {
   const db = await initDB();
-  await writeMany(db, STORES.columns, columns);
+  await writeMany(db, STORES.columns, columns.map(normalizeColumn));
 }
 
 export async function getProjects() {
@@ -123,6 +149,47 @@ export async function saveTeamMembers(teamMembers) {
   return sortByOrder(normalizedTeamMembers);
 }
 
+export async function getChartCards() {
+  const db = await initDB();
+  const chartCards = await getAllFromStore(db, STORES.chartCards);
+  return sortByOrder(chartCards.map(normalizeChartCard));
+}
+
+export async function createChartCard(chartCard) {
+  const db = await initDB();
+  const existingChartCards = await getChartCards();
+  const normalizedChartCard = normalizeChartCard(chartCard, existingChartCards.length);
+  await putValue(db, STORES.chartCards, normalizedChartCard);
+  return normalizedChartCard;
+}
+
+export async function updateChartCard(chartCard) {
+  const normalizedChartCard = normalizeChartCard(chartCard);
+  const db = await initDB();
+  await putValue(db, STORES.chartCards, normalizedChartCard);
+  return normalizedChartCard;
+}
+
+export async function saveChartCards(chartCards) {
+  const normalizedChartCards = chartCards.map(normalizeChartCard);
+  const db = await initDB();
+  await writeMany(db, STORES.chartCards, normalizedChartCards);
+  return sortByOrder(normalizedChartCards);
+}
+
+export async function getTaskEvents() {
+  const db = await initDB();
+  const taskEvents = await getAllFromStore(db, STORES.taskEvents);
+  return taskEvents.map(normalizeTaskEvent).filter((event) => event.taskId && event.columnId);
+}
+
+export async function createTaskEvent(taskEvent) {
+  const normalizedTaskEvent = normalizeTaskEvent(createTaskEventModel(taskEvent));
+  const db = await initDB();
+  await putValue(db, STORES.taskEvents, normalizedTaskEvent);
+  return normalizedTaskEvent;
+}
+
 export async function getTasks() {
   const db = await initDB();
   const tasks = await getAllFromStore(db, STORES.tasks);
@@ -159,6 +226,54 @@ export async function saveTaskOrder(tasks) {
   const db = await initDB();
   await writeMany(db, STORES.tasks, orderedTasks);
   return orderedTasks;
+}
+
+async function ensureDefaultColumns(existingColumns) {
+  const byId = new Map(existingColumns.map((column) => [column.id, column]));
+  const nextColumns = DEFAULT_COLUMNS.map((defaultColumn, index) => {
+    const existingColumn = byId.get(defaultColumn.id) || {};
+    return normalizeColumn(
+      {
+        ...existingColumn,
+        ...defaultColumn,
+        allowTaskCreation: defaultColumn.allowTaskCreation ?? existingColumn.allowTaskCreation
+      },
+      index
+    );
+  });
+  const hasMissingColumns = DEFAULT_COLUMNS.some((column) => !byId.has(column.id));
+  const hasColumnUpdates = nextColumns.some((column, index) => {
+    const currentColumn = existingColumns.find((item) => item.id === column.id);
+    return (
+      !currentColumn ||
+      currentColumn.title !== column.title ||
+      Number(currentColumn.order) !== column.order ||
+      currentColumn.allowTaskCreation !== column.allowTaskCreation ||
+      index !== column.order
+    );
+  });
+
+  if (hasMissingColumns || hasColumnUpdates) {
+    await saveColumns(nextColumns);
+  }
+}
+
+async function ensureDefaultChartCards() {
+  const chartCards = await getChartCards();
+  const hasTaskProgressChart = chartCards.some(
+    (chartCard) => chartCard.chartType === TASK_PROGRESS_CHART_TYPE
+  );
+
+  if (hasTaskProgressChart) {
+    return;
+  }
+
+  const metricsCards = chartCards.filter((chartCard) => chartCard.columnId === METRICS_COLUMN_ID);
+  await createChartCard(
+    createChartCardModel({
+      order: metricsCards.length
+    })
+  );
 }
 
 function getAllFromStore(db, storeName) {

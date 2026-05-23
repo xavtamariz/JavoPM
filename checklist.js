@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260522-team";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260523-metrics";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");
