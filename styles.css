@@ -121,11 +121,15 @@ button {
 
 .app-header {
   display: flex;
-  align-items: end;
+  align-items: start;
   justify-content: space-between;
   gap: 20px;
   width: 100%;
   margin: 0 0 20px;
+}
+
+.brand-block {
+  min-width: 0;
 }
 
 .header-actions {
@@ -144,7 +148,7 @@ button {
 }
 
 .eyebrow {
-  margin: 0 0 6px;
+  margin: 0;
   color: var(--accent);
   font-size: 12px;
   font-weight: 760;
@@ -157,6 +161,18 @@ h1 {
   font-size: clamp(28px, 4vw, 46px);
   font-weight: 760;
   line-height: 1;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .header-status,
