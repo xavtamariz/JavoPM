@@ -1,7 +1,13 @@
-import { ALLOWED_TYPES, createDefaultChecklist, normalizeTask } from "./models.js?v=20260522-short-description-grow";
+import {
+  ALLOWED_TYPES,
+  createDefaultChecklist,
+  normalizeProjectName,
+  normalizeTask,
+  updateFolioProjectName
+} from "./models.js?v=20260522-projects";
 import { renderChecklists } from "./checklist.js?v=20260522-short-description-grow";
 
-export function openTaskModal({ task, onSave, onDelete, onClose }) {
+export function openTaskModal({ task, projects = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
   root.innerHTML = "";
 
@@ -65,9 +71,9 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
     const left = document.createElement("div");
     left.className = "modal-left-row";
     left.append(
-      createField("Proyecto", "project", "text", workingTask.project),
+      createProjectField(),
       createTypeField(),
-      createField("Folio", "folio", "text", workingTask.folio)
+      createField("Folio", "folio", "text", workingTask.folio, { readonly: "true" })
     );
 
     const right = document.createElement("div");
@@ -199,6 +205,44 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
     });
 
     select.addEventListener("change", () => updateWorkingTask({ type: select.value }));
+    wrapper.append(label, select);
+    return wrapper;
+  }
+
+  function createProjectField() {
+    const wrapper = document.createElement("div");
+    wrapper.className = "field";
+
+    const label = document.createElement("label");
+    label.htmlFor = "task-project";
+    label.textContent = "Proyecto";
+
+    const select = document.createElement("select");
+    select.id = "task-project";
+
+    const projectNames = getProjectNames();
+
+    projectNames.forEach((projectName) => {
+      const option = document.createElement("option");
+      option.value = projectName;
+      option.textContent = projectName;
+      select.append(option);
+    });
+
+    select.value = workingTask.project;
+    select.addEventListener("change", () => {
+      const project = select.value;
+      const folio = updateFolioProjectName(workingTask.folio, project);
+      updateWorkingTask({
+        project,
+        folio
+      });
+      const folioInput = form.querySelector("#task-folio");
+      if (folioInput) {
+        folioInput.value = folio;
+      }
+    });
+
     wrapper.append(label, select);
     return wrapper;
   }
@@ -349,6 +393,17 @@ export function openTaskModal({ task, onSave, onDelete, onClose }) {
 
   function getModalTitle() {
     return workingTask.shortDescription.trim() || "Sin descripción";
+  }
+
+  function getProjectNames() {
+    const names = projects.map((project) => normalizeProjectName(project.name)).filter(Boolean);
+    const currentProject = normalizeProjectName(workingTask.project);
+
+    if (currentProject && !names.includes(currentProject)) {
+      names.unshift(currentProject);
+    }
+
+    return names.length > 0 ? names : [currentProject || "Proyecto"];
   }
 
   function syncTopbarTitle() {

@@ -16,7 +16,7 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260522-mobile-column-height" />
+    <link rel="stylesheet" href="./styles.css?v=20260522-projects" />
   </head>
   <body>
     <div class="app-shell">
@@ -26,16 +26,30 @@
           <h1>JavoPM</h1>
         </div>
         <div class="header-actions">
-          <button
-            class="theme-toggle"
-            type="button"
-            data-theme-toggle
-            aria-label="Cambiar a tema oscuro"
-            aria-pressed="false"
-          >
-            <span class="theme-dot" aria-hidden="true"></span>
-            <span data-theme-label>Tema claro</span>
-          </button>
+          <div class="header-action-row">
+            <div class="project-menu" data-project-menu>
+              <button
+                class="project-menu-button"
+                type="button"
+                data-project-menu-toggle
+                aria-expanded="false"
+                aria-haspopup="dialog"
+              >
+                <span class="project-dot" aria-hidden="true"></span>
+                <span class="project-menu-label">Proyectos</span>
+              </button>
+            </div>
+            <button
+              class="theme-toggle"
+              type="button"
+              data-theme-toggle
+              aria-label="Cambiar a tema oscuro"
+              aria-pressed="false"
+            >
+              <span class="theme-dot" aria-hidden="true"></span>
+              <span data-theme-label>Tema claro</span>
+            </button>
+          </div>
           <div class="header-status" aria-live="polite">
             <span class="status-dot" aria-hidden="true"></span>
             Guardado local
@@ -50,6 +64,6 @@
 
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260522-theme-toggle"></script>
+    <script type="module" src="./app.js?v=20260522-projects"></script>
   </body>
 </html>

@@ -1,9 +1,15 @@
-import { DEFAULT_COLUMNS, normalizeTask, sortByOrder } from "./models.js?v=20260522-short-description-grow";
+import {
+  DEFAULT_COLUMNS,
+  normalizeProject,
+  normalizeTask,
+  sortByOrder
+} from "./models.js?v=20260522-projects";
 
 const DB_NAME = "JavoPM";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORES = {
   columns: "columns",
+  projects: "projects",
   tasks: "tasks",
   meta: "meta"
 };
@@ -26,6 +32,10 @@ export function initDB() {
           const taskStore = db.createObjectStore(STORES.tasks, { keyPath: "id" });
           taskStore.createIndex("columnId", "columnId", { unique: false });
           taskStore.createIndex("order", "order", { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains(STORES.projects)) {
+          db.createObjectStore(STORES.projects, { keyPath: "id" });
         }
 
         if (!db.objectStoreNames.contains(STORES.meta)) {
@@ -61,6 +71,27 @@ export async function getColumns() {
 export async function saveColumns(columns) {
   const db = await initDB();
   await writeMany(db, STORES.columns, columns);
+}
+
+export async function getProjects() {
+  const db = await initDB();
+  const projects = await getAllFromStore(db, STORES.projects);
+  return sortByOrder(projects.map(normalizeProject));
+}
+
+export async function createProject(project) {
+  const db = await initDB();
+  const existingProjects = await getProjects();
+  const normalizedProject = normalizeProject(project, existingProjects.length);
+  await putValue(db, STORES.projects, normalizedProject);
+  return normalizedProject;
+}
+
+export async function saveProjects(projects) {
+  const db = await initDB();
+  const normalizedProjects = projects.map(normalizeProject);
+  await writeMany(db, STORES.projects, normalizedProjects);
+  return sortByOrder(normalizedProjects);
 }
 
 export async function getTasks() {

@@ -8,6 +8,7 @@ export const DEFAULT_COLUMNS = [
 ];
 
 export const ALLOWED_TYPES = ["Bug", "Tarea", "Evento"];
+export const DEFAULT_PROJECT_NAME = "Proyecto";
 
 export function createId(prefix) {
   const randomPart = crypto.randomUUID
@@ -35,16 +36,35 @@ export function createChecklistItem(order = 0) {
   };
 }
 
-export function createTaskModel({ columnId, order, folio, startDate = todayISO() }) {
+export function createProjectModel({ name = DEFAULT_PROJECT_NAME, order = 0 }) {
   const now = new Date().toISOString();
+
+  return {
+    id: createId("project"),
+    name: normalizeProjectName(name) || DEFAULT_PROJECT_NAME,
+    createdAt: now,
+    updatedAt: now,
+    order
+  };
+}
+
+export function createTaskModel({
+  columnId,
+  order,
+  folio,
+  project = DEFAULT_PROJECT_NAME,
+  startDate = todayISO()
+}) {
+  const now = new Date().toISOString();
+  const projectName = normalizeProjectName(project) || DEFAULT_PROJECT_NAME;
 
   return {
     id: createId("task"),
     columnId,
     shortDescription: "Nueva tarea",
-    project: "Proyecto",
+    project: projectName,
     type: "Tarea",
-    folio,
+    folio: folio || generateFolio([], projectName),
     startDate,
     endDate: "",
     points: 0,
@@ -58,13 +78,15 @@ export function createTaskModel({ columnId, order, folio, startDate = todayISO()
 }
 
 export function normalizeTask(task) {
+  const project = normalizeProjectName(task.project) || DEFAULT_PROJECT_NAME;
+
   return {
     id: task.id || createId("task"),
     columnId: task.columnId || DEFAULT_COLUMNS[0].id,
     shortDescription: sanitizeText(task.shortDescription) || "Nueva tarea",
-    project: sanitizeText(task.project) || "Proyecto",
+    project,
     type: ALLOWED_TYPES.includes(task.type) ? task.type : "Tarea",
-    folio: sanitizeText(task.folio) || "TASK-001",
+    folio: sanitizeText(task.folio) || formatFolio(project, 1),
     startDate: task.startDate || "",
     endDate: task.endDate || "",
     points: Number.isFinite(Number(task.points)) ? Number(task.points) : 0,
@@ -74,6 +96,18 @@ export function normalizeTask(task) {
     createdAt: task.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     order: Number.isFinite(Number(task.order)) ? Number(task.order) : 0
+  };
+}
+
+export function normalizeProject(project, projectIndex = 0) {
+  const now = new Date().toISOString();
+
+  return {
+    id: project.id || createId("project"),
+    name: normalizeProjectName(project.name) || DEFAULT_PROJECT_NAME,
+    createdAt: project.createdAt || now,
+    updatedAt: project.updatedAt || now,
+    order: Number.isFinite(Number(project.order)) ? Number(project.order) : projectIndex
   };
 }
 
@@ -107,17 +141,43 @@ export function normalizeChecklistItems(items) {
     .sort((a, b) => a.order - b.order);
 }
 
-export function generateFolio(tasks) {
+export function generateFolio(tasks, projectName = DEFAULT_PROJECT_NAME) {
   const used = new Set(tasks.map((task) => task.folio));
-  let number = tasks.length + 1;
-  let folio = formatFolio(number);
+  let number = getNextGlobalFolioNumber(tasks);
+  let folio = formatFolio(projectName, number);
 
   while (used.has(folio)) {
     number += 1;
-    folio = formatFolio(number);
+    folio = formatFolio(projectName, number);
   }
 
   return folio;
+}
+
+export function updateFolioProjectName(folio, projectName, fallbackNumber = 1) {
+  return formatFolio(projectName, getFolioNumber(folio) || fallbackNumber);
+}
+
+export function formatFolio(projectName, number) {
+  return `${formatProjectPrefix(projectName)}-${String(number).padStart(3, "0")}`;
+}
+
+export function getFolioNumber(folio) {
+  const match = String(folio || "").match(/-(\d+)$/);
+  return match ? Number(match[1]) : 0;
+}
+
+export function getNextGlobalFolioNumber(tasks) {
+  const maxNumber = tasks.reduce((max, task) => Math.max(max, getFolioNumber(task.folio)), 0);
+  return maxNumber + 1;
+}
+
+export function formatProjectPrefix(projectName) {
+  return (normalizeProjectName(projectName) || DEFAULT_PROJECT_NAME).toLocaleUpperCase("es-MX");
+}
+
+export function normalizeProjectName(value) {
+  return sanitizeText(value).replace(/\s+/g, " ");
 }
 
 export function sortByOrder(items) {
@@ -141,10 +201,6 @@ export function formatDateRange(startDate, endDate) {
 
 export function todayISO() {
   return new Date().toISOString().slice(0, 10);
-}
-
-function formatFolio(number) {
-  return `TASK-${String(number).padStart(3, "0")}`;
 }
 
 function formatDate(value) {
