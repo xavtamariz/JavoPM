@@ -139,6 +139,7 @@ button {
   display: grid;
   justify-items: end;
   gap: 8px;
+  transform: translateY(4px);
 }
 
 .header-action-row {
