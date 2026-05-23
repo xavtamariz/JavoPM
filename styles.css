@@ -220,8 +220,8 @@ h1 {
 
 .project-menu-label {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .theme-toggle {
@@ -267,13 +267,6 @@ h1 {
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: var(--theme-dot);
-}
-
-.project-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--ink-soft);
 }
 
 .project-popover {
@@ -1202,14 +1195,12 @@ h1 {
   }
 
   .project-menu-button {
-    max-width: 76px;
-    padding: 0 8px;
-    font-size: 10px;
+    max-width: none;
   }
 
   .project-menu-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: clip;
   }
 }
 
@@ -1227,14 +1218,6 @@ h1 {
   }
 
   .project-menu-button {
-    max-width: 42px;
-    gap: 3px;
-    padding: 0 4px;
-    font-size: 7.5px;
-  }
-
-  .project-dot {
-    width: 6px;
-    height: 6px;
+    max-width: none;
   }
 }
