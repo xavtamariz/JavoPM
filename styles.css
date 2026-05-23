@@ -637,7 +637,7 @@ h1 {
 
 .chart-line {
   fill: none;
-  stroke: var(--ink);
+  stroke: var(--accent);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 3;
@@ -645,7 +645,7 @@ h1 {
 
 .chart-dot {
   fill: var(--surface);
-  stroke: var(--ink);
+  stroke: var(--accent);
   stroke-width: 2;
 }
 
