@@ -1,42 +1,51 @@
 import {
   createProject,
   createTask,
+  createTeamMember,
   deleteTask,
   getColumns,
   getProjects,
+  getTeamMembers,
   getTasks,
   initDB,
   resetSeedDataIfNeeded,
   saveProjects,
+  saveTeamMembers,
   saveTaskOrder,
   updateTask
-} from "./db.js?v=20260522-projects";
+} from "./db.js?v=20260522-team";
 import {
   DEFAULT_PROJECT_NAME,
+  DEFAULT_RESPONSIBLE_NAME,
   createProjectModel,
+  createTeamMemberModel,
   createTaskModel,
   generateFolio,
   getFolioNumber,
   getNextGlobalFolioNumber,
   normalizeProjectName,
+  normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260522-projects";
-import { openTaskModal } from "./modal.js?v=20260522-projects";
-import { renderBoard } from "./ui.js?v=20260522-safari-drag-smooth";
+} from "./models.js?v=20260522-team";
+import { openTaskModal } from "./modal.js?v=20260522-team";
+import { renderBoard } from "./ui.js?v=20260522-team";
 
 const state = {
   columns: [],
   projects: [],
+  teamMembers: [],
   tasks: []
 };
 
 const boardElement = document.querySelector("#board");
 const projectMenuToggle = document.querySelector("[data-project-menu-toggle]");
+const teamMenuToggle = document.querySelector("[data-team-menu-toggle]");
 const themeToggle = document.querySelector("[data-theme-toggle]");
 const themeLabel = document.querySelector("[data-theme-label]");
 const THEME_STORAGE_KEY = "javopm-theme";
 let projectModalKeydownHandler;
+let teamModalKeydownHandler;
 
 async function startApp() {
   try {
@@ -45,6 +54,7 @@ async function startApp() {
     await resetSeedDataIfNeeded();
     await loadState();
     initProjectMenu();
+    initTeamMenu();
     render();
   } catch (error) {
     renderBootError(error);
@@ -91,12 +101,19 @@ function applyTheme(theme, options = {}) {
 }
 
 async function loadState() {
-  const [columns, tasks, projects] = await Promise.all([getColumns(), getTasks(), getProjects()]);
+  const [columns, tasks, projects, teamMembers] = await Promise.all([
+    getColumns(),
+    getTasks(),
+    getProjects(),
+    getTeamMembers()
+  ]);
   const syncedProjects = await syncProjectsWithTasks(projects, tasks);
+  const syncedTeamMembers = await syncTeamMembersWithTasks(teamMembers, tasks);
   const syncedTasks = await syncTaskFoliosWithProjects(tasks);
 
   state.columns = columns;
   state.projects = syncedProjects;
+  state.teamMembers = syncedTeamMembers;
   state.tasks = syncedTasks;
 }
 
@@ -119,6 +136,14 @@ function initProjectMenu() {
   projectMenuToggle.addEventListener("click", openProjectModal);
 }
 
+function initTeamMenu() {
+  if (!teamMenuToggle) {
+    return;
+  }
+
+  teamMenuToggle.addEventListener("click", openTeamModal);
+}
+
 function openProjectModal() {
   const root = document.querySelector("#modal-root");
   if (!root) {
@@ -126,6 +151,7 @@ function openProjectModal() {
   }
 
   closeProjectModal({ clearRoot: false });
+  closeTeamModal({ clearRoot: false });
   root.innerHTML = "";
 
   const overlay = document.createElement("div");
@@ -286,10 +312,200 @@ async function handleCreateProject(value) {
   return savedProject;
 }
 
+function openTeamModal() {
+  const root = document.querySelector("#modal-root");
+  if (!root) {
+    return;
+  }
+
+  closeProjectModal({ clearRoot: false });
+  closeTeamModal({ clearRoot: false });
+  root.innerHTML = "";
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) {
+      closeTeamModal();
+    }
+  });
+
+  const modal = document.createElement("section");
+  modal.className = "modal project-modal team-modal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "team-modal-title");
+
+  const shell = document.createElement("div");
+  shell.className = "modal-form";
+  shell.append(createTeamModalTopbar(), createTeamModalBody());
+
+  modal.append(shell);
+  overlay.append(modal);
+  root.append(overlay);
+
+  teamMenuToggle.setAttribute("aria-expanded", "true");
+  teamModalKeydownHandler = (event) => {
+    if (event.key === "Escape") {
+      closeTeamModal();
+    }
+  };
+  document.addEventListener("keydown", teamModalKeydownHandler);
+
+  requestAnimationFrame(() => {
+    overlay.querySelector("[data-team-create-input]")?.focus({ preventScroll: true });
+  });
+}
+
+function closeTeamModal(options = {}) {
+  const { clearRoot = true } = options;
+
+  if (teamModalKeydownHandler) {
+    document.removeEventListener("keydown", teamModalKeydownHandler);
+    teamModalKeydownHandler = null;
+  }
+
+  teamMenuToggle?.setAttribute("aria-expanded", "false");
+
+  if (clearRoot) {
+    const root = document.querySelector("#modal-root");
+    if (root) {
+      root.innerHTML = "";
+    }
+  }
+}
+
+function createTeamModalTopbar() {
+  const topbar = document.createElement("div");
+  topbar.className = "modal-topbar";
+
+  const title = document.createElement("h2");
+  title.id = "team-modal-title";
+  title.className = "modal-title";
+  title.textContent = "Equipo";
+
+  const closeButton = document.createElement("button");
+  closeButton.className = "close-button";
+  closeButton.type = "button";
+  closeButton.textContent = "×";
+  closeButton.setAttribute("aria-label", "Cerrar modal de equipo");
+  closeButton.addEventListener("click", closeTeamModal);
+
+  topbar.append(title, closeButton);
+  return topbar;
+}
+
+function createTeamModalBody(message = "") {
+  const body = document.createElement("div");
+  body.className = "project-modal-body";
+  body.dataset.teamModalBody = "true";
+
+  const listTitle = document.createElement("p");
+  listTitle.className = "project-list-title";
+  listTitle.textContent = "Integrantes del equipo";
+
+  const list = document.createElement("ul");
+  list.className = "project-list";
+
+  if (state.teamMembers.length === 0) {
+    const emptyItem = document.createElement("li");
+    emptyItem.className = "project-list-item is-empty";
+    emptyItem.textContent = "Sin integrantes todavía";
+    list.append(emptyItem);
+  } else {
+    state.teamMembers.forEach((teamMember) => {
+      const item = document.createElement("li");
+      item.className = "project-list-item";
+      item.textContent = teamMember.name;
+      list.append(item);
+    });
+  }
+
+  const form = document.createElement("form");
+  form.className = "project-create-form";
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const input = form.querySelector("[data-team-create-input]");
+    await handleCreateTeamMember(input.value);
+  });
+
+  const input = document.createElement("input");
+  input.className = "project-create-input";
+  input.dataset.teamCreateInput = "true";
+  input.placeholder = "Nuevo integrante";
+  input.type = "text";
+
+  const createButton = document.createElement("button");
+  createButton.className = "project-create-button";
+  createButton.type = "submit";
+  createButton.textContent = "Crear";
+
+  const validation = document.createElement("div");
+  validation.className = `project-menu-message${message ? " is-visible" : ""}`;
+  validation.textContent = message;
+
+  form.append(input, createButton);
+  body.append(listTitle, list, form, validation);
+  return body;
+}
+
+function renderTeamModalBody(message = "") {
+  const currentBody = document.querySelector("[data-team-modal-body]");
+  if (!currentBody) {
+    return;
+  }
+
+  const nextBody = createTeamModalBody(message);
+  currentBody.replaceWith(nextBody);
+  requestAnimationFrame(() => {
+    nextBody.querySelector("[data-team-create-input]")?.focus({ preventScroll: true });
+  });
+}
+
+async function handleCreateTeamMember(value) {
+  const name = normalizeTeamMemberName(value);
+
+  if (!name) {
+    renderTeamModalBody("Escribe un nombre de integrante.");
+    return null;
+  }
+
+  if (isDefaultResponsible(name)) {
+    renderTeamModalBody("Ese nombre está reservado para tareas sin responsable.");
+    return null;
+  }
+
+  if (teamMemberNameExists(name)) {
+    renderTeamModalBody("Ese integrante ya existe.");
+    return null;
+  }
+
+  const savedTeamMember = await createTeamMember(
+    createTeamMemberModel({
+      name,
+      order: state.teamMembers.length
+    })
+  );
+
+  state.teamMembers = sortByOrder([...state.teamMembers, savedTeamMember]);
+  renderTeamModalBody();
+  return savedTeamMember;
+}
+
 function projectNameExists(name) {
   return state.projects.some(
     (project) => project.name.toLocaleLowerCase("es-MX") === name.toLocaleLowerCase("es-MX")
   );
+}
+
+function teamMemberNameExists(name) {
+  return state.teamMembers.some(
+    (teamMember) => teamMember.name.toLocaleLowerCase("es-MX") === name.toLocaleLowerCase("es-MX")
+  );
+}
+
+function isDefaultResponsible(name) {
+  return name.toLocaleLowerCase("es-MX") === DEFAULT_RESPONSIBLE_NAME.toLocaleLowerCase("es-MX");
 }
 
 function getDefaultProjectName() {
@@ -321,6 +537,7 @@ function handleOpenTask(taskId) {
   openTaskModal({
     task,
     projects: state.projects,
+    teamMembers: state.teamMembers,
     onDelete: handleDeleteTask,
     onSave: handleSaveTask,
     onClose: () => render()
@@ -451,12 +668,59 @@ async function syncTaskFoliosWithProjects(tasks) {
   return sortByOrder(migratedTasks);
 }
 
+async function syncTeamMembersWithTasks(teamMembers, tasks) {
+  const nextTeamMembers = [];
+  const seen = new Set();
+
+  const addTeamMemberName = (name) => {
+    const teamMemberName = normalizeTeamMemberName(name);
+    const key = teamMemberName.toLocaleLowerCase("es-MX");
+
+    if (!teamMemberName || isDefaultResponsible(teamMemberName) || seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    nextTeamMembers.push(
+      teamMembers.find(
+        (teamMember) => teamMember.name.toLocaleLowerCase("es-MX") === key
+      ) || createTeamMemberModel({ name: teamMemberName, order: nextTeamMembers.length })
+    );
+  };
+
+  teamMembers.forEach((teamMember) => addTeamMemberName(teamMember.name));
+  tasks.forEach((task) => addTeamMemberName(task.responsible));
+
+  const sortedTeamMembers = sortByOrder(
+    nextTeamMembers.map((teamMember, index) => ({
+      ...teamMember,
+      order: Number.isFinite(Number(teamMember.order)) ? Number(teamMember.order) : index
+    }))
+  );
+
+  if (teamMembersNeedSaving(teamMembers, sortedTeamMembers)) {
+    return saveTeamMembers(sortedTeamMembers);
+  }
+
+  return sortedTeamMembers;
+}
+
 function projectsNeedSaving(currentProjects, nextProjects) {
   if (currentProjects.length !== nextProjects.length) {
     return true;
   }
 
   return nextProjects.some((project, index) => currentProjects[index]?.name !== project.name);
+}
+
+function teamMembersNeedSaving(currentTeamMembers, nextTeamMembers) {
+  if (currentTeamMembers.length !== nextTeamMembers.length) {
+    return true;
+  }
+
+  return nextTeamMembers.some(
+    (teamMember, index) => currentTeamMembers[index]?.name !== teamMember.name
+  );
 }
 
 function normalizeOrdersByColumn(tasks) {

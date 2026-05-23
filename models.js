@@ -9,6 +9,7 @@ export const DEFAULT_COLUMNS = [
 
 export const ALLOWED_TYPES = ["Bug", "Tarea", "Evento"];
 export const DEFAULT_PROJECT_NAME = "Proyecto";
+export const DEFAULT_RESPONSIBLE_NAME = "Sin asignar";
 
 export function createId(prefix) {
   const randomPart = crypto.randomUUID
@@ -48,6 +49,18 @@ export function createProjectModel({ name = DEFAULT_PROJECT_NAME, order = 0 }) {
   };
 }
 
+export function createTeamMemberModel({ name, order = 0 }) {
+  const now = new Date().toISOString();
+
+  return {
+    id: createId("team"),
+    name: normalizeTeamMemberName(name),
+    createdAt: now,
+    updatedAt: now,
+    order
+  };
+}
+
 export function createTaskModel({
   columnId,
   order,
@@ -68,7 +81,7 @@ export function createTaskModel({
     startDate,
     endDate: "",
     points: 0,
-    responsible: "Sin asignar",
+    responsible: DEFAULT_RESPONSIBLE_NAME,
     longDescription: "",
     checklists: [createDefaultChecklist()],
     createdAt: now,
@@ -90,7 +103,7 @@ export function normalizeTask(task) {
     startDate: task.startDate || "",
     endDate: task.endDate || "",
     points: Number.isFinite(Number(task.points)) ? Number(task.points) : 0,
-    responsible: sanitizeText(task.responsible) || "Sin asignar",
+    responsible: normalizeTeamMemberName(task.responsible) || DEFAULT_RESPONSIBLE_NAME,
     longDescription: typeof task.longDescription === "string" ? task.longDescription : "",
     checklists: normalizeChecklists(task.checklists),
     createdAt: task.createdAt || new Date().toISOString(),
@@ -108,6 +121,18 @@ export function normalizeProject(project, projectIndex = 0) {
     createdAt: project.createdAt || now,
     updatedAt: project.updatedAt || now,
     order: Number.isFinite(Number(project.order)) ? Number(project.order) : projectIndex
+  };
+}
+
+export function normalizeTeamMember(teamMember, teamMemberIndex = 0) {
+  const now = new Date().toISOString();
+
+  return {
+    id: teamMember.id || createId("team"),
+    name: normalizeTeamMemberName(teamMember.name),
+    createdAt: teamMember.createdAt || now,
+    updatedAt: teamMember.updatedAt || now,
+    order: Number.isFinite(Number(teamMember.order)) ? Number(teamMember.order) : teamMemberIndex
   };
 }
 
@@ -177,6 +202,10 @@ export function formatProjectPrefix(projectName) {
 }
 
 export function normalizeProjectName(value) {
+  return sanitizeText(value).replace(/\s+/g, " ");
+}
+
+export function normalizeTeamMemberName(value) {
   return sanitizeText(value).replace(/\s+/g, " ");
 }
 

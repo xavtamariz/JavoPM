@@ -16,7 +16,7 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260522-project-modal" />
+    <link rel="stylesheet" href="./styles.css?v=20260522-team" />
   </head>
   <body>
     <div class="app-shell">
@@ -49,9 +49,20 @@
               <span data-theme-label>Tema claro</span>
             </button>
           </div>
-          <div class="header-status" aria-live="polite">
-            <span class="status-dot" aria-hidden="true"></span>
-            Guardado local
+          <div class="header-action-row">
+            <button
+              class="team-menu-button"
+              type="button"
+              data-team-menu-toggle
+              aria-expanded="false"
+              aria-haspopup="dialog"
+            >
+              <span class="team-menu-label">Equipo</span>
+            </button>
+            <div class="header-status" aria-live="polite">
+              <span class="status-dot" aria-hidden="true"></span>
+              Guardado local
+            </div>
           </div>
         </div>
       </header>
@@ -63,6 +74,6 @@
 
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260522-project-modal"></script>
+    <script type="module" src="./app.js?v=20260522-team"></script>
   </body>
 </html>

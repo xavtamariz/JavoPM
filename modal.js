@@ -1,13 +1,15 @@
 import {
   ALLOWED_TYPES,
+  DEFAULT_RESPONSIBLE_NAME,
   createDefaultChecklist,
   normalizeProjectName,
+  normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260522-projects";
-import { renderChecklists } from "./checklist.js?v=20260522-short-description-grow";
+} from "./models.js?v=20260522-team";
+import { renderChecklists } from "./checklist.js?v=20260522-team";
 
-export function openTaskModal({ task, projects = [], onSave, onDelete, onClose }) {
+export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
   root.innerHTML = "";
 
@@ -82,9 +84,7 @@ export function openTaskModal({ task, projects = [], onSave, onDelete, onClose }
       createField("Fecha inicio", "startDate", "date", workingTask.startDate),
       createField("Fecha fin", "endDate", "date", workingTask.endDate),
       createField("Puntos", "points", "number", workingTask.points, { min: "0", step: "1" }),
-      createField("Responsable", "responsible", "text", workingTask.responsible, {
-        wrapperClass: "modal-responsible"
-      })
+      createResponsibleField()
     );
 
     header.append(left, right);
@@ -241,6 +241,33 @@ export function openTaskModal({ task, projects = [], onSave, onDelete, onClose }
       if (folioInput) {
         folioInput.value = folio;
       }
+    });
+
+    wrapper.append(label, select);
+    return wrapper;
+  }
+
+  function createResponsibleField() {
+    const wrapper = document.createElement("div");
+    wrapper.className = "field modal-responsible";
+
+    const label = document.createElement("label");
+    label.htmlFor = "task-responsible";
+    label.textContent = "Responsable";
+
+    const select = document.createElement("select");
+    select.id = "task-responsible";
+
+    getTeamMemberNames().forEach((teamMemberName) => {
+      const option = document.createElement("option");
+      option.value = teamMemberName;
+      option.textContent = teamMemberName;
+      select.append(option);
+    });
+
+    select.value = workingTask.responsible;
+    select.addEventListener("change", () => {
+      updateWorkingTask({ responsible: select.value });
     });
 
     wrapper.append(label, select);
@@ -404,6 +431,26 @@ export function openTaskModal({ task, projects = [], onSave, onDelete, onClose }
     }
 
     return names.length > 0 ? names : [currentProject || "Proyecto"];
+  }
+
+  function getTeamMemberNames() {
+    const names = teamMembers
+      .map((teamMember) => normalizeTeamMemberName(teamMember.name))
+      .filter(Boolean);
+    const currentResponsible = normalizeTeamMemberName(workingTask.responsible);
+    const options = [DEFAULT_RESPONSIBLE_NAME];
+
+    names.forEach((name) => {
+      if (!options.includes(name)) {
+        options.push(name);
+      }
+    });
+
+    if (currentResponsible && !options.includes(currentResponsible)) {
+      options.push(currentResponsible);
+    }
+
+    return options;
   }
 
   function syncTopbarTitle() {

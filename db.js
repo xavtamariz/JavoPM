@@ -1,15 +1,17 @@
 import {
   DEFAULT_COLUMNS,
   normalizeProject,
+  normalizeTeamMember,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260522-projects";
+} from "./models.js?v=20260522-team";
 
 const DB_NAME = "JavoPM";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORES = {
   columns: "columns",
   projects: "projects",
+  teamMembers: "teamMembers",
   tasks: "tasks",
   meta: "meta"
 };
@@ -36,6 +38,10 @@ export function initDB() {
 
         if (!db.objectStoreNames.contains(STORES.projects)) {
           db.createObjectStore(STORES.projects, { keyPath: "id" });
+        }
+
+        if (!db.objectStoreNames.contains(STORES.teamMembers)) {
+          db.createObjectStore(STORES.teamMembers, { keyPath: "id" });
         }
 
         if (!db.objectStoreNames.contains(STORES.meta)) {
@@ -92,6 +98,29 @@ export async function saveProjects(projects) {
   const normalizedProjects = projects.map(normalizeProject);
   await writeMany(db, STORES.projects, normalizedProjects);
   return sortByOrder(normalizedProjects);
+}
+
+export async function getTeamMembers() {
+  const db = await initDB();
+  const teamMembers = await getAllFromStore(db, STORES.teamMembers);
+  return sortByOrder(teamMembers.map(normalizeTeamMember).filter((teamMember) => teamMember.name));
+}
+
+export async function createTeamMember(teamMember) {
+  const db = await initDB();
+  const existingTeamMembers = await getTeamMembers();
+  const normalizedTeamMember = normalizeTeamMember(teamMember, existingTeamMembers.length);
+  await putValue(db, STORES.teamMembers, normalizedTeamMember);
+  return normalizedTeamMember;
+}
+
+export async function saveTeamMembers(teamMembers) {
+  const db = await initDB();
+  const normalizedTeamMembers = teamMembers
+    .map(normalizeTeamMember)
+    .filter((teamMember) => teamMember.name);
+  await writeMany(db, STORES.teamMembers, normalizedTeamMembers);
+  return sortByOrder(normalizedTeamMembers);
 }
 
 export async function getTasks() {

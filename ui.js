@@ -1,4 +1,4 @@
-import { formatDateRange, sortByOrder } from "./models.js?v=20260522-short-description-grow";
+import { formatDateRange, sortByOrder } from "./models.js?v=20260522-team";
 
 let lastDragEndedAt = 0;
 let activeDrag = null;
