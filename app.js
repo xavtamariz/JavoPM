@@ -18,7 +18,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260523-stage";
+} from "./db.js?v=20260523-pie-clean";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -34,9 +34,9 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260523-stage";
-import { openTaskModal } from "./modal.js?v=20260523-stage";
-import { renderBoard } from "./ui.js?v=20260523-stage";
+} from "./models.js?v=20260523-pie-clean";
+import { openTaskModal } from "./modal.js?v=20260523-pie-clean";
+import { renderBoard } from "./ui.js?v=20260523-pie-clean";
 
 const state = {
   chartCards: [],

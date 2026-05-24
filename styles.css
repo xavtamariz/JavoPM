@@ -700,21 +700,6 @@ h1 {
   stroke-width: 2;
 }
 
-.pie-total-value {
-  fill: var(--ink);
-  font-family: var(--mono);
-  font-size: 19px;
-  font-weight: 820;
-}
-
-.pie-total-label {
-  fill: var(--muted);
-  font-family: var(--mono);
-  font-size: 9px;
-  font-weight: 760;
-  text-transform: uppercase;
-}
-
 .chart-grid-line {
   stroke: var(--line);
   stroke-width: 1;

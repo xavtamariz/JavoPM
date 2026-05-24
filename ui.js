@@ -8,7 +8,7 @@ import {
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
   sortByOrder
-} from "./models.js?v=20260523-stage";
+} from "./models.js?v=20260523-pie-clean";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -592,9 +592,6 @@ function createPieChart({ stages, total }) {
       currentAngle += angle;
     });
   }
-
-  svg.append(createSvgText(centerX, centerY - 2, String(total), "pie-total-value", "middle"));
-  svg.append(createSvgText(centerX, centerY + 16, "tareas", "pie-total-label", "middle"));
 
   const shell = document.createElement("div");
   shell.className = "chart-frame pie-chart-frame";

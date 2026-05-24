@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260523-stage";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260523-pie-clean";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");
