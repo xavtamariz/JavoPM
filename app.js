@@ -35,7 +35,7 @@ import {
   sortByOrder,
   updateFolioProjectName
 } from "./models.js?v=20260523-leaderboard";
-import { openTaskModal } from "./modal.js?v=20260523-leaderboard";
+import { openTaskModal } from "./modal.js?v=20260524-save-button";
 import { renderBoard } from "./ui.js?v=20260523-leaderboard";
 
 const state = {

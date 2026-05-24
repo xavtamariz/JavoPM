@@ -95,6 +95,13 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     const footer = document.createElement("footer");
     footer.className = "modal-footer";
 
+    const saveButton = document.createElement("button");
+    saveButton.className = "save-task-button";
+    saveButton.type = "button";
+    saveButton.textContent = "Guardar";
+    saveButton.setAttribute("aria-label", "Guardar y cerrar tarea");
+    saveButton.addEventListener("click", handleSaveAndClose);
+
     const deleteButton = document.createElement("button");
     deleteButton.className = "delete-task-button";
     deleteButton.type = "button";
@@ -102,7 +109,7 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     deleteButton.setAttribute("aria-label", "Eliminar tarea");
     deleteButton.addEventListener("click", handleDelete);
 
-    footer.append(deleteButton);
+    footer.append(saveButton, deleteButton);
     return footer;
   }
 
@@ -503,6 +510,16 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     if (validate()) {
       onSave(workingTask);
     }
+    destroyModal();
+  }
+
+  async function handleSaveAndClose() {
+    clearTimeout(saveTimer);
+    if (!validate()) {
+      return;
+    }
+
+    await onSave(workingTask);
     destroyModal();
   }
 
