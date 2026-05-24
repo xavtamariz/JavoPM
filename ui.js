@@ -2,13 +2,17 @@ import {
   CHART_CARD_TYPE,
   CHART_PERIODS,
   DEFAULT_CHART_PERIOD,
+  DEFAULT_RESPONSIBLE_NAME,
   DEFAULT_CHART_TEAM,
+  DEFAULT_LEADERBOARD_METRIC,
+  LEADERBOARD_METRICS,
   METRICS_COLUMN_ID,
   TASK_CARD_TYPE,
+  TASK_LEADERBOARD_CHART_TYPE,
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
   sortByOrder
-} from "./models.js?v=20260523-vivid-stages";
+} from "./models.js?v=20260523-leaderboard";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -17,6 +21,11 @@ const AXIS_LABELS = {
   developed: "D",
   verification: "V",
   completed: "C"
+};
+const COMPLETED_COLUMN_ID = "completed";
+const LEADERBOARD_MODE_LABELS = {
+  points: "Puntos",
+  tasks: "Completadas"
 };
 
 let lastDragEndedAt = 0;
@@ -285,7 +294,13 @@ function createChartCard({
 }) {
   const card = document.createElement("article");
   const isStageChart = chartCard.chartType === TASK_STAGE_BY_MEMBER_CHART_TYPE;
-  card.className = `task-card chart-card${isStageChart ? " stage-chart-card" : ""}`;
+  const isLeaderboardChart = chartCard.chartType === TASK_LEADERBOARD_CHART_TYPE;
+  card.className = [
+    "task-card",
+    "chart-card",
+    isStageChart ? "stage-chart-card" : "",
+    isLeaderboardChart ? "leaderboard-chart-card" : ""
+  ].filter(Boolean).join(" ");
   card.dataset.cardId = chartCard.id;
   card.dataset.cardType = CHART_CARD_TYPE;
   card.setAttribute("aria-label", chartCard.title);
@@ -309,8 +324,20 @@ function createChartCard({
   const badge = document.createElement("span");
   badge.className = "chart-card-badge";
   badge.textContent = isStageChart ? "Pie chart" : "Line chart";
+  const headerControl = isLeaderboardChart
+    ? createLeaderboardModeControl(chartCard, onUpdateChartCard)
+    : badge;
 
-  header.append(title, badge);
+  header.append(title, headerControl);
+
+  if (isLeaderboardChart) {
+    const leaderboardData = getLeaderboardData({ chartCard, taskEvents, tasks, teamMembers });
+    const leaderboard = createLeaderboardList(leaderboardData);
+    const periodControls = createPeriodControls(chartCard, onUpdateChartCard);
+
+    card.append(header, leaderboard, periodControls, moveHandle);
+    return card;
+  }
 
   if (isStageChart) {
     const chartData = getStageChartData({ chartCard, columns, taskEvents, tasks, teamMembers });
@@ -469,6 +496,69 @@ function getStageTeamMember(chartCard, teamMembers) {
   }
 
   return teamNames[0] || DEFAULT_CHART_TEAM;
+}
+
+function getLeaderboardData({ chartCard, tasks, taskEvents, teamMembers }) {
+  const metric = LEADERBOARD_METRICS.includes(chartCard.settings?.leaderboardMetric)
+    ? chartCard.settings.leaderboardMetric
+    : DEFAULT_LEADERBOARD_METRIC;
+  const cutoff = getPeriodCutoff(chartCard.settings?.period || DEFAULT_CHART_PERIOD);
+  const teamNames = new Set(teamMembers.map((teamMember) => teamMember.name).filter(Boolean));
+  const completedTasks = tasks.filter((task) => {
+    const responsible = task.responsible || "";
+
+    return (
+      task.columnId === COMPLETED_COLUMN_ID &&
+      responsible &&
+      responsible !== DEFAULT_RESPONSIBLE_NAME &&
+      (teamNames.size === 0 || teamNames.has(responsible))
+    );
+  });
+  const completedTaskIds = new Set(completedTasks.map((task) => task.id));
+  const completionEvents = cutoff
+    ? taskEvents.filter((event) => {
+        if (event.columnId !== COMPLETED_COLUMN_ID || !completedTaskIds.has(event.taskId)) {
+          return false;
+        }
+
+        return new Date(event.createdAt).getTime() >= cutoff;
+      })
+    : [];
+  const tasksInScope = completionEvents.length > 0
+    ? completedTasks.filter((task) => completionEvents.some((event) => event.taskId === task.id))
+    : completedTasks;
+  const memberTotals = new Map();
+
+  tasksInScope.forEach((task) => {
+    const name = task.responsible;
+    const current = memberTotals.get(name) || {
+      count: 0,
+      name,
+      points: 0
+    };
+    current.count += 1;
+    current.points += Number.isFinite(Number(task.points)) ? Number(task.points) : 0;
+    memberTotals.set(name, current);
+  });
+
+  const rows = [...memberTotals.values()].map((member) => ({
+    ...member,
+    value: metric === "points" ? member.points : member.count
+  }));
+  const totalValue = rows.reduce((sum, row) => sum + row.value, 0);
+  const sortedRows = rows
+    .sort((a, b) => b.value - a.value || b.count - a.count || a.name.localeCompare(b.name, "es-MX"))
+    .map((row, index) => ({
+      ...row,
+      percent: totalValue > 0 ? Math.round((row.value / totalValue) * 100) : 0,
+      rank: index + 1
+    }));
+
+  return {
+    metric,
+    rows: sortedRows,
+    totalValue
+  };
 }
 
 function getPeriodCutoff(periodValue) {
@@ -679,6 +769,78 @@ function createPeriodControls(chartCard, onUpdateChartCard) {
   });
 
   return group;
+}
+
+function createLeaderboardModeControl(chartCard, onUpdateChartCard) {
+  const select = document.createElement("select");
+  select.className = "leaderboard-mode-select";
+  select.setAttribute("aria-label", "Ordenar leaderboard por");
+
+  LEADERBOARD_METRICS.forEach((metric) => {
+    const option = document.createElement("option");
+    option.value = metric;
+    option.textContent = LEADERBOARD_MODE_LABELS[metric];
+    select.append(option);
+  });
+
+  select.value = chartCard.settings?.leaderboardMetric || DEFAULT_LEADERBOARD_METRIC;
+  select.addEventListener("change", () => {
+    onUpdateChartCard({
+      ...chartCard,
+      settings: {
+        ...chartCard.settings,
+        leaderboardMetric: select.value
+      },
+      updatedAt: new Date().toISOString()
+    });
+  });
+
+  return select;
+}
+
+function createLeaderboardList({ metric, rows }) {
+  const list = document.createElement("div");
+  list.className = "leaderboard-list";
+
+  if (rows.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "leaderboard-empty";
+    empty.textContent = "Sin completadas";
+    list.append(empty);
+    return list;
+  }
+
+  rows.forEach((row) => {
+    const item = document.createElement("div");
+    item.className = "leaderboard-row";
+
+    const rank = document.createElement("span");
+    rank.className = "leaderboard-rank";
+    rank.textContent = `#${row.rank}`;
+
+    const name = document.createElement("span");
+    name.className = "leaderboard-name";
+    name.textContent = row.name;
+
+    const value = document.createElement("span");
+    value.className = "leaderboard-value";
+    value.textContent = metric === "points"
+      ? `${formatLeaderboardNumber(row.value)}Pts`
+      : `${row.value}C`;
+
+    const percent = document.createElement("span");
+    percent.className = "leaderboard-percent";
+    percent.textContent = `${row.percent}%`;
+
+    item.append(rank, name, value, percent);
+    list.append(item);
+  });
+
+  return list;
+}
+
+function formatLeaderboardNumber(value) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, "");
 }
 
 function createStageTeamControl(chartCard, teamMembers, selectedTeamMember, onUpdateChartCard) {

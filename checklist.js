@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260523-vivid-stages";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260523-leaderboard";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

@@ -16,8 +16,11 @@ export const TASK_CARD_TYPE = "task";
 export const CHART_CARD_TYPE = "chart";
 export const TASK_PROGRESS_CHART_TYPE = "taskProgressByColumn";
 export const TASK_STAGE_BY_MEMBER_CHART_TYPE = "taskStageByMember";
+export const TASK_LEADERBOARD_CHART_TYPE = "taskLeaderboard";
 export const DEFAULT_CHART_PERIOD = "1D";
 export const DEFAULT_CHART_TEAM = "all";
+export const DEFAULT_LEADERBOARD_METRIC = "tasks";
+export const LEADERBOARD_METRICS = ["tasks", "points"];
 export const CHART_PERIODS = [
   { label: "1D", value: "1D", days: 1 },
   { label: "1W", value: "1W", days: 7 },
@@ -227,8 +230,12 @@ export function normalizeChartSettings(settings = {}) {
   const periodValues = CHART_PERIODS.map((period) => period.value);
   const period = periodValues.includes(settings.period) ? settings.period : DEFAULT_CHART_PERIOD;
   const teamMember = normalizeTeamMemberName(settings.teamMember);
+  const leaderboardMetric = LEADERBOARD_METRICS.includes(settings.leaderboardMetric)
+    ? settings.leaderboardMetric
+    : DEFAULT_LEADERBOARD_METRIC;
 
   return {
+    leaderboardMetric,
     period,
     teamMember: teamMember || DEFAULT_CHART_TEAM
   };

@@ -1,6 +1,7 @@
 import {
   DEFAULT_COLUMNS,
   METRICS_COLUMN_ID,
+  TASK_LEADERBOARD_CHART_TYPE,
   TASK_PROGRESS_CHART_TYPE,
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   createChartCardModel,
@@ -12,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260523-vivid-stages";
+} from "./models.js?v=20260523-leaderboard";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 4;
@@ -269,6 +270,10 @@ async function ensureDefaultChartCards() {
     {
       chartType: TASK_STAGE_BY_MEMBER_CHART_TYPE,
       title: "Tareas por etapa"
+    },
+    {
+      chartType: TASK_LEADERBOARD_CHART_TYPE,
+      title: "Leaderboard"
     }
   ];
   let metricsCardCount = chartCards.filter(

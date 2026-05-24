@@ -18,7 +18,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260523-vivid-stages";
+} from "./db.js?v=20260523-leaderboard";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -34,9 +34,9 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260523-vivid-stages";
-import { openTaskModal } from "./modal.js?v=20260523-vivid-stages";
-import { renderBoard } from "./ui.js?v=20260523-vivid-stages";
+} from "./models.js?v=20260523-leaderboard";
+import { openTaskModal } from "./modal.js?v=20260523-leaderboard";
+import { renderBoard } from "./ui.js?v=20260523-leaderboard";
 
 const state = {
   chartCards: [],
