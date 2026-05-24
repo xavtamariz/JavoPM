@@ -6,8 +6,8 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260523-pie-clean";
-import { renderChecklists } from "./checklist.js?v=20260523-pie-clean";
+} from "./models.js?v=20260523-stage-borders";
+import { renderChecklists } from "./checklist.js?v=20260523-stage-borders";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");

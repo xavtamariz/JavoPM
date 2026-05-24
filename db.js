@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260523-pie-clean";
+} from "./models.js?v=20260523-stage-borders";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 4;

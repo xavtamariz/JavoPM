@@ -8,7 +8,7 @@ import {
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
   sortByOrder
-} from "./models.js?v=20260523-pie-clean";
+} from "./models.js?v=20260523-stage-borders";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -728,7 +728,7 @@ function createStageBreakdown({ stages }) {
 
   stages.forEach((stage) => {
     const item = document.createElement("div");
-    item.className = "stage-metric";
+    item.className = `stage-metric stage-metric-${stage.id}`;
 
     const count = document.createElement("span");
     count.className = "stage-count";

@@ -818,6 +818,30 @@ h1 {
   background: var(--checklist-bg);
 }
 
+.stage-metric-frozen {
+  border-color: var(--accent);
+}
+
+.stage-metric-todo {
+  border-color: var(--task);
+}
+
+.stage-metric-in_progress {
+  border-color: var(--event);
+}
+
+.stage-metric-developed {
+  border-color: var(--ink-soft);
+}
+
+.stage-metric-verification {
+  border-color: var(--line-strong);
+}
+
+.stage-metric-completed {
+  border-color: var(--points-bg);
+}
+
 .stage-count {
   display: inline-flex;
   align-items: baseline;
