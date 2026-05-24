@@ -13,6 +13,8 @@
   --accent-soft: #e3f3f0;
   --danger: #b9473a;
   --danger-soft: #f7e5e2;
+  --save-border: #b7ddd6;
+  --save-hover: #d5ede8;
   --bug: #b9473a;
   --task: #1f7a6f;
   --event: #8a6a1f;
@@ -65,6 +67,8 @@
   --accent-soft: #15342e;
   --danger: #ff8a7b;
   --danger-soft: #351b18;
+  --save-border: rgba(95, 192, 174, 0.46);
+  --save-hover: #1d443c;
   --bug: #ff8a7b;
   --task: #7ed8c8;
   --event: #e6c76c;
@@ -1471,9 +1475,9 @@ h1 {
 
 .save-task-button {
   padding: 0 12px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-soft);
+  border: 1px solid var(--save-border);
+  background: var(--accent-soft);
+  color: var(--accent);
   white-space: nowrap;
 }
 
@@ -1486,10 +1490,13 @@ h1 {
 }
 
 .close-button:hover,
-.save-task-button:hover,
 .toolbar-button:hover,
 .small-button:hover {
   background: var(--surface-2);
+}
+
+.save-task-button:hover {
+  background: var(--save-hover);
 }
 
 .delete-task-button:hover {
