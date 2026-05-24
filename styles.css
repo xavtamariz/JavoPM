@@ -1378,13 +1378,24 @@ h1 {
 .field input[type="date"] {
   display: block;
   max-width: 100%;
+  padding-block: 0;
+  line-height: calc(var(--field-control-height) - 2px);
   text-align: left;
 }
 
 .field input[type="date"]::-webkit-date-and-time-value {
+  display: flex;
+  height: calc(var(--field-control-height) - 2px);
+  align-items: center;
   margin: 0;
   min-height: calc(var(--field-control-height) - 2px);
+  line-height: calc(var(--field-control-height) - 2px);
   text-align: left;
+}
+
+.field input[type="date"]::-webkit-calendar-picker-indicator {
+  align-self: center;
+  margin-block: 0;
 }
 
 .field select {
