@@ -17,6 +17,12 @@
   --task: #1f7a6f;
   --event: #8a6a1f;
   --event-soft: #f5ecd1;
+  --stage-frozen: #0f9f9a;
+  --stage-todo: #2563eb;
+  --stage-progress: #d97706;
+  --stage-developed: #e11d48;
+  --stage-verification: #7c3aed;
+  --stage-completed: #16a34a;
   --page-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(247, 248, 250, 0) 280px);
   --control-bg: rgba(255, 255, 255, 0.76);
   --column-bg: rgba(255, 255, 255, 0.7);
@@ -63,6 +69,12 @@
   --task: #7ed8c8;
   --event: #e6c76c;
   --event-soft: #392f18;
+  --stage-frozen: #5eead4;
+  --stage-todo: #60a5fa;
+  --stage-progress: #facc15;
+  --stage-developed: #fb7185;
+  --stage-verification: #c084fc;
+  --stage-completed: #86efac;
   --page-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(5, 6, 7, 0) 280px);
   --control-bg: rgba(17, 20, 24, 0.78);
   --column-bg: rgba(14, 17, 21, 0.86);
@@ -671,27 +683,27 @@ h1 {
 }
 
 .pie-segment-frozen {
-  fill: var(--accent);
+  fill: var(--stage-frozen);
 }
 
 .pie-segment-todo {
-  fill: var(--task);
+  fill: var(--stage-todo);
 }
 
 .pie-segment-in_progress {
-  fill: var(--event);
+  fill: var(--stage-progress);
 }
 
 .pie-segment-developed {
-  fill: var(--ink-soft);
+  fill: var(--stage-developed);
 }
 
 .pie-segment-verification {
-  fill: var(--line-strong);
+  fill: var(--stage-verification);
 }
 
 .pie-segment-completed {
-  fill: var(--points-bg);
+  fill: var(--stage-completed);
 }
 
 .pie-empty {
@@ -813,33 +825,33 @@ h1 {
   gap: 3px;
   min-width: 0;
   padding: 7px 4px;
-  border: 1px solid var(--line);
+  border: 1.5px solid var(--line);
   border-radius: var(--radius);
   background: var(--checklist-bg);
 }
 
 .stage-metric-frozen {
-  border-color: var(--accent);
+  border-color: var(--stage-frozen);
 }
 
 .stage-metric-todo {
-  border-color: var(--task);
+  border-color: var(--stage-todo);
 }
 
 .stage-metric-in_progress {
-  border-color: var(--event);
+  border-color: var(--stage-progress);
 }
 
 .stage-metric-developed {
-  border-color: var(--ink-soft);
+  border-color: var(--stage-developed);
 }
 
 .stage-metric-verification {
-  border-color: var(--line-strong);
+  border-color: var(--stage-verification);
 }
 
 .stage-metric-completed {
-  border-color: var(--points-bg);
+  border-color: var(--stage-completed);
 }
 
 .stage-count {

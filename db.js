@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260523-stage-borders";
+} from "./models.js?v=20260523-vivid-stages";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 4;

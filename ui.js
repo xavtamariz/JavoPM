@@ -8,7 +8,7 @@ import {
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
   sortByOrder
-} from "./models.js?v=20260523-stage-borders";
+} from "./models.js?v=20260523-vivid-stages";
 
 const AXIS_LABELS = {
   frozen: "C",

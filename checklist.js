@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260523-stage-borders";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260523-vivid-stages";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");
