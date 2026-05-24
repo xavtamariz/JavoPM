@@ -16,7 +16,7 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260524-header-actions" />
+    <link rel="stylesheet" href="./styles.css?v=20260524-side-menu" />
   </head>
   <body>
     <div class="app-shell">
@@ -57,12 +57,19 @@
               <span class="theme-dot" aria-hidden="true"></span>
               <span data-theme-label>Claro</span>
             </button>
-          </div>
-          <div class="header-action-row">
-            <div class="header-status" aria-live="polite">
-              <span class="status-dot" aria-hidden="true"></span>
-              Guardado local
-            </div>
+            <button
+              class="side-menu-toggle"
+              type="button"
+              data-side-menu-toggle
+              aria-controls="side-menu"
+              aria-expanded="false"
+              aria-label="Abrir menú lateral"
+            >
+              <span class="side-menu-icon" aria-hidden="true">
+                <span></span>
+                <span></span>
+              </span>
+            </button>
           </div>
         </div>
       </header>
@@ -72,8 +79,25 @@
       </main>
     </div>
 
+    <div class="side-menu-overlay" data-side-menu-overlay hidden>
+      <aside id="side-menu" class="side-menu" role="dialog" aria-modal="true" aria-labelledby="side-menu-title">
+        <div class="side-menu-topbar">
+          <h2 id="side-menu-title">Menú</h2>
+          <button class="close-button" type="button" data-side-menu-close aria-label="Cerrar menú lateral">×</button>
+        </div>
+        <div class="side-menu-body">
+          <div class="side-menu-section">
+            <div class="header-status" aria-live="polite">
+              <span class="status-dot" aria-hidden="true"></span>
+              Guardado local
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260524-header-actions"></script>
+    <script type="module" src="./app.js?v=20260524-side-menu"></script>
   </body>
 </html>

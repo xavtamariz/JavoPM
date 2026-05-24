@@ -52,13 +52,18 @@ const projectMenuToggle = document.querySelector("[data-project-menu-toggle]");
 const teamMenuToggle = document.querySelector("[data-team-menu-toggle]");
 const themeToggle = document.querySelector("[data-theme-toggle]");
 const themeLabel = document.querySelector("[data-theme-label]");
+const sideMenuToggle = document.querySelector("[data-side-menu-toggle]");
+const sideMenuOverlay = document.querySelector("[data-side-menu-overlay]");
+const sideMenuClose = document.querySelector("[data-side-menu-close]");
 const THEME_STORAGE_KEY = "javopm-theme";
 let projectModalKeydownHandler;
+let sideMenuKeydownHandler;
 let teamModalKeydownHandler;
 
 async function startApp() {
   try {
     initThemeToggle();
+    initSideMenu();
     await initDB();
     await resetSeedDataIfNeeded();
     await loadState();
@@ -68,6 +73,62 @@ async function startApp() {
   } catch (error) {
     renderBootError(error);
   }
+}
+
+function initSideMenu() {
+  if (!sideMenuToggle || !sideMenuOverlay || !sideMenuClose) {
+    return;
+  }
+
+  sideMenuToggle.addEventListener("click", openSideMenu);
+  sideMenuClose.addEventListener("click", closeSideMenu);
+  sideMenuOverlay.addEventListener("click", (event) => {
+    if (event.target === sideMenuOverlay) {
+      closeSideMenu();
+    }
+  });
+}
+
+function openSideMenu() {
+  if (!sideMenuOverlay || !sideMenuToggle) {
+    return;
+  }
+
+  closeProjectModal({ clearRoot: false });
+  closeTeamModal({ clearRoot: false });
+  sideMenuOverlay.hidden = false;
+  sideMenuToggle.setAttribute("aria-expanded", "true");
+  sideMenuKeydownHandler = (event) => {
+    if (event.key === "Escape") {
+      closeSideMenu();
+    }
+  };
+  document.addEventListener("keydown", sideMenuKeydownHandler);
+
+  requestAnimationFrame(() => {
+    sideMenuOverlay.classList.add("is-open");
+    sideMenuClose?.focus({ preventScroll: true });
+  });
+}
+
+function closeSideMenu() {
+  if (!sideMenuOverlay || !sideMenuToggle) {
+    return;
+  }
+
+  sideMenuOverlay.classList.remove("is-open");
+  sideMenuToggle.setAttribute("aria-expanded", "false");
+
+  if (sideMenuKeydownHandler) {
+    document.removeEventListener("keydown", sideMenuKeydownHandler);
+    sideMenuKeydownHandler = undefined;
+  }
+
+  window.setTimeout(() => {
+    if (!sideMenuOverlay.classList.contains("is-open")) {
+      sideMenuOverlay.hidden = true;
+    }
+  }, 180);
 }
 
 function initThemeToggle() {
