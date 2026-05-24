@@ -87,7 +87,7 @@ function applyTheme(theme, options = {}) {
   document.documentElement.dataset.theme = nextTheme;
 
   if (themeLabel) {
-    themeLabel.textContent = nextTheme === "dark" ? "Tema oscuro" : "Tema claro";
+    themeLabel.textContent = nextTheme === "dark" ? "Oscuro" : "Claro";
   }
 
   if (themeToggle) {
