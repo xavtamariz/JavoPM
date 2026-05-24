@@ -15,6 +15,7 @@ export const METRICS_COLUMN_ID = "metrics";
 export const TASK_CARD_TYPE = "task";
 export const CHART_CARD_TYPE = "chart";
 export const TASK_PROGRESS_CHART_TYPE = "taskProgressByColumn";
+export const TASK_STAGE_BY_MEMBER_CHART_TYPE = "taskStageByMember";
 export const DEFAULT_CHART_PERIOD = "1D";
 export const DEFAULT_CHART_TEAM = "all";
 export const CHART_PERIODS = [

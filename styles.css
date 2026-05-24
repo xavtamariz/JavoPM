@@ -600,6 +600,10 @@ h1 {
   cursor: default;
 }
 
+.stage-chart-card {
+  min-height: 396px;
+}
+
 .chart-card-header {
   display: flex;
   align-items: start;
@@ -645,6 +649,70 @@ h1 {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.pie-chart-frame {
+  display: grid;
+  place-items: center;
+  min-height: 176px;
+  padding: 8px;
+}
+
+.pie-svg {
+  display: block;
+  width: 100%;
+  max-height: 172px;
+}
+
+.pie-segment {
+  stroke: var(--surface);
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.pie-segment-frozen {
+  fill: var(--accent);
+}
+
+.pie-segment-todo {
+  fill: var(--task);
+}
+
+.pie-segment-in_progress {
+  fill: var(--event);
+}
+
+.pie-segment-developed {
+  fill: var(--ink-soft);
+}
+
+.pie-segment-verification {
+  fill: var(--line-strong);
+}
+
+.pie-segment-completed {
+  fill: var(--points-bg);
+}
+
+.pie-empty {
+  fill: var(--surface-2);
+  stroke: var(--line-strong);
+  stroke-width: 2;
+}
+
+.pie-total-value {
+  fill: var(--ink);
+  font-family: var(--mono);
+  font-size: 19px;
+  font-weight: 820;
+}
+
+.pie-total-label {
+  fill: var(--muted);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 760;
+  text-transform: uppercase;
 }
 
 .chart-grid-line {
@@ -741,6 +809,54 @@ h1 {
 .chart-team-control select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.stage-team-control {
+  margin-bottom: 10px;
+}
+
+.stage-breakdown {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.stage-metric {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--checklist-bg);
+}
+
+.stage-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  min-width: 0;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 820;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.stage-letter {
+  color: var(--muted);
+}
+
+.stage-percent {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 760;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .task-project {

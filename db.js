@@ -2,6 +2,7 @@ import {
   DEFAULT_COLUMNS,
   METRICS_COLUMN_ID,
   TASK_PROGRESS_CHART_TYPE,
+  TASK_STAGE_BY_MEMBER_CHART_TYPE,
   createChartCardModel,
   createTaskEventModel,
   normalizeChartCard,
@@ -11,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260523-metrics";
+} from "./models.js?v=20260523-stage";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 4;
@@ -260,20 +261,36 @@ async function ensureDefaultColumns(existingColumns) {
 
 async function ensureDefaultChartCards() {
   const chartCards = await getChartCards();
-  const hasTaskProgressChart = chartCards.some(
-    (chartCard) => chartCard.chartType === TASK_PROGRESS_CHART_TYPE
-  );
+  const defaultCharts = [
+    {
+      chartType: TASK_PROGRESS_CHART_TYPE,
+      title: "Tareas por columna"
+    },
+    {
+      chartType: TASK_STAGE_BY_MEMBER_CHART_TYPE,
+      title: "Tareas por etapa"
+    }
+  ];
+  let metricsCardCount = chartCards.filter(
+    (chartCard) => chartCard.columnId === METRICS_COLUMN_ID
+  ).length;
 
-  if (hasTaskProgressChart) {
-    return;
+  for (const chart of defaultCharts) {
+    const exists = chartCards.some((chartCard) => chartCard.chartType === chart.chartType);
+
+    if (exists) {
+      continue;
+    }
+
+    await createChartCard(
+      createChartCardModel({
+        chartType: chart.chartType,
+        order: metricsCardCount,
+        title: chart.title
+      })
+    );
+    metricsCardCount += 1;
   }
-
-  const metricsCards = chartCards.filter((chartCard) => chartCard.columnId === METRICS_COLUMN_ID);
-  await createChartCard(
-    createChartCardModel({
-      order: metricsCards.length
-    })
-  );
 }
 
 function getAllFromStore(db, storeName) {

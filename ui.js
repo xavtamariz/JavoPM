@@ -5,9 +5,10 @@ import {
   DEFAULT_CHART_TEAM,
   METRICS_COLUMN_ID,
   TASK_CARD_TYPE,
+  TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
   sortByOrder
-} from "./models.js?v=20260523-metrics";
+} from "./models.js?v=20260523-stage";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -283,7 +284,8 @@ function createChartCard({
   onUpdateChartCard
 }) {
   const card = document.createElement("article");
-  card.className = "task-card chart-card";
+  const isStageChart = chartCard.chartType === TASK_STAGE_BY_MEMBER_CHART_TYPE;
+  card.className = `task-card chart-card${isStageChart ? " stage-chart-card" : ""}`;
   card.dataset.cardId = chartCard.id;
   card.dataset.cardType = CHART_CARD_TYPE;
   card.setAttribute("aria-label", chartCard.title);
@@ -306,9 +308,25 @@ function createChartCard({
 
   const badge = document.createElement("span");
   badge.className = "chart-card-badge";
-  badge.textContent = "Line chart";
+  badge.textContent = isStageChart ? "Pie chart" : "Line chart";
 
   header.append(title, badge);
+
+  if (isStageChart) {
+    const chartData = getStageChartData({ chartCard, columns, taskEvents, tasks, teamMembers });
+    const teamControl = createStageTeamControl(
+      chartCard,
+      teamMembers,
+      chartData.selectedTeamMember,
+      onUpdateChartCard
+    );
+    const pie = createPieChart(chartData);
+    const breakdown = createStageBreakdown(chartData);
+    const periodControls = createPeriodControls(chartCard, onUpdateChartCard);
+
+    card.append(header, teamControl, pie, breakdown, periodControls, moveHandle);
+    return card;
+  }
 
   const chartData = getChartData({ chartCard, columns, taskEvents, tasks });
   const chart = createLineChart(chartData);
@@ -382,6 +400,75 @@ function getChartData({ chartCard, columns, tasks, taskEvents }) {
     source,
     values
   };
+}
+
+function getStageChartData({ chartCard, columns, tasks, taskEvents, teamMembers }) {
+  const workflowColumns = columns.filter((column) => column.id !== METRICS_COLUMN_ID);
+  const selectedTeamMember = getStageTeamMember(chartCard, teamMembers);
+  const hasTeamMember = selectedTeamMember !== DEFAULT_CHART_TEAM;
+  const period = chartCard.settings?.period || DEFAULT_CHART_PERIOD;
+  const cutoff = getPeriodCutoff(period);
+  const tasksById = new Map(tasks.map((task) => [task.id, task]));
+  const columnIds = new Set(workflowColumns.map((column) => column.id));
+
+  const selectedEvents = hasTeamMember
+    ? taskEvents.filter((event) => {
+        const task = tasksById.get(event.taskId);
+
+        if (!task || task.responsible !== selectedTeamMember || !columnIds.has(event.columnId)) {
+          return false;
+        }
+
+        if (cutoff && new Date(event.createdAt).getTime() < cutoff) {
+          return false;
+        }
+
+        return true;
+      })
+    : [];
+
+  const source = selectedEvents.length > 0 ? "events" : "current";
+  const values = workflowColumns.map((column) => {
+    if (source === "events") {
+      return selectedEvents.filter((event) => event.columnId === column.id).length;
+    }
+
+    return tasks.filter(
+      (task) => task.columnId === column.id && task.responsible === selectedTeamMember
+    ).length;
+  });
+  const total = values.reduce((sum, value) => sum + value, 0);
+  const stages = workflowColumns.map((column, index) => {
+    const count = values[index];
+
+    return {
+      count,
+      id: column.id,
+      label: AXIS_LABELS[column.id] || column.title.slice(0, 1),
+      percent: total > 0 ? Math.round((count / total) * 100) : 0
+    };
+  });
+
+  return {
+    selectedTeamMember,
+    stages,
+    total
+  };
+}
+
+function getStageTeamMember(chartCard, teamMembers) {
+  const teamNames = teamMembers.map((teamMember) => teamMember.name).filter(Boolean);
+  const selectedTeamMember = chartCard.settings?.teamMember;
+
+  if (
+    selectedTeamMember &&
+    selectedTeamMember !== DEFAULT_CHART_TEAM &&
+    teamNames.includes(selectedTeamMember)
+  ) {
+    return selectedTeamMember;
+  }
+
+  return teamNames[0] || DEFAULT_CHART_TEAM;
 }
 
 function getPeriodCutoff(periodValue) {
@@ -463,6 +550,91 @@ function createLineChart({ labels, values }) {
   return shell;
 }
 
+function createPieChart({ stages, total }) {
+  const width = 320;
+  const height = 172;
+  const centerX = width / 2;
+  const centerY = 86;
+  const radius = 60;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.classList.add("pie-svg");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Gráfica de tareas por etapa");
+
+  if (total <= 0) {
+    const emptyCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    emptyCircle.setAttribute("cx", String(centerX));
+    emptyCircle.setAttribute("cy", String(centerY));
+    emptyCircle.setAttribute("r", String(radius));
+    emptyCircle.classList.add("pie-empty");
+    svg.append(emptyCircle);
+  } else {
+    let currentAngle = -90;
+
+    stages.forEach((stage) => {
+      if (stage.count <= 0) {
+        return;
+      }
+
+      const angle = (stage.count / total) * 360;
+      const segment = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      segment.setAttribute(
+        "d",
+        createPieSegmentPath(centerX, centerY, radius, currentAngle, currentAngle + angle)
+      );
+      segment.classList.add("pie-segment", `pie-segment-${stage.id}`);
+
+      const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      title.textContent = `${stage.count}${stage.label} · ${stage.percent}%`;
+      segment.append(title);
+      svg.append(segment);
+      currentAngle += angle;
+    });
+  }
+
+  svg.append(createSvgText(centerX, centerY - 2, String(total), "pie-total-value", "middle"));
+  svg.append(createSvgText(centerX, centerY + 16, "tareas", "pie-total-label", "middle"));
+
+  const shell = document.createElement("div");
+  shell.className = "chart-frame pie-chart-frame";
+  shell.append(svg);
+  return shell;
+}
+
+function createPieSegmentPath(centerX, centerY, radius, startAngle, endAngle) {
+  if (endAngle - startAngle >= 359.99) {
+    const top = pointOnCircle(centerX, centerY, radius, -90);
+    const bottom = pointOnCircle(centerX, centerY, radius, 90);
+    return [
+      `M ${top.x} ${top.y}`,
+      `A ${radius} ${radius} 0 1 1 ${bottom.x} ${bottom.y}`,
+      `A ${radius} ${radius} 0 1 1 ${top.x} ${top.y}`,
+      "Z"
+    ].join(" ");
+  }
+
+  const start = pointOnCircle(centerX, centerY, radius, startAngle);
+  const end = pointOnCircle(centerX, centerY, radius, endAngle);
+  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+
+  return [
+    `M ${centerX} ${centerY}`,
+    `L ${start.x} ${start.y}`,
+    `A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y}`,
+    "Z"
+  ].join(" ");
+}
+
+function pointOnCircle(centerX, centerY, radius, angle) {
+  const radians = (angle * Math.PI) / 180;
+
+  return {
+    x: centerX + radius * Math.cos(radians),
+    y: centerY + radius * Math.sin(radians)
+  };
+}
+
 function createSvgLine(x1, y1, x2, y2, className) {
   const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
   line.setAttribute("x1", String(x1));
@@ -510,6 +682,78 @@ function createPeriodControls(chartCard, onUpdateChartCard) {
   });
 
   return group;
+}
+
+function createStageTeamControl(chartCard, teamMembers, selectedTeamMember, onUpdateChartCard) {
+  const wrapper = document.createElement("label");
+  wrapper.className = "chart-team-control stage-team-control";
+  wrapper.textContent = "Team member";
+
+  const select = document.createElement("select");
+  select.setAttribute("aria-label", "Integrante del equipo para tareas por etapa");
+
+  const teamNames = teamMembers.map((teamMember) => teamMember.name).filter(Boolean);
+
+  if (teamNames.length === 0) {
+    const emptyOption = document.createElement("option");
+    emptyOption.value = DEFAULT_CHART_TEAM;
+    emptyOption.textContent = "Sin integrantes";
+    select.append(emptyOption);
+    select.disabled = true;
+  } else {
+    teamNames.forEach((teamMemberName) => {
+      const option = document.createElement("option");
+      option.value = teamMemberName;
+      option.textContent = teamMemberName;
+      select.append(option);
+    });
+    select.value = selectedTeamMember;
+  }
+
+  select.addEventListener("change", () => {
+    onUpdateChartCard({
+      ...chartCard,
+      settings: {
+        ...chartCard.settings,
+        teamMember: select.value
+      },
+      updatedAt: new Date().toISOString()
+    });
+  });
+
+  wrapper.append(select);
+  return wrapper;
+}
+
+function createStageBreakdown({ stages }) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "stage-breakdown";
+
+  stages.forEach((stage) => {
+    const item = document.createElement("div");
+    item.className = "stage-metric";
+
+    const count = document.createElement("span");
+    count.className = "stage-count";
+
+    const number = document.createElement("span");
+    number.className = "stage-number";
+    number.textContent = String(stage.count);
+
+    const letter = document.createElement("span");
+    letter.className = "stage-letter";
+    letter.textContent = stage.label;
+    count.append(number, letter);
+
+    const percent = document.createElement("span");
+    percent.className = "stage-percent";
+    percent.textContent = `${stage.percent}%`;
+
+    item.append(count, percent);
+    wrapper.append(item);
+  });
+
+  return wrapper;
 }
 
 function createTeamControl(chartCard, teamMembers, onUpdateChartCard) {
