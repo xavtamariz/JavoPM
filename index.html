@@ -16,7 +16,13 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260524-save-green" />
+    <script>
+      window.JAVOPM_CONFIG = window.JAVOPM_CONFIG || {
+        supabaseAnonKey: "",
+        supabaseUrl: ""
+      };
+    </script>
+    <link rel="stylesheet" href="./styles.css?v=20260524-account-sync" />
   </head>
   <body>
     <div class="app-shell">
@@ -27,6 +33,15 @@
         </div>
         <div class="header-actions">
           <div class="header-action-row">
+            <button
+              class="account-menu-button"
+              type="button"
+              data-account-menu-toggle
+              aria-expanded="false"
+              aria-haspopup="dialog"
+            >
+              <span class="account-menu-label">Cuenta</span>
+            </button>
             <div class="project-menu" data-project-menu>
               <button
                 class="project-menu-button"
@@ -87,9 +102,9 @@
         </div>
         <div class="side-menu-body">
           <div class="side-menu-section">
-            <div class="header-status" aria-live="polite">
+            <div class="header-status" data-sync-status data-sync-state="local" aria-live="polite">
               <span class="status-dot" aria-hidden="true"></span>
-              Guardado local
+              <span data-sync-label>Guardado local</span>
             </div>
           </div>
         </div>
@@ -98,6 +113,6 @@
 
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260524-save-button"></script>
+    <script type="module" src="./app.js?v=20260524-account-sync"></script>
   </body>
 </html>

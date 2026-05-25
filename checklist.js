@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260523-leaderboard";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260524-account-sync";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

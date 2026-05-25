@@ -11,7 +11,8 @@ JavoPM es una primera versión local-first de un tablero Kanban para gestionar t
 - Modal editable por tarea.
 - Descripción larga con edición básica.
 - Checklists dinámicas con items editables, completables y eliminables.
-- Sin backend, sin login y sin cifrado por ahora.
+- Modo anónimo local sin cuenta.
+- Arquitectura opcional de cuenta owner y sincronización con Supabase para v1.7.0.
 
 ## Uso local
 
@@ -22,3 +23,23 @@ python3 -m http.server 4173
 ```
 
 Luego entra a `http://localhost:4173`.
+
+## Supabase opcional
+
+JavoPM sigue funcionando 100% local si `window.JAVOPM_CONFIG` no tiene credenciales.
+Para activar cuentas y sync cloud:
+
+1. Crea o elige un proyecto Supabase.
+2. Aplica `schema/001_account_cloud_sync.sql`.
+3. Configura la app antes de cargar `app.js`:
+
+```html
+<script>
+  window.JAVOPM_CONFIG = {
+    supabaseUrl: "https://TU-PROYECTO.supabase.co",
+    supabaseAnonKey: "TU_ANON_KEY"
+  };
+</script>
+```
+
+No uses la `service_role` key en el navegador.

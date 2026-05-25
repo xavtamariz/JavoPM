@@ -205,6 +205,7 @@ h1 {
 }
 
 .header-status,
+.account-menu-button,
 .project-menu-button,
 .team-menu-button,
 .side-menu-toggle,
@@ -226,6 +227,7 @@ h1 {
   position: relative;
 }
 
+.account-menu-button,
 .project-menu-button,
 .team-menu-button,
 .side-menu-toggle {
@@ -238,6 +240,7 @@ h1 {
     transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.account-menu-label,
 .project-menu-label,
 .team-menu-label {
   min-width: 0;
@@ -256,6 +259,8 @@ h1 {
     transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.account-menu-button:hover,
+.account-menu-button:focus-visible,
 .project-menu-button:hover,
 .project-menu-button:focus-visible,
 .team-menu-button:hover,
@@ -270,6 +275,7 @@ h1 {
   transform: translateY(-1px);
 }
 
+.account-menu-button:focus-visible,
 .project-menu-button:focus-visible,
 .team-menu-button:focus-visible,
 .side-menu-toggle:focus-visible,
@@ -278,6 +284,7 @@ h1 {
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+.account-menu-button:active,
 .project-menu-button:active,
 .team-menu-button:active,
 .side-menu-toggle:active,
@@ -317,6 +324,22 @@ h1 {
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: var(--theme-dot);
+}
+
+.header-status[data-sync-state="syncing"] .status-dot {
+  background: var(--event);
+}
+
+.header-status[data-sync-state="synced"] .status-dot {
+  background: var(--accent);
+}
+
+.header-status[data-sync-state="offline"] .status-dot {
+  background: var(--muted);
+}
+
+.header-status[data-sync-state="error"] .status-dot {
+  background: var(--danger);
 }
 
 .side-menu-overlay {
@@ -399,10 +422,78 @@ h1 {
   width: min(520px, 100%);
 }
 
+.modal.account-modal {
+  width: min(560px, 100%);
+}
+
 .project-modal-body {
   display: grid;
   gap: 12px;
   padding: 20px;
+}
+
+.account-modal-body {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.account-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.account-mode-button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.account-mode-button.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.account-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.account-message {
+  display: none;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.account-message.is-visible {
+  display: block;
+}
+
+.account-modal-footer {
+  align-items: center;
+}
+
+.account-cancel-button {
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+}
+
+.account-primary-button:disabled,
+.account-mode-button:disabled,
+.account-cancel-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .project-list-title {
@@ -1722,6 +1813,7 @@ h1 {
   }
 
   .header-status,
+  .account-menu-button,
   .project-menu-button,
   .team-menu-button,
   .side-menu-toggle,
@@ -1736,6 +1828,7 @@ h1 {
     padding: 0 9px;
   }
 
+  .account-menu-button,
   .project-menu-button,
   .team-menu-button {
     max-width: none;
@@ -1745,6 +1838,7 @@ h1 {
     width: 32px;
   }
 
+  .account-menu-label,
   .project-menu-label,
   .team-menu-label {
     overflow: visible;
@@ -1758,6 +1852,7 @@ h1 {
   }
 
   .header-status,
+  .account-menu-button,
   .project-menu-button,
   .team-menu-button,
   .side-menu-toggle,
@@ -1772,6 +1867,7 @@ h1 {
     padding: 0 8px;
   }
 
+  .account-menu-button,
   .project-menu-button,
   .team-menu-button {
     max-width: none;

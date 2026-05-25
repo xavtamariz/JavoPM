@@ -13,10 +13,10 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260523-leaderboard";
+} from "./models.js?v=20260524-account-sync";
 
 const DB_NAME = "JavoPM";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const STORES = {
   chartCards: "chartCards",
   columns: "columns",
@@ -24,6 +24,7 @@ const STORES = {
   teamMembers: "teamMembers",
   taskEvents: "taskEvents",
   tasks: "tasks",
+  pendingMutations: "pendingMutations",
   meta: "meta"
 };
 
@@ -70,6 +71,14 @@ export function initDB() {
 
         if (!db.objectStoreNames.contains(STORES.meta)) {
           db.createObjectStore(STORES.meta, { keyPath: "key" });
+        }
+
+        if (!db.objectStoreNames.contains(STORES.pendingMutations)) {
+          const pendingMutationStore = db.createObjectStore(STORES.pendingMutations, {
+            keyPath: "mutationId"
+          });
+          pendingMutationStore.createIndex("status", "status", { unique: false });
+          pendingMutationStore.createIndex("createdAt", "createdAt", { unique: false });
         }
       };
 
@@ -230,6 +239,117 @@ export async function saveTaskOrder(tasks) {
   return orderedTasks;
 }
 
+export async function getMetaValue(key) {
+  const db = await initDB();
+  const record = await getValue(db, STORES.meta, key);
+  return record?.value;
+}
+
+export async function setMetaValue(key, value) {
+  const db = await initDB();
+  await setValue(db, STORES.meta, { key, value });
+  return value;
+}
+
+export async function getCloudMeta() {
+  return (await getMetaValue("cloudMeta")) || null;
+}
+
+export async function saveCloudMeta(meta) {
+  const nextMeta = {
+    ...(await getCloudMeta()),
+    ...meta,
+    updatedAt: new Date().toISOString()
+  };
+  await setMetaValue("cloudMeta", nextMeta);
+  return nextMeta;
+}
+
+export async function saveAnonymousBackup(snapshot) {
+  const backup = {
+    createdAt: new Date().toISOString(),
+    snapshot
+  };
+  await setMetaValue("anonymousBackup", backup);
+  return backup;
+}
+
+export async function addPendingMutation(mutation) {
+  const db = await initDB();
+  const normalizedMutation = {
+    ...mutation,
+    status: mutation.status || "pending",
+    createdAt: mutation.createdAt || new Date().toISOString()
+  };
+  await putValue(db, STORES.pendingMutations, normalizedMutation);
+  return normalizedMutation;
+}
+
+export async function getPendingMutations() {
+  const db = await initDB();
+  const mutations = await getAllFromStore(db, STORES.pendingMutations);
+  return mutations.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+}
+
+export async function updatePendingMutation(mutation) {
+  const db = await initDB();
+  const updatedMutation = {
+    ...mutation,
+    updatedAt: new Date().toISOString()
+  };
+  await putValue(db, STORES.pendingMutations, updatedMutation);
+  return updatedMutation;
+}
+
+export async function deletePendingMutation(mutationId) {
+  const db = await initDB();
+  await deleteValue(db, STORES.pendingMutations, mutationId);
+}
+
+export async function exportBoardSnapshot() {
+  const [columns, tasks, projects, teamMembers, chartCards, taskEvents] = await Promise.all([
+    getColumns(),
+    getTasks(),
+    getProjects(),
+    getTeamMembers(),
+    getChartCards(),
+    getTaskEvents()
+  ]);
+
+  return {
+    exportedAt: new Date().toISOString(),
+    columns,
+    tasks,
+    projects,
+    teamMembers,
+    chartCards,
+    taskEvents
+  };
+}
+
+export async function importBoardSnapshot(snapshot = {}) {
+  const db = await initDB();
+  const columns = Array.isArray(snapshot.columns) && snapshot.columns.length > 0
+    ? snapshot.columns
+    : DEFAULT_COLUMNS;
+  const tasks = Array.isArray(snapshot.tasks) ? snapshot.tasks : [];
+  const projects = Array.isArray(snapshot.projects) ? snapshot.projects : [];
+  const teamMembers = Array.isArray(snapshot.teamMembers) ? snapshot.teamMembers : [];
+  const chartCards = Array.isArray(snapshot.chartCards) ? snapshot.chartCards : [];
+  const taskEvents = Array.isArray(snapshot.taskEvents) ? snapshot.taskEvents : [];
+
+  await Promise.all([
+    replaceStore(db, STORES.columns, columns.map(normalizeColumn)),
+    replaceStore(db, STORES.tasks, tasks.map(normalizeTask)),
+    replaceStore(db, STORES.projects, projects.map(normalizeProject)),
+    replaceStore(db, STORES.teamMembers, teamMembers.map(normalizeTeamMember).filter((item) => item.name)),
+    replaceStore(db, STORES.chartCards, chartCards.map(normalizeChartCard)),
+    replaceStore(db, STORES.taskEvents, taskEvents.map(normalizeTaskEvent))
+  ]);
+
+  await setValue(db, STORES.meta, { key: "seeded", value: true });
+}
+
 async function ensureDefaultColumns(existingColumns) {
   const byId = new Map(existingColumns.map((column) => [column.id, column]));
   const nextColumns = DEFAULT_COLUMNS.map((defaultColumn, index) => {
@@ -346,6 +466,18 @@ function writeMany(db, storeName, values) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, "readwrite");
     const store = transaction.objectStore(storeName);
+    values.forEach((value) => store.put(value));
+    transaction.oncomplete = () => resolve(values);
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+function replaceStore(db, storeName, values) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, "readwrite");
+    const store = transaction.objectStore(storeName);
+    store.clear();
     values.forEach((value) => store.put(value));
     transaction.oncomplete = () => resolve(values);
     transaction.onerror = () => reject(transaction.error);

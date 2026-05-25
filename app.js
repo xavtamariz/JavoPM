@@ -4,21 +4,26 @@ import {
   createTeamMember,
   createTaskEvent,
   deleteTask,
+  exportBoardSnapshot,
   getChartCards,
   getColumns,
+  getMetaValue,
   getProjects,
   getTeamMembers,
   getTaskEvents,
   getTasks,
+  importBoardSnapshot,
   initDB,
   resetSeedDataIfNeeded,
+  saveAnonymousBackup,
   saveChartCards,
+  setMetaValue,
   saveProjects,
   saveTeamMembers,
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260523-leaderboard";
+} from "./db.js?v=20260524-account-sync";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -27,6 +32,7 @@ import {
   createProjectModel,
   createTeamMemberModel,
   createTaskModel,
+  formatFolio,
   generateFolio,
   getFolioNumber,
   getNextGlobalFolioNumber,
@@ -34,9 +40,22 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260523-leaderboard";
-import { openTaskModal } from "./modal.js?v=20260524-save-button";
-import { renderBoard } from "./ui.js?v=20260523-leaderboard";
+} from "./models.js?v=20260524-account-sync";
+import { initAccountModal } from "./accountModal.js?v=20260524-account-sync";
+import {
+  canUseAccounts,
+  createOwnerAccount,
+  loginOwnerAccount,
+  restoreOwnerSession
+} from "./auth.js?v=20260524-account-sync";
+import { openTaskModal } from "./modal.js?v=20260524-account-sync";
+import {
+  allocateNextCloudFolioNumber,
+  initSyncEngine,
+  recordCloudMutation,
+  startCloudSyncSession
+} from "./syncEngine.js?v=20260524-account-sync";
+import { renderBoard } from "./ui.js?v=20260524-account-sync";
 
 const state = {
   chartCards: [],
@@ -48,6 +67,7 @@ const state = {
 };
 
 const boardElement = document.querySelector("#board");
+const accountMenuToggle = document.querySelector("[data-account-menu-toggle]");
 const projectMenuToggle = document.querySelector("[data-project-menu-toggle]");
 const teamMenuToggle = document.querySelector("[data-team-menu-toggle]");
 const themeToggle = document.querySelector("[data-theme-toggle]");
@@ -55,7 +75,10 @@ const themeLabel = document.querySelector("[data-theme-label]");
 const sideMenuToggle = document.querySelector("[data-side-menu-toggle]");
 const sideMenuOverlay = document.querySelector("[data-side-menu-overlay]");
 const sideMenuClose = document.querySelector("[data-side-menu-close]");
+const syncStatus = document.querySelector("[data-sync-status]");
+const syncLabel = document.querySelector("[data-sync-label]");
 const THEME_STORAGE_KEY = "javopm-theme";
+let clientId;
 let projectModalKeydownHandler;
 let sideMenuKeydownHandler;
 let teamModalKeydownHandler;
@@ -67,8 +90,15 @@ async function startApp() {
     await initDB();
     await resetSeedDataIfNeeded();
     await loadState();
+    clientId = await getOrCreateClientId();
+    initSyncEngine({
+      onRemoteSnapshot: handleRemoteSnapshot,
+      onStatusChange: setSyncStatus
+    });
+    initAccountMenu();
     initProjectMenu();
     initTeamMenu();
+    await tryRestoreOwnerSession();
     render();
   } catch (error) {
     renderBootError(error);
@@ -243,6 +273,139 @@ function initTeamMenu() {
   teamMenuToggle.addEventListener("click", openTeamModal);
 }
 
+function initAccountMenu() {
+  initAccountModal({
+    beforeOpen: () => {
+      closeProjectModal({ clearRoot: false });
+      closeTeamModal({ clearRoot: false });
+      closeSideMenu();
+    },
+    button: accountMenuToggle,
+    isConfigured: canUseAccounts,
+    onCreateAccount: handleCreateOwnerAccount,
+    onLogin: handleLoginOwnerAccount
+  });
+}
+
+async function getOrCreateClientId() {
+  const existingClientId = await getMetaValue("clientId");
+
+  if (existingClientId) {
+    return existingClientId;
+  }
+
+  const nextClientId = crypto.randomUUID
+    ? `client_${crypto.randomUUID()}`
+    : `client_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  await setMetaValue("clientId", nextClientId);
+  return nextClientId;
+}
+
+async function tryRestoreOwnerSession() {
+  if (!canUseAccounts()) {
+    setSyncStatus("local");
+    return;
+  }
+
+  try {
+    const result = await restoreOwnerSession();
+    if (!result?.cloud?.snapshot) {
+      setSyncStatus("local");
+      return;
+    }
+
+    await importBoardSnapshot(result.cloud.snapshot);
+    await reloadBoardState();
+    await startAuthenticatedSync(result);
+  } catch (error) {
+    setSyncStatus("error", error.message);
+  }
+}
+
+async function handleCreateOwnerAccount({ confirmPassword, email, password }) {
+  const snapshot = await exportBoardSnapshot();
+  const result = await createOwnerAccount({
+    clientId,
+    confirmPassword,
+    email,
+    password,
+    snapshot
+  });
+
+  if (result.status === "authenticated") {
+    await startAuthenticatedSync(result);
+    setSyncStatus("synced");
+  }
+
+  if (result.status === "verification_required") {
+    await setMetaValue("pendingOwnerImport", {
+      clientId,
+      createdAt: new Date().toISOString(),
+      email,
+      snapshot
+    });
+  }
+
+  return result;
+}
+
+async function handleLoginOwnerAccount({ email, password }) {
+  const backup = await exportBoardSnapshot();
+  await saveAnonymousBackup(backup);
+
+  const pendingImport = await getMetaValue("pendingOwnerImport");
+  const matchingPendingImport = pendingImport?.email === email ? pendingImport : null;
+  const result = await loginOwnerAccount({
+    clientId,
+    email,
+    password,
+    pendingImport: matchingPendingImport
+  });
+
+  if (result.status === "authenticated") {
+    await importBoardSnapshot(result.cloud.snapshot);
+    await reloadBoardState();
+    await startAuthenticatedSync(result);
+    if (result.completedPendingImport) {
+      await setMetaValue("pendingOwnerImport", null);
+    }
+    render();
+  }
+
+  return result;
+}
+
+async function startAuthenticatedSync(result) {
+  await startCloudSyncSession({
+    boardId: result.cloud.boardId,
+    clientId,
+    userId: result.user.id,
+    workspaceId: result.cloud.workspaceId
+  });
+}
+
+async function handleRemoteSnapshot(snapshot) {
+  await importBoardSnapshot(snapshot);
+  await reloadBoardState();
+  render();
+}
+
+function setSyncStatus(status) {
+  if (!syncStatus || !syncLabel) {
+    return;
+  }
+
+  const labels = {
+    error: "Error de sincronización",
+    local: "Guardado local",
+    offline: "Sin conexión",
+    synced: "Sincronizado",
+    syncing: "Sincronizando"
+  };
+  syncLabel.textContent = labels[status] || labels.local;
+  syncStatus.dataset.syncState = status || "local";
+}
+
 function openProjectModal() {
   const root = document.querySelector("#modal-root");
   if (!root) {
@@ -407,6 +570,14 @@ async function handleCreateProject(value) {
   );
 
   state.projects = sortByOrder([...state.projects, savedProject]);
+  await recordCloudMutation({
+    critical: true,
+    entity: savedProject,
+    entityId: savedProject.id,
+    entityType: "project",
+    operation: "insert",
+    patch: savedProject
+  });
   renderProjectModalBody();
   return savedProject;
 }
@@ -587,6 +758,14 @@ async function handleCreateTeamMember(value) {
   );
 
   state.teamMembers = sortByOrder([...state.teamMembers, savedTeamMember]);
+  await recordCloudMutation({
+    critical: true,
+    entity: savedTeamMember,
+    entityId: savedTeamMember.id,
+    entityType: "teamMember",
+    operation: "insert",
+    patch: savedTeamMember
+  });
   renderTeamModalBody();
   return savedTeamMember;
 }
@@ -613,11 +792,12 @@ function getDefaultProjectName() {
 
 async function handleAddTask(columnId) {
   const project = getDefaultProjectName();
+  const folio = await createFolio(project);
   const task = createTaskModel({
     columnId,
     order: getColumnCardCount(columnId),
     project,
-    folio: generateFolio(state.tasks, project)
+    folio
   });
 
   const savedTask = await createTask(task);
@@ -629,8 +809,34 @@ async function handleAddTask(columnId) {
     createdAt: savedTask.createdAt
   });
   state.taskEvents = [...state.taskEvents, taskEvent];
+  await recordCloudMutation({
+    critical: true,
+    entity: savedTask,
+    entityId: savedTask.id,
+    entityType: "task",
+    operation: "insert",
+    patch: savedTask
+  });
+  await recordCloudMutation({
+    critical: true,
+    entity: taskEvent,
+    entityId: taskEvent.id,
+    entityType: "taskEvent",
+    operation: "insert",
+    patch: taskEvent
+  });
   render();
   handleOpenTask(savedTask.id);
+}
+
+async function createFolio(project) {
+  const cloudNumber = await allocateNextCloudFolioNumber();
+
+  if (cloudNumber) {
+    return formatFolio(project, cloudNumber);
+  }
+
+  return generateFolio(state.tasks, project);
 }
 
 function getColumnCardCount(columnId) {
@@ -657,10 +863,19 @@ function handleOpenTask(taskId) {
 }
 
 async function handleSaveTask(task) {
+  const previousTask = state.tasks.find((currentTask) => currentTask.id === task.id);
   const savedTask = await updateTask(task);
   state.tasks = sortByOrder(
     state.tasks.map((currentTask) => (currentTask.id === savedTask.id ? savedTask : currentTask))
   );
+  await recordCloudMutation({
+    critical: isCriticalTaskUpdate(previousTask, savedTask),
+    entity: savedTask,
+    entityId: savedTask.id,
+    entityType: "task",
+    operation: "update",
+    patch: getTaskPatch(previousTask, savedTask)
+  });
   render();
 }
 
@@ -671,7 +886,44 @@ async function handleUpdateChartCard(chartCard) {
       currentChartCard.id === savedChartCard.id ? savedChartCard : currentChartCard
     )
   );
+  await recordCloudMutation({
+    entity: savedChartCard,
+    entityId: savedChartCard.id,
+    entityType: "chartCard",
+    operation: "update",
+    patch: savedChartCard
+  });
   render();
+}
+
+function isCriticalTaskUpdate(previousTask, nextTask) {
+  if (!previousTask || !nextTask) {
+    return true;
+  }
+
+  return (
+    previousTask.project !== nextTask.project ||
+    previousTask.responsible !== nextTask.responsible ||
+    previousTask.checklists.length !== nextTask.checklists.length ||
+    getChecklistItemCount(previousTask) !== getChecklistItemCount(nextTask)
+  );
+}
+
+function getChecklistItemCount(task) {
+  return task.checklists.reduce((total, checklist) => total + checklist.items.length, 0);
+}
+
+function getTaskPatch(previousTask, nextTask) {
+  if (!previousTask) {
+    return nextTask;
+  }
+
+  return Object.entries(nextTask).reduce((patch, [key, value]) => {
+    if (JSON.stringify(previousTask[key]) !== JSON.stringify(value)) {
+      patch[key] = value;
+    }
+    return patch;
+  }, {});
 }
 
 async function handleMoveCard(cardType, cardId, targetColumnId) {
@@ -715,6 +967,22 @@ async function handleMoveTask(taskId, targetColumnId) {
       eventType: "moved"
     });
     state.taskEvents = [...state.taskEvents, taskEvent];
+    await recordCloudMutation({
+      critical: true,
+      entity: state.tasks.find((task) => task.id === taskId),
+      entityId: taskId,
+      entityType: "task",
+      operation: "move",
+      patch: { columnId: targetColumnId }
+    });
+    await recordCloudMutation({
+      critical: true,
+      entity: taskEvent,
+      entityId: taskEvent.id,
+      entityType: "taskEvent",
+      operation: "insert",
+      patch: taskEvent
+    });
     render();
   } catch (error) {
     await reloadBoardState();
@@ -748,6 +1016,14 @@ async function handleMoveChartCard(chartCardId, targetColumnId) {
 
   try {
     await Promise.all([saveTaskOrder(normalizedCards.tasks), saveChartCards(normalizedCards.chartCards)]);
+    await recordCloudMutation({
+      critical: true,
+      entity: state.chartCards.find((chartCard) => chartCard.id === chartCardId),
+      entityId: chartCardId,
+      entityType: "chartCard",
+      operation: "move",
+      patch: { columnId: targetColumnId }
+    });
   } catch (error) {
     await reloadBoardState();
     render();
@@ -766,6 +1042,13 @@ async function handleDeleteTask(taskId) {
   try {
     await deleteTask(taskId);
     await Promise.all([saveTaskOrder(normalizedCards.tasks), saveChartCards(normalizedCards.chartCards)]);
+    await recordCloudMutation({
+      critical: true,
+      entityId: taskId,
+      entityType: "task",
+      operation: "delete",
+      patch: { deletedAt: new Date().toISOString() }
+    });
   } catch (error) {
     await reloadBoardState();
     render();

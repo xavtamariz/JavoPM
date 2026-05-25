@@ -161,7 +161,7 @@ export function normalizeTask(task) {
     longDescription: typeof task.longDescription === "string" ? task.longDescription : "",
     checklists: normalizeChecklists(task.checklists),
     createdAt: task.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    updatedAt: task.updatedAt || new Date().toISOString(),
     order: Number.isFinite(Number(task.order)) ? Number(task.order) : 0
   };
 }
