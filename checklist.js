@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260525-chart-dedupe";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260525-login-cloud-only";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

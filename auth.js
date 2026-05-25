@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260525-chart-dedupe";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-chart-dedupe";
+} from "./cloudRepository.js?v=20260525-login-cloud-only";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-login-cloud-only";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();
@@ -58,7 +58,6 @@ export async function createOwnerAccount({ clientId, confirmPassword, email, pas
 export async function loginOwnerAccount({
   clientId,
   email,
-  fallbackLocalSnapshot = null,
   password,
   pendingImport = null
 }) {
@@ -76,31 +75,29 @@ export async function loginOwnerAccount({
 
   let cloud;
   let completedPendingImport = false;
-  let recoveredLocalSnapshot = false;
 
   try {
     cloud = await pullOwnerBoardSnapshot({
       supabase,
       userId: data.user.id
     });
-    const recoverySnapshot = getRecoverableLocalSnapshot({
+    const pendingImportSnapshot = getPendingImportSnapshot({
       email,
-      fallbackLocalSnapshot,
       pendingImport,
       userEmail: data.user.email
     });
-    if (shouldRecoverEmptyCloudBoard(cloud.snapshot, recoverySnapshot)) {
+    if (shouldCompletePendingImport(cloud.snapshot, pendingImportSnapshot)) {
       await importSnapshotRows({
         boardId: cloud.boardId,
         clientId,
-        snapshot: recoverySnapshot,
+        snapshot: pendingImportSnapshot,
         supabase
       });
       cloud = await pullOwnerBoardSnapshot({
         supabase,
         userId: data.user.id
       });
-      recoveredLocalSnapshot = true;
+      completedPendingImport = true;
     }
   } catch (error) {
     if (!pendingImport?.snapshot || pendingImport.email !== email) {
@@ -124,7 +121,6 @@ export async function loginOwnerAccount({
     cloud,
     completedPendingImport,
     email,
-    recoveredLocalSnapshot,
     session: data.session,
     status: "authenticated",
     user: data.user
@@ -133,7 +129,6 @@ export async function loginOwnerAccount({
 
 export async function restoreOwnerSession({
   clientId,
-  fallbackLocalSnapshot = null,
   pendingImport = null
 } = {}) {
   if (!canUseAccounts()) {
@@ -149,31 +144,29 @@ export async function restoreOwnerSession({
 
   let cloud;
   let completedPendingImport = false;
-  let recoveredLocalSnapshot = false;
 
   try {
     cloud = await pullOwnerBoardSnapshot({
       supabase,
       userId: data.session.user.id
     });
-    const recoverySnapshot = getRecoverableLocalSnapshot({
+    const pendingImportSnapshot = getPendingImportSnapshot({
       email: data.session.user.email,
-      fallbackLocalSnapshot,
       pendingImport,
       userEmail: data.session.user.email
     });
-    if (shouldRecoverEmptyCloudBoard(cloud.snapshot, recoverySnapshot)) {
+    if (shouldCompletePendingImport(cloud.snapshot, pendingImportSnapshot)) {
       await importSnapshotRows({
         boardId: cloud.boardId,
         clientId,
-        snapshot: recoverySnapshot,
+        snapshot: pendingImportSnapshot,
         supabase
       });
       cloud = await pullOwnerBoardSnapshot({
         supabase,
         userId: data.session.user.id
       });
-      recoveredLocalSnapshot = true;
+      completedPendingImport = true;
     }
   } catch (error) {
     if (!pendingImport?.snapshot || pendingImport.email !== data.session.user.email) {
@@ -197,7 +190,6 @@ export async function restoreOwnerSession({
     cloud,
     completedPendingImport,
     email: data.session.user.email,
-    recoveredLocalSnapshot,
     session: data.session,
     status: "authenticated",
     user: data.session.user
@@ -237,15 +229,15 @@ function getAuthRedirectUrl() {
   return `${window.location.origin}/`;
 }
 
-function getRecoverableLocalSnapshot({ email, fallbackLocalSnapshot, pendingImport, userEmail }) {
+function getPendingImportSnapshot({ email, pendingImport, userEmail }) {
   if (pendingImport?.snapshot && pendingImport.email === email && pendingImport.email === userEmail) {
     return pendingImport.snapshot;
   }
 
-  return fallbackLocalSnapshot || null;
+  return null;
 }
 
-function shouldRecoverEmptyCloudBoard(cloudSnapshot, localSnapshot) {
+function shouldCompletePendingImport(cloudSnapshot, localSnapshot) {
   const cloudTaskCount = Array.isArray(cloudSnapshot?.tasks) ? cloudSnapshot.tasks.length : 0;
   const localTaskCount = Array.isArray(localSnapshot?.tasks) ? localSnapshot.tasks.length : 0;
   return cloudTaskCount === 0 && localTaskCount > 0;

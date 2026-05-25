@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260525-chart-dedupe";
+} from "./models.js?v=20260525-login-cloud-only";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 5;

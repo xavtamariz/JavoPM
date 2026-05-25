@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "https://esm.sh/@supabase/supabase-js@2.49.8";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260525-login-cloud-only";
 
 let clientPromise;
 

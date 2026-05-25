@@ -292,6 +292,12 @@ h1 {
   transform: translateY(0) scale(0.99);
 }
 
+.account-menu-button[data-authenticated="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .side-menu-toggle {
   justify-content: center;
   width: 34px;
@@ -464,6 +470,35 @@ h1 {
 .account-fields {
   display: grid;
   gap: 12px;
+}
+
+.account-session-panel {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--checklist-bg);
+}
+
+.account-session-label,
+.account-session-email {
+  margin: 0;
+}
+
+.account-session-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.account-session-email {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 780;
+  overflow-wrap: anywhere;
 }
 
 .account-message {

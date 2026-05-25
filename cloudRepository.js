@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260525-chart-dedupe";
+} from "./models.js?v=20260525-login-cloud-only";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",

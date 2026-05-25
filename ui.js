@@ -12,7 +12,7 @@ import {
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
   sortByOrder
-} from "./models.js?v=20260525-chart-dedupe";
+} from "./models.js?v=20260525-login-cloud-only";
 
 const AXIS_LABELS = {
   frozen: "C",

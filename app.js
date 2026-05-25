@@ -23,7 +23,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260525-chart-dedupe";
+} from "./db.js?v=20260525-login-cloud-only";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -40,26 +40,29 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260525-chart-dedupe";
-import { initAccountModal } from "./accountModal.js?v=20260525-chart-dedupe";
+} from "./models.js?v=20260525-login-cloud-only";
+import { initAccountModal } from "./accountModal.js?v=20260525-login-cloud-only";
 import {
   canUseAccounts,
   createOwnerAccount,
   loginOwnerAccount,
-  restoreOwnerSession
-} from "./auth.js?v=20260525-chart-dedupe";
-import { openTaskModal } from "./modal.js?v=20260525-chart-dedupe";
+  restoreOwnerSession,
+  signOutOwnerAccount
+} from "./auth.js?v=20260525-login-cloud-only";
+import { openTaskModal } from "./modal.js?v=20260525-login-cloud-only";
 import {
   allocateNextCloudFolioNumber,
   initSyncEngine,
   recordCloudMutation,
-  startCloudSyncSession
-} from "./syncEngine.js?v=20260525-chart-dedupe";
-import { renderBoard } from "./ui.js?v=20260525-chart-dedupe";
+  startCloudSyncSession,
+  stopCloudSyncSession
+} from "./syncEngine.js?v=20260525-login-cloud-only";
+import { renderBoard } from "./ui.js?v=20260525-login-cloud-only";
 
 const state = {
   chartCards: [],
   columns: [],
+  account: null,
   projects: [],
   teamMembers: [],
   taskEvents: [],
@@ -282,8 +285,10 @@ function initAccountMenu() {
     },
     button: accountMenuToggle,
     isConfigured: canUseAccounts,
+    getAccountState: () => state.account,
     onCreateAccount: handleCreateOwnerAccount,
-    onLogin: handleLoginOwnerAccount
+    onLogin: handleLoginOwnerAccount,
+    onLogout: handleLogoutOwnerAccount
   });
 }
 
@@ -308,12 +313,9 @@ async function tryRestoreOwnerSession() {
   }
 
   try {
-    const localSnapshot = await exportBoardSnapshot();
     const pendingImport = await getMetaValue("pendingOwnerImport");
-    const anonymousBackup = await getMetaValue("anonymousBackup");
     const result = await restoreOwnerSession({
       clientId,
-      fallbackLocalSnapshot: getBestRecoverySnapshot(localSnapshot, anonymousBackup?.snapshot),
       pendingImport
     });
     if (!result?.cloud?.snapshot) {
@@ -324,21 +326,12 @@ async function tryRestoreOwnerSession() {
     await importBoardSnapshot(result.cloud.snapshot);
     await reloadBoardState();
     await startAuthenticatedSync(result);
-    if (result.completedPendingImport || result.recoveredLocalSnapshot) {
+    if (result.completedPendingImport) {
       await setMetaValue("pendingOwnerImport", null);
-    }
-    if (result.recoveredLocalSnapshot) {
-      await setMetaValue("anonymousBackup", null);
     }
   } catch (error) {
     setSyncStatus("error", error.message);
   }
-}
-
-function getBestRecoverySnapshot(currentSnapshot, backupSnapshot) {
-  const currentTaskCount = Array.isArray(currentSnapshot?.tasks) ? currentSnapshot.tasks.length : 0;
-  const backupTaskCount = Array.isArray(backupSnapshot?.tasks) ? backupSnapshot.tasks.length : 0;
-  return currentTaskCount >= backupTaskCount ? currentSnapshot : backupSnapshot;
 }
 
 async function handleCreateOwnerAccount({ confirmPassword, email, password }) {
@@ -373,12 +366,10 @@ async function handleLoginOwnerAccount({ email, password }) {
   await saveAnonymousBackup(backup);
 
   const pendingImport = await getMetaValue("pendingOwnerImport");
-  const anonymousBackup = await getMetaValue("anonymousBackup");
   const matchingPendingImport = pendingImport?.email === email ? pendingImport : null;
   const result = await loginOwnerAccount({
     clientId,
     email,
-    fallbackLocalSnapshot: anonymousBackup?.snapshot || null,
     password,
     pendingImport: matchingPendingImport
   });
@@ -387,11 +378,8 @@ async function handleLoginOwnerAccount({ email, password }) {
     await importBoardSnapshot(result.cloud.snapshot);
     await reloadBoardState();
     await startAuthenticatedSync(result);
-    if (result.completedPendingImport || result.recoveredLocalSnapshot) {
+    if (result.completedPendingImport) {
       await setMetaValue("pendingOwnerImport", null);
-    }
-    if (result.recoveredLocalSnapshot) {
-      await setMetaValue("anonymousBackup", null);
     }
     render();
   }
@@ -400,12 +388,40 @@ async function handleLoginOwnerAccount({ email, password }) {
 }
 
 async function startAuthenticatedSync(result) {
+  state.account = {
+    email: result.email || result.user?.email || "",
+    userId: result.user?.id || ""
+  };
+  updateAccountButton();
   await startCloudSyncSession({
     boardId: result.cloud.boardId,
     clientId,
     userId: result.user.id,
     workspaceId: result.cloud.workspaceId
   });
+}
+
+async function handleLogoutOwnerAccount() {
+  await signOutOwnerAccount();
+  await stopCloudSyncSession();
+  state.account = null;
+  updateAccountButton();
+  setSyncStatus("local");
+}
+
+function updateAccountButton() {
+  const label = accountMenuToggle?.querySelector(".account-menu-label");
+  if (!accountMenuToggle || !label) {
+    return;
+  }
+
+  const isAuthenticated = Boolean(state.account?.email);
+  label.textContent = isAuthenticated ? "Cuenta" : "Cuenta";
+  accountMenuToggle.dataset.authenticated = String(isAuthenticated);
+  accountMenuToggle.setAttribute(
+    "aria-label",
+    isAuthenticated ? `Cuenta activa: ${state.account.email}` : "Cuenta"
+  );
 }
 
 async function handleRemoteSnapshot(snapshot) {

@@ -1,9 +1,11 @@
 export function initAccountModal({
   beforeOpen,
   button,
+  getAccountState,
   isConfigured,
   onCreateAccount,
-  onLogin
+  onLogin,
+  onLogout
 }) {
   if (!button) {
     return;
@@ -104,6 +106,24 @@ export function initAccountModal({
   function createBody() {
     const body = document.createElement("div");
     body.className = "account-modal-body";
+    const accountState = getAccountState?.();
+
+    if (accountState?.email) {
+      const sessionPanel = document.createElement("div");
+      sessionPanel.className = "account-session-panel";
+
+      const label = document.createElement("p");
+      label.className = "account-session-label";
+      label.textContent = "Sesión activa";
+
+      const email = document.createElement("p");
+      email.className = "account-session-email";
+      email.textContent = accountState.email;
+
+      sessionPanel.append(label, email);
+      body.append(sessionPanel);
+      return body;
+    }
 
     const tabs = document.createElement("div");
     tabs.className = "account-mode-tabs";
@@ -163,7 +183,9 @@ export function initAccountModal({
     primaryButton.className = "save-task-button account-primary-button";
     primaryButton.type = "submit";
     primaryButton.disabled = !isConfigured();
-    primaryButton.textContent = mode === "create" ? "Crear cuenta" : "Iniciar sesión";
+    primaryButton.textContent = getAccountState?.()?.email
+      ? "Cerrar sesión"
+      : mode === "create" ? "Crear cuenta" : "Iniciar sesión";
 
     footer.append(cancelButton, primaryButton);
     return footer;
@@ -216,6 +238,22 @@ export function initAccountModal({
     event.preventDefault();
 
     if (!isConfigured()) {
+      return;
+    }
+
+    const accountState = getAccountState?.();
+    if (accountState?.email) {
+      const form = event.currentTarget;
+      setBusy(form, true);
+      try {
+        await onLogout?.();
+        close();
+      } catch (error) {
+        message = error.message || "No se pudo cerrar sesión.";
+        render();
+      } finally {
+        setBusy(form, false);
+      }
       return;
     }
 
