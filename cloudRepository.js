@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260525-login-cloud-only";
+} from "./models.js?v=20260525-clear-login-queue";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",

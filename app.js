@@ -3,6 +3,7 @@ import {
   createTask,
   createTeamMember,
   createTaskEvent,
+  clearPendingMutations,
   deleteTask,
   exportBoardSnapshot,
   getChartCards,
@@ -23,7 +24,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260525-login-cloud-only";
+} from "./db.js?v=20260525-clear-login-queue";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -40,24 +41,24 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260525-login-cloud-only";
-import { initAccountModal } from "./accountModal.js?v=20260525-login-cloud-only";
+} from "./models.js?v=20260525-clear-login-queue";
+import { initAccountModal } from "./accountModal.js?v=20260525-clear-login-queue";
 import {
   canUseAccounts,
   createOwnerAccount,
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260525-login-cloud-only";
-import { openTaskModal } from "./modal.js?v=20260525-login-cloud-only";
+} from "./auth.js?v=20260525-clear-login-queue";
+import { openTaskModal } from "./modal.js?v=20260525-clear-login-queue";
 import {
   allocateNextCloudFolioNumber,
   initSyncEngine,
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260525-login-cloud-only";
-import { renderBoard } from "./ui.js?v=20260525-login-cloud-only";
+} from "./syncEngine.js?v=20260525-clear-login-queue";
+import { renderBoard } from "./ui.js?v=20260525-clear-login-queue";
 
 const state = {
   chartCards: [],
@@ -324,6 +325,7 @@ async function tryRestoreOwnerSession() {
     }
 
     await importBoardSnapshot(result.cloud.snapshot);
+    await clearPendingMutations();
     await reloadBoardState();
     await startAuthenticatedSync(result);
     if (result.completedPendingImport) {
@@ -404,6 +406,7 @@ async function startAuthenticatedSync(result) {
 async function handleLogoutOwnerAccount() {
   await signOutOwnerAccount();
   await stopCloudSyncSession();
+  await clearPendingMutations();
   state.account = null;
   updateAccountButton();
   setSyncStatus("local");

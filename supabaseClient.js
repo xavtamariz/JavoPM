@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260525-login-cloud-only";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260525-clear-login-queue";
 
 let clientPromise;
 

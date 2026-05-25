@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260525-login-cloud-only";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260525-clear-login-queue";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

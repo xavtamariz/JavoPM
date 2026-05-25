@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260525-login-cloud-only";
+} from "./models.js?v=20260525-clear-login-queue";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 5;
@@ -304,6 +304,11 @@ export async function updatePendingMutation(mutation) {
 export async function deletePendingMutation(mutationId) {
   const db = await initDB();
   await deleteValue(db, STORES.pendingMutations, mutationId);
+}
+
+export async function clearPendingMutations() {
+  const db = await initDB();
+  await replaceStore(db, STORES.pendingMutations, []);
 }
 
 export async function exportBoardSnapshot() {
