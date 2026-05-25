@@ -22,7 +22,7 @@
         supabaseUrl: "https://scoacquwvbchdsldxaep.supabase.co"
       };
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260525-clear-login-queue" />
+    <link rel="stylesheet" href="./styles.css?v=20260525-account-drawer" />
   </head>
   <body>
     <div class="app-shell">
@@ -108,11 +108,19 @@
             </div>
           </div>
         </div>
+        <div class="side-menu-account" data-side-account hidden>
+          <div class="side-account-copy">
+            <span class="side-account-label">Cuenta</span>
+            <strong data-side-account-email></strong>
+          </div>
+          <p class="side-account-message" data-side-account-message aria-live="polite"></p>
+          <button class="side-account-logout" type="button" data-side-account-logout>Cerrar sesión</button>
+        </div>
       </aside>
     </div>
 
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260525-clear-login-queue"></script>
+    <script type="module" src="./app.js?v=20260525-account-drawer"></script>
   </body>
 </html>

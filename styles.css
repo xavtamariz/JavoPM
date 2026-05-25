@@ -298,6 +298,11 @@ h1 {
   color: var(--accent);
 }
 
+.account-menu-button[hidden],
+.side-menu-account[hidden] {
+  display: none !important;
+}
+
 .side-menu-toggle {
   justify-content: center;
   width: 34px;
@@ -405,6 +410,7 @@ h1 {
 .side-menu-body {
   display: grid;
   align-content: start;
+  flex: 1;
   gap: 12px;
   padding: 16px;
 }
@@ -422,6 +428,80 @@ h1 {
   justify-content: flex-start;
   width: 100%;
   min-height: 38px;
+}
+
+.side-menu-account {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.side-account-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.side-account-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 820;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.side-account-copy strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.side-account-message {
+  min-height: 0;
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.side-account-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 760;
+  transition:
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    background 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.side-account-logout:hover,
+.side-account-logout:focus-visible {
+  background: var(--danger-hover);
+}
+
+.side-account-logout:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.side-account-logout:active {
+  transform: scale(0.99);
+}
+
+.side-account-logout:disabled {
+  cursor: progress;
+  opacity: 0.65;
 }
 
 .modal.project-modal {

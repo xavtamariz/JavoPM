@@ -42,7 +42,7 @@ import {
   sortByOrder,
   updateFolioProjectName
 } from "./models.js?v=20260525-clear-login-queue";
-import { initAccountModal } from "./accountModal.js?v=20260525-clear-login-queue";
+import { initAccountModal } from "./accountModal.js?v=20260525-account-drawer";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -50,7 +50,7 @@ import {
   restoreOwnerSession,
   signOutOwnerAccount
 } from "./auth.js?v=20260525-clear-login-queue";
-import { openTaskModal } from "./modal.js?v=20260525-clear-login-queue";
+import { openTaskModal } from "./modal.js?v=20260525-account-drawer";
 import {
   allocateNextCloudFolioNumber,
   initSyncEngine,
@@ -58,7 +58,7 @@ import {
   startCloudSyncSession,
   stopCloudSyncSession
 } from "./syncEngine.js?v=20260525-clear-login-queue";
-import { renderBoard } from "./ui.js?v=20260525-clear-login-queue";
+import { renderBoard } from "./ui.js?v=20260525-account-drawer";
 
 const state = {
   chartCards: [],
@@ -79,6 +79,10 @@ const themeLabel = document.querySelector("[data-theme-label]");
 const sideMenuToggle = document.querySelector("[data-side-menu-toggle]");
 const sideMenuOverlay = document.querySelector("[data-side-menu-overlay]");
 const sideMenuClose = document.querySelector("[data-side-menu-close]");
+const sideAccount = document.querySelector("[data-side-account]");
+const sideAccountEmail = document.querySelector("[data-side-account-email]");
+const sideAccountLogout = document.querySelector("[data-side-account-logout]");
+const sideAccountMessage = document.querySelector("[data-side-account-message]");
 const syncStatus = document.querySelector("[data-sync-status]");
 const syncLabel = document.querySelector("[data-sync-label]");
 const THEME_STORAGE_KEY = "javopm-theme";
@@ -121,6 +125,7 @@ function initSideMenu() {
       closeSideMenu();
     }
   });
+  sideAccountLogout?.addEventListener("click", handleSideMenuLogout);
 }
 
 function openSideMenu() {
@@ -378,6 +383,7 @@ async function handleLoginOwnerAccount({ email, password }) {
 
   if (result.status === "authenticated") {
     await importBoardSnapshot(result.cloud.snapshot);
+    await clearPendingMutations();
     await reloadBoardState();
     await startAuthenticatedSync(result);
     if (result.completedPendingImport) {
@@ -412,19 +418,52 @@ async function handleLogoutOwnerAccount() {
   setSyncStatus("local");
 }
 
-function updateAccountButton() {
-  const label = accountMenuToggle?.querySelector(".account-menu-label");
-  if (!accountMenuToggle || !label) {
+async function handleSideMenuLogout() {
+  if (!sideAccountLogout) {
     return;
   }
 
+  if (sideAccountMessage) {
+    sideAccountMessage.textContent = "";
+  }
+  sideAccountLogout.disabled = true;
+
+  try {
+    await handleLogoutOwnerAccount();
+    closeSideMenu();
+  } catch (error) {
+    if (sideAccountMessage) {
+      sideAccountMessage.textContent = error.message || "No se pudo cerrar sesión.";
+    }
+  } finally {
+    sideAccountLogout.disabled = false;
+  }
+}
+
+function updateAccountButton() {
+  const label = accountMenuToggle?.querySelector(".account-menu-label");
   const isAuthenticated = Boolean(state.account?.email);
-  label.textContent = isAuthenticated ? "Cuenta" : "Cuenta";
-  accountMenuToggle.dataset.authenticated = String(isAuthenticated);
-  accountMenuToggle.setAttribute(
-    "aria-label",
-    isAuthenticated ? `Cuenta activa: ${state.account.email}` : "Cuenta"
-  );
+
+  if (accountMenuToggle && label) {
+    label.textContent = "Cuenta";
+    accountMenuToggle.hidden = isAuthenticated;
+    accountMenuToggle.dataset.authenticated = String(isAuthenticated);
+    accountMenuToggle.setAttribute(
+      "aria-label",
+      isAuthenticated ? `Cuenta activa: ${state.account.email}` : "Cuenta"
+    );
+    accountMenuToggle.setAttribute("aria-expanded", "false");
+  }
+
+  if (!sideAccount || !sideAccountEmail) {
+    return;
+  }
+
+  sideAccount.hidden = !isAuthenticated;
+  sideAccountEmail.textContent = state.account?.email || "";
+  if (sideAccountMessage) {
+    sideAccountMessage.textContent = "";
+  }
 }
 
 async function handleRemoteSnapshot(snapshot) {
