@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260525-session-recovery";
+} from "./models.js?v=20260525-idempotent-recovery";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
@@ -28,6 +28,11 @@ export const BOARD_SCOPED_TABLES = [
 
 const DEFAULT_BOARD_TITLE = "JavoPM";
 const DEFAULT_WORKSPACE_NAME = "JavoPM";
+const UPSERT_CONFLICTS = {
+  projects: "board_id,name",
+  tasks: "board_id,folio",
+  team_members: "board_id,name"
+};
 
 export async function createOwnerWorkspaceFromSnapshot({ clientId, snapshot, supabase, user }) {
   const now = new Date().toISOString();
@@ -378,7 +383,12 @@ async function upsertEntity({ context, mutation, supabase }) {
   }
 
   if (mutation.entityType === "project") {
-    await upsertOne(supabase, "projects", projectToRow(normalizeProject(mutation.entity), context));
+    await upsertOne(
+      supabase,
+      "projects",
+      projectToRow(normalizeProject(mutation.entity), context),
+      UPSERT_CONFLICTS.projects
+    );
     return;
   }
 
@@ -386,7 +396,8 @@ async function upsertEntity({ context, mutation, supabase }) {
     await upsertOne(
       supabase,
       "team_members",
-      teamMemberToRow(normalizeTeamMember(mutation.entity), context)
+      teamMemberToRow(normalizeTeamMember(mutation.entity), context),
+      UPSERT_CONFLICTS.team_members
     );
     return;
   }
@@ -590,7 +601,7 @@ async function upsertRows(supabase, tableName, rows) {
 
   const { data, error } = await supabase
     .from(tableName)
-    .upsert(rows, { onConflict: "id" })
+    .upsert(rows, { onConflict: UPSERT_CONFLICTS[tableName] || "id" })
     .select();
 
   throwIfError(error);

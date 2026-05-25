@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260525-session-recovery";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260525-idempotent-recovery";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

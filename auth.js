@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260525-session-recovery";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-session-recovery";
+} from "./cloudRepository.js?v=20260525-idempotent-recovery";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-idempotent-recovery";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();

@@ -6,8 +6,8 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260525-session-recovery";
-import { renderChecklists } from "./checklist.js?v=20260525-session-recovery";
+} from "./models.js?v=20260525-idempotent-recovery";
+import { renderChecklists } from "./checklist.js?v=20260525-idempotent-recovery";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
