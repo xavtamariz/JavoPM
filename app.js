@@ -23,7 +23,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260525-folio-remap";
+} from "./db.js?v=20260525-chart-dedupe";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -40,22 +40,22 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260525-folio-remap";
-import { initAccountModal } from "./accountModal.js?v=20260525-folio-remap";
+} from "./models.js?v=20260525-chart-dedupe";
+import { initAccountModal } from "./accountModal.js?v=20260525-chart-dedupe";
 import {
   canUseAccounts,
   createOwnerAccount,
   loginOwnerAccount,
   restoreOwnerSession
-} from "./auth.js?v=20260525-folio-remap";
-import { openTaskModal } from "./modal.js?v=20260525-folio-remap";
+} from "./auth.js?v=20260525-chart-dedupe";
+import { openTaskModal } from "./modal.js?v=20260525-chart-dedupe";
 import {
   allocateNextCloudFolioNumber,
   initSyncEngine,
   recordCloudMutation,
   startCloudSyncSession
-} from "./syncEngine.js?v=20260525-folio-remap";
-import { renderBoard } from "./ui.js?v=20260525-folio-remap";
+} from "./syncEngine.js?v=20260525-chart-dedupe";
+import { renderBoard } from "./ui.js?v=20260525-chart-dedupe";
 
 const state = {
   chartCards: [],

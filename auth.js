@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260525-folio-remap";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-folio-remap";
+} from "./cloudRepository.js?v=20260525-chart-dedupe";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-chart-dedupe";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();

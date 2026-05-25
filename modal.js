@@ -6,8 +6,8 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260525-folio-remap";
-import { renderChecklists } from "./checklist.js?v=20260525-folio-remap";
+} from "./models.js?v=20260525-chart-dedupe";
+import { renderChecklists } from "./checklist.js?v=20260525-chart-dedupe";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");

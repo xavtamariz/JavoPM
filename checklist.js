@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260525-folio-remap";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260525-chart-dedupe";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

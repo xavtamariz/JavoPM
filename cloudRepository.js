@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260525-folio-remap";
+} from "./models.js?v=20260525-chart-dedupe";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
@@ -174,6 +174,7 @@ export async function importSnapshotRows({ boardId, clientId, snapshot, supabase
   await upsertRows(supabase, "tasks", rows.tasks);
   await upsertRows(supabase, "checklists", rows.checklists);
   await upsertRows(supabase, "checklist_items", rows.checklistItems);
+  await remapChartRowsToExistingTypes({ boardId, rows, supabase });
   await upsertRows(supabase, "chart_cards", rows.chartCards);
   await upsertRows(supabase, "task_events", rows.taskEvents);
   await upsertOne(supabase, "board_counters", {
@@ -306,7 +307,7 @@ function rowsToLocalSnapshot(rows) {
   });
 
   return {
-    chartCards: rows.chartCards.map((row) => ({
+    chartCards: dedupeChartRowsByType(rows.chartCards).map((row) => ({
       chartType: row.chart_type,
       columnId: row.column_id,
       createdAt: row.created_at,
@@ -589,7 +590,8 @@ async function fetchBoardRows(supabase, tableName, boardId) {
     .select("*")
     .eq("board_id", boardId)
     .is("deleted_at", null)
-    .order("order_index", { ascending: true });
+    .order("order_index", { ascending: true })
+    .order("created_at", { ascending: true });
 
   throwIfError(error);
   return data || [];
@@ -638,6 +640,52 @@ async function remapTaskRowsToExistingFolios({ boardId, rows, supabase }) {
     if (remappedTaskIds.has(event.task_id)) {
       event.task_id = remappedTaskIds.get(event.task_id);
     }
+  });
+}
+
+async function remapChartRowsToExistingTypes({ boardId, rows, supabase }) {
+  if (!rows.chartCards.length) {
+    return;
+  }
+
+  const chartTypes = [...new Set(rows.chartCards.map((chartCard) => chartCard.chart_type).filter(Boolean))];
+  if (!chartTypes.length) {
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("chart_cards")
+    .select("id, chart_type")
+    .eq("board_id", boardId)
+    .in("chart_type", chartTypes)
+    .order("created_at", { ascending: true });
+
+  throwIfError(error);
+
+  const existingIdByType = new Map();
+  (data || []).forEach((chartCard) => {
+    if (!existingIdByType.has(chartCard.chart_type)) {
+      existingIdByType.set(chartCard.chart_type, chartCard.id);
+    }
+  });
+
+  rows.chartCards.forEach((chartCard) => {
+    const existingId = existingIdByType.get(chartCard.chart_type);
+    if (existingId) {
+      chartCard.id = existingId;
+    }
+  });
+}
+
+function dedupeChartRowsByType(chartRows) {
+  const seenTypes = new Set();
+  return chartRows.filter((chartRow) => {
+    const key = chartRow.chart_type || chartRow.id;
+    if (seenTypes.has(key)) {
+      return false;
+    }
+    seenTypes.add(key);
+    return true;
   });
 }
 
