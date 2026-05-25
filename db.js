@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260525-clear-login-queue";
+} from "./models.js?v=20260525-logout-wipe";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 5;
@@ -355,6 +355,27 @@ export async function importBoardSnapshot(snapshot = {}) {
   await setValue(db, STORES.meta, { key: "seeded", value: true });
 }
 
+export async function resetLocalBoardAfterLogout() {
+  const db = await initDB();
+  const clientIdRecord = await getValue(db, STORES.meta, "clientId");
+  const metaRecords = [{ key: "seeded", value: true }];
+
+  if (clientIdRecord?.value) {
+    metaRecords.push({ key: "clientId", value: clientIdRecord.value });
+  }
+
+  await Promise.all([
+    replaceStore(db, STORES.columns, DEFAULT_COLUMNS.map(normalizeColumn)),
+    replaceStore(db, STORES.tasks, []),
+    replaceStore(db, STORES.projects, []),
+    replaceStore(db, STORES.teamMembers, []),
+    replaceStore(db, STORES.chartCards, createDefaultChartCards().map(normalizeChartCard)),
+    replaceStore(db, STORES.taskEvents, []),
+    replaceStore(db, STORES.pendingMutations, []),
+    replaceStore(db, STORES.meta, metaRecords)
+  ]);
+}
+
 async function ensureDefaultColumns(existingColumns) {
   const byId = new Map(existingColumns.map((column) => [column.id, column]));
   const nextColumns = DEFAULT_COLUMNS.map((defaultColumn, index) => {
@@ -383,6 +404,26 @@ async function ensureDefaultColumns(existingColumns) {
   if (hasMissingColumns || hasColumnUpdates) {
     await saveColumns(nextColumns);
   }
+}
+
+function createDefaultChartCards() {
+  return [
+    createChartCardModel({
+      chartType: TASK_PROGRESS_CHART_TYPE,
+      order: 0,
+      title: "Tareas por columna"
+    }),
+    createChartCardModel({
+      chartType: TASK_STAGE_BY_MEMBER_CHART_TYPE,
+      order: 1,
+      title: "Tareas por etapa"
+    }),
+    createChartCardModel({
+      chartType: TASK_LEADERBOARD_CHART_TYPE,
+      order: 2,
+      title: "Leaderboard"
+    })
+  ];
 }
 
 async function ensureDefaultChartCards() {

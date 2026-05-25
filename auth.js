@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260525-clear-login-queue";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-clear-login-queue";
+} from "./cloudRepository.js?v=20260525-logout-wipe";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-logout-wipe";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();

@@ -16,6 +16,7 @@ import {
   importBoardSnapshot,
   initDB,
   resetSeedDataIfNeeded,
+  resetLocalBoardAfterLogout,
   saveAnonymousBackup,
   saveChartCards,
   setMetaValue,
@@ -24,7 +25,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260525-clear-login-queue";
+} from "./db.js?v=20260525-logout-wipe";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -41,24 +42,24 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260525-clear-login-queue";
-import { initAccountModal } from "./accountModal.js?v=20260525-account-drawer";
+} from "./models.js?v=20260525-logout-wipe";
+import { initAccountModal } from "./accountModal.js?v=20260525-logout-wipe";
 import {
   canUseAccounts,
   createOwnerAccount,
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260525-clear-login-queue";
-import { openTaskModal } from "./modal.js?v=20260525-account-drawer";
+} from "./auth.js?v=20260525-logout-wipe";
+import { openTaskModal } from "./modal.js?v=20260525-logout-wipe";
 import {
   allocateNextCloudFolioNumber,
   initSyncEngine,
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260525-clear-login-queue";
-import { renderBoard } from "./ui.js?v=20260525-account-drawer";
+} from "./syncEngine.js?v=20260525-logout-wipe";
+import { renderBoard } from "./ui.js?v=20260525-logout-wipe";
 
 const state = {
   chartCards: [],
@@ -412,10 +413,12 @@ async function startAuthenticatedSync(result) {
 async function handleLogoutOwnerAccount() {
   await signOutOwnerAccount();
   await stopCloudSyncSession();
-  await clearPendingMutations();
+  await resetLocalBoardAfterLogout();
+  await reloadBoardState();
   state.account = null;
   updateAccountButton();
   setSyncStatus("local");
+  render();
 }
 
 async function handleSideMenuLogout() {
