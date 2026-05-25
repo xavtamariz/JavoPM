@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260525-idempotent-recovery";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-idempotent-recovery";
+} from "./cloudRepository.js?v=20260525-folio-remap";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-folio-remap";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();
@@ -96,10 +96,10 @@ export async function loginOwnerAccount({
         snapshot: recoverySnapshot,
         supabase
       });
-      cloud = {
-        ...cloud,
-        snapshot: recoverySnapshot
-      };
+      cloud = await pullOwnerBoardSnapshot({
+        supabase,
+        userId: data.user.id
+      });
       recoveredLocalSnapshot = true;
     }
   } catch (error) {
@@ -169,10 +169,10 @@ export async function restoreOwnerSession({
         snapshot: recoverySnapshot,
         supabase
       });
-      cloud = {
-        ...cloud,
-        snapshot: recoverySnapshot
-      };
+      cloud = await pullOwnerBoardSnapshot({
+        supabase,
+        userId: data.session.user.id
+      });
       recoveredLocalSnapshot = true;
     }
   } catch (error) {

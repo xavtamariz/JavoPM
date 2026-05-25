@@ -4,14 +4,14 @@ import {
   getPendingMutations,
   saveCloudMeta,
   updatePendingMutation
-} from "./db.js?v=20260525-idempotent-recovery";
+} from "./db.js?v=20260525-folio-remap";
 import {
   BOARD_SCOPED_TABLES,
   allocateCloudFolioNumber,
   fetchBoardSnapshot,
   pushMutationToCloud
-} from "./cloudRepository.js?v=20260525-idempotent-recovery";
-import { getSupabaseClient } from "./supabaseClient.js?v=20260525-idempotent-recovery";
+} from "./cloudRepository.js?v=20260525-folio-remap";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260525-folio-remap";
 
 const REMOTE_TABLES = BOARD_SCOPED_TABLES.filter((tableName) => tableName !== "client_mutations");
 

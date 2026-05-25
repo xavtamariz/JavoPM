@@ -23,7 +23,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260525-idempotent-recovery";
+} from "./db.js?v=20260525-folio-remap";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -40,22 +40,22 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260525-idempotent-recovery";
-import { initAccountModal } from "./accountModal.js?v=20260525-idempotent-recovery";
+} from "./models.js?v=20260525-folio-remap";
+import { initAccountModal } from "./accountModal.js?v=20260525-folio-remap";
 import {
   canUseAccounts,
   createOwnerAccount,
   loginOwnerAccount,
   restoreOwnerSession
-} from "./auth.js?v=20260525-idempotent-recovery";
-import { openTaskModal } from "./modal.js?v=20260525-idempotent-recovery";
+} from "./auth.js?v=20260525-folio-remap";
+import { openTaskModal } from "./modal.js?v=20260525-folio-remap";
 import {
   allocateNextCloudFolioNumber,
   initSyncEngine,
   recordCloudMutation,
   startCloudSyncSession
-} from "./syncEngine.js?v=20260525-idempotent-recovery";
-import { renderBoard } from "./ui.js?v=20260525-idempotent-recovery";
+} from "./syncEngine.js?v=20260525-folio-remap";
+import { renderBoard } from "./ui.js?v=20260525-folio-remap";
 
 const state = {
   chartCards: [],

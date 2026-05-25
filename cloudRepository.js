@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260525-idempotent-recovery";
+} from "./models.js?v=20260525-folio-remap";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
@@ -170,6 +170,7 @@ export async function importSnapshotRows({ boardId, clientId, snapshot, supabase
   await upsertRows(supabase, "columns", rows.columns);
   await upsertRows(supabase, "projects", rows.projects);
   await upsertRows(supabase, "team_members", rows.teamMembers);
+  await remapTaskRowsToExistingFolios({ boardId, rows, supabase });
   await upsertRows(supabase, "tasks", rows.tasks);
   await upsertRows(supabase, "checklists", rows.checklists);
   await upsertRows(supabase, "checklist_items", rows.checklistItems);
@@ -592,6 +593,52 @@ async function fetchBoardRows(supabase, tableName, boardId) {
 
   throwIfError(error);
   return data || [];
+}
+
+async function remapTaskRowsToExistingFolios({ boardId, rows, supabase }) {
+  if (!rows.tasks.length) {
+    return;
+  }
+
+  const folios = [...new Set(rows.tasks.map((task) => task.folio).filter(Boolean))];
+  if (!folios.length) {
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("id, folio")
+    .eq("board_id", boardId)
+    .in("folio", folios);
+
+  throwIfError(error);
+
+  const existingIdByFolio = new Map((data || []).map((task) => [task.folio, task.id]));
+  const remappedTaskIds = new Map();
+
+  rows.tasks.forEach((task) => {
+    const existingId = existingIdByFolio.get(task.folio);
+    if (existingId && existingId !== task.id) {
+      remappedTaskIds.set(task.id, existingId);
+      task.id = existingId;
+    }
+  });
+
+  if (!remappedTaskIds.size) {
+    return;
+  }
+
+  rows.checklists.forEach((checklist) => {
+    if (remappedTaskIds.has(checklist.task_id)) {
+      checklist.task_id = remappedTaskIds.get(checklist.task_id);
+    }
+  });
+
+  rows.taskEvents.forEach((event) => {
+    if (remappedTaskIds.has(event.task_id)) {
+      event.task_id = remappedTaskIds.get(event.task_id);
+    }
+  });
 }
 
 async function upsertRows(supabase, tableName, rows) {
