@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260524-account-sync";
+} from "./models.js?v=20260525-auth-redirect";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 5;

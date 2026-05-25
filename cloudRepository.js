@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260524-account-sync";
+} from "./models.js?v=20260525-auth-redirect";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",

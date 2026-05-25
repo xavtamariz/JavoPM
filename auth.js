@@ -1,5 +1,5 @@
-import { createOwnerWorkspaceFromSnapshot, pullOwnerBoardSnapshot } from "./cloudRepository.js?v=20260524-account-sync";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260524-account-sync";
+import { createOwnerWorkspaceFromSnapshot, pullOwnerBoardSnapshot } from "./cloudRepository.js?v=20260525-auth-redirect";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-auth-redirect";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();
@@ -11,7 +11,10 @@ export async function createOwnerAccount({ clientId, confirmPassword, email, pas
   const supabase = await getSupabaseClient();
   const { data, error } = await supabase.auth.signUp({
     email,
-    password
+    password,
+    options: {
+      emailRedirectTo: getAuthRedirectUrl()
+    }
   });
 
   if (isExistingAccountError(error) || looksLikeExistingSignup(data)) {
@@ -97,7 +100,7 @@ export async function loginOwnerAccount({ clientId, email, password, pendingImpo
   };
 }
 
-export async function restoreOwnerSession() {
+export async function restoreOwnerSession({ clientId, pendingImport = null } = {}) {
   if (!canUseAccounts()) {
     return null;
   }
@@ -109,13 +112,35 @@ export async function restoreOwnerSession() {
     return null;
   }
 
-  const cloud = await pullOwnerBoardSnapshot({
-    supabase,
-    userId: data.session.user.id
-  });
+  let cloud;
+  let completedPendingImport = false;
+
+  try {
+    cloud = await pullOwnerBoardSnapshot({
+      supabase,
+      userId: data.session.user.id
+    });
+  } catch (error) {
+    if (!pendingImport?.snapshot || pendingImport.email !== data.session.user.email) {
+      throw error;
+    }
+
+    const createdCloud = await createOwnerWorkspaceFromSnapshot({
+      clientId,
+      snapshot: pendingImport.snapshot,
+      supabase,
+      user: data.session.user
+    });
+    cloud = {
+      ...createdCloud,
+      snapshot: pendingImport.snapshot
+    };
+    completedPendingImport = true;
+  }
 
   return {
     cloud,
+    completedPendingImport,
     email: data.session.user.email,
     session: data.session,
     status: "authenticated",
@@ -146,6 +171,14 @@ function validateEmailAndPassword({ confirmPassword, email, isCreate, password }
   if (isCreate && password !== confirmPassword) {
     throw new Error("Las contraseñas no coinciden.");
   }
+}
+
+function getAuthRedirectUrl() {
+  if (typeof window === "undefined" || !window.location?.origin) {
+    return "https://javo-pm.onrender.com/";
+  }
+
+  return `${window.location.origin}/`;
 }
 
 function isExistingAccountError(error) {

@@ -23,7 +23,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260524-account-sync";
+} from "./db.js?v=20260525-auth-redirect";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -40,22 +40,22 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260524-account-sync";
-import { initAccountModal } from "./accountModal.js?v=20260524-account-sync";
+} from "./models.js?v=20260525-auth-redirect";
+import { initAccountModal } from "./accountModal.js?v=20260525-auth-redirect";
 import {
   canUseAccounts,
   createOwnerAccount,
   loginOwnerAccount,
   restoreOwnerSession
-} from "./auth.js?v=20260524-account-sync";
-import { openTaskModal } from "./modal.js?v=20260524-account-sync";
+} from "./auth.js?v=20260525-auth-redirect";
+import { openTaskModal } from "./modal.js?v=20260525-auth-redirect";
 import {
   allocateNextCloudFolioNumber,
   initSyncEngine,
   recordCloudMutation,
   startCloudSyncSession
-} from "./syncEngine.js?v=20260524-account-sync";
-import { renderBoard } from "./ui.js?v=20260524-account-sync";
+} from "./syncEngine.js?v=20260525-auth-redirect";
+import { renderBoard } from "./ui.js?v=20260525-auth-redirect";
 
 const state = {
   chartCards: [],
@@ -308,7 +308,11 @@ async function tryRestoreOwnerSession() {
   }
 
   try {
-    const result = await restoreOwnerSession();
+    const pendingImport = await getMetaValue("pendingOwnerImport");
+    const result = await restoreOwnerSession({
+      clientId,
+      pendingImport
+    });
     if (!result?.cloud?.snapshot) {
       setSyncStatus("local");
       return;
@@ -317,6 +321,9 @@ async function tryRestoreOwnerSession() {
     await importBoardSnapshot(result.cloud.snapshot);
     await reloadBoardState();
     await startAuthenticatedSync(result);
+    if (result.completedPendingImport) {
+      await setMetaValue("pendingOwnerImport", null);
+    }
   } catch (error) {
     setSyncStatus("error", error.message);
   }

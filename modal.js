@@ -6,8 +6,8 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260524-account-sync";
-import { renderChecklists } from "./checklist.js?v=20260524-account-sync";
+} from "./models.js?v=20260525-auth-redirect";
+import { renderChecklists } from "./checklist.js?v=20260525-auth-redirect";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");

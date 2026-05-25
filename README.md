@@ -31,7 +31,10 @@ Para activar cuentas y sync cloud:
 
 1. Crea o elige un proyecto Supabase.
 2. Aplica `schema/001_account_cloud_sync.sql`.
-3. Configura la app antes de cargar `app.js`:
+3. En Supabase Dashboard > Authentication > URL Configuration:
+   - Site URL: `https://javo-pm.onrender.com`
+   - Redirect URLs: `https://javo-pm.onrender.com/**`, `http://localhost:4173/**` y `http://127.0.0.1:4173/**`
+4. Configura la app antes de cargar `app.js`:
 
 ```html
 <script>
