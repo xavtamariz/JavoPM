@@ -1,5 +1,9 @@
-import { createOwnerWorkspaceFromSnapshot, pullOwnerBoardSnapshot } from "./cloudRepository.js?v=20260525-auth-redirect";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-auth-redirect";
+import {
+  createOwnerWorkspaceFromSnapshot,
+  importSnapshotRows,
+  pullOwnerBoardSnapshot
+} from "./cloudRepository.js?v=20260525-multi-session";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260525-multi-session";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();
@@ -51,7 +55,13 @@ export async function createOwnerAccount({ clientId, confirmPassword, email, pas
   };
 }
 
-export async function loginOwnerAccount({ clientId, email, password, pendingImport = null }) {
+export async function loginOwnerAccount({
+  clientId,
+  email,
+  fallbackLocalSnapshot = null,
+  password,
+  pendingImport = null
+}) {
   validateEmailAndPassword({ email, isCreate: false, password });
 
   const supabase = await getSupabaseClient();
@@ -66,12 +76,32 @@ export async function loginOwnerAccount({ clientId, email, password, pendingImpo
 
   let cloud;
   let completedPendingImport = false;
+  let recoveredLocalSnapshot = false;
 
   try {
     cloud = await pullOwnerBoardSnapshot({
       supabase,
       userId: data.user.id
     });
+    const recoverySnapshot = getRecoverableLocalSnapshot({
+      email,
+      fallbackLocalSnapshot,
+      pendingImport,
+      userEmail: data.user.email
+    });
+    if (shouldRecoverEmptyCloudBoard(cloud.snapshot, recoverySnapshot)) {
+      await importSnapshotRows({
+        boardId: cloud.boardId,
+        clientId,
+        snapshot: recoverySnapshot,
+        supabase
+      });
+      cloud = {
+        ...cloud,
+        snapshot: recoverySnapshot
+      };
+      recoveredLocalSnapshot = true;
+    }
   } catch (error) {
     if (!pendingImport?.snapshot || pendingImport.email !== email) {
       throw error;
@@ -94,13 +124,18 @@ export async function loginOwnerAccount({ clientId, email, password, pendingImpo
     cloud,
     completedPendingImport,
     email,
+    recoveredLocalSnapshot,
     session: data.session,
     status: "authenticated",
     user: data.user
   };
 }
 
-export async function restoreOwnerSession({ clientId, pendingImport = null } = {}) {
+export async function restoreOwnerSession({
+  clientId,
+  fallbackLocalSnapshot = null,
+  pendingImport = null
+} = {}) {
   if (!canUseAccounts()) {
     return null;
   }
@@ -114,12 +149,32 @@ export async function restoreOwnerSession({ clientId, pendingImport = null } = {
 
   let cloud;
   let completedPendingImport = false;
+  let recoveredLocalSnapshot = false;
 
   try {
     cloud = await pullOwnerBoardSnapshot({
       supabase,
       userId: data.session.user.id
     });
+    const recoverySnapshot = getRecoverableLocalSnapshot({
+      email: data.session.user.email,
+      fallbackLocalSnapshot,
+      pendingImport,
+      userEmail: data.session.user.email
+    });
+    if (shouldRecoverEmptyCloudBoard(cloud.snapshot, recoverySnapshot)) {
+      await importSnapshotRows({
+        boardId: cloud.boardId,
+        clientId,
+        snapshot: recoverySnapshot,
+        supabase
+      });
+      cloud = {
+        ...cloud,
+        snapshot: recoverySnapshot
+      };
+      recoveredLocalSnapshot = true;
+    }
   } catch (error) {
     if (!pendingImport?.snapshot || pendingImport.email !== data.session.user.email) {
       throw error;
@@ -142,6 +197,7 @@ export async function restoreOwnerSession({ clientId, pendingImport = null } = {
     cloud,
     completedPendingImport,
     email: data.session.user.email,
+    recoveredLocalSnapshot,
     session: data.session,
     status: "authenticated",
     user: data.session.user
@@ -154,7 +210,7 @@ export async function signOutOwnerAccount() {
   }
 
   const supabase = await getSupabaseClient();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
 }
 
 function validateEmailAndPassword({ confirmPassword, email, isCreate, password }) {
@@ -179,6 +235,20 @@ function getAuthRedirectUrl() {
   }
 
   return `${window.location.origin}/`;
+}
+
+function getRecoverableLocalSnapshot({ email, fallbackLocalSnapshot, pendingImport, userEmail }) {
+  if (pendingImport?.snapshot && pendingImport.email === email && pendingImport.email === userEmail) {
+    return pendingImport.snapshot;
+  }
+
+  return fallbackLocalSnapshot || null;
+}
+
+function shouldRecoverEmptyCloudBoard(cloudSnapshot, localSnapshot) {
+  const cloudTaskCount = Array.isArray(cloudSnapshot?.tasks) ? cloudSnapshot.tasks.length : 0;
+  const localTaskCount = Array.isArray(localSnapshot?.tasks) ? localSnapshot.tasks.length : 0;
+  return cloudTaskCount === 0 && localTaskCount > 0;
 }
 
 function isExistingAccountError(error) {

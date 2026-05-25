@@ -23,7 +23,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260525-auth-redirect";
+} from "./db.js?v=20260525-multi-session";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -40,22 +40,22 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260525-auth-redirect";
-import { initAccountModal } from "./accountModal.js?v=20260525-auth-redirect";
+} from "./models.js?v=20260525-multi-session";
+import { initAccountModal } from "./accountModal.js?v=20260525-multi-session";
 import {
   canUseAccounts,
   createOwnerAccount,
   loginOwnerAccount,
   restoreOwnerSession
-} from "./auth.js?v=20260525-auth-redirect";
-import { openTaskModal } from "./modal.js?v=20260525-auth-redirect";
+} from "./auth.js?v=20260525-multi-session";
+import { openTaskModal } from "./modal.js?v=20260525-multi-session";
 import {
   allocateNextCloudFolioNumber,
   initSyncEngine,
   recordCloudMutation,
   startCloudSyncSession
-} from "./syncEngine.js?v=20260525-auth-redirect";
-import { renderBoard } from "./ui.js?v=20260525-auth-redirect";
+} from "./syncEngine.js?v=20260525-multi-session";
+import { renderBoard } from "./ui.js?v=20260525-multi-session";
 
 const state = {
   chartCards: [],
@@ -309,8 +309,10 @@ async function tryRestoreOwnerSession() {
 
   try {
     const pendingImport = await getMetaValue("pendingOwnerImport");
+    const anonymousBackup = await getMetaValue("anonymousBackup");
     const result = await restoreOwnerSession({
       clientId,
+      fallbackLocalSnapshot: anonymousBackup?.snapshot || null,
       pendingImport
     });
     if (!result?.cloud?.snapshot) {
@@ -321,8 +323,11 @@ async function tryRestoreOwnerSession() {
     await importBoardSnapshot(result.cloud.snapshot);
     await reloadBoardState();
     await startAuthenticatedSync(result);
-    if (result.completedPendingImport) {
+    if (result.completedPendingImport || result.recoveredLocalSnapshot) {
       await setMetaValue("pendingOwnerImport", null);
+    }
+    if (result.recoveredLocalSnapshot) {
+      await setMetaValue("anonymousBackup", null);
     }
   } catch (error) {
     setSyncStatus("error", error.message);
@@ -361,10 +366,12 @@ async function handleLoginOwnerAccount({ email, password }) {
   await saveAnonymousBackup(backup);
 
   const pendingImport = await getMetaValue("pendingOwnerImport");
+  const anonymousBackup = await getMetaValue("anonymousBackup");
   const matchingPendingImport = pendingImport?.email === email ? pendingImport : null;
   const result = await loginOwnerAccount({
     clientId,
     email,
+    fallbackLocalSnapshot: anonymousBackup?.snapshot || null,
     password,
     pendingImport: matchingPendingImport
   });
@@ -373,8 +380,11 @@ async function handleLoginOwnerAccount({ email, password }) {
     await importBoardSnapshot(result.cloud.snapshot);
     await reloadBoardState();
     await startAuthenticatedSync(result);
-    if (result.completedPendingImport) {
+    if (result.completedPendingImport || result.recoveredLocalSnapshot) {
       await setMetaValue("pendingOwnerImport", null);
+    }
+    if (result.recoveredLocalSnapshot) {
+      await setMetaValue("anonymousBackup", null);
     }
     render();
   }

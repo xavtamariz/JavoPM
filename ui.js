@@ -12,7 +12,7 @@ import {
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
   sortByOrder
-} from "./models.js?v=20260525-auth-redirect";
+} from "./models.js?v=20260525-multi-session";
 
 const AXIS_LABELS = {
   frozen: "C",
