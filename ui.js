@@ -12,7 +12,7 @@ import {
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
   sortByOrder
-} from "./models.js?v=20260525-multi-session";
+} from "./models.js?v=20260525-session-recovery";
 
 const AXIS_LABELS = {
   frozen: "C",

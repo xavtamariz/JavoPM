@@ -23,7 +23,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260525-multi-session";
+} from "./db.js?v=20260525-session-recovery";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -40,22 +40,22 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260525-multi-session";
-import { initAccountModal } from "./accountModal.js?v=20260525-multi-session";
+} from "./models.js?v=20260525-session-recovery";
+import { initAccountModal } from "./accountModal.js?v=20260525-session-recovery";
 import {
   canUseAccounts,
   createOwnerAccount,
   loginOwnerAccount,
   restoreOwnerSession
-} from "./auth.js?v=20260525-multi-session";
-import { openTaskModal } from "./modal.js?v=20260525-multi-session";
+} from "./auth.js?v=20260525-session-recovery";
+import { openTaskModal } from "./modal.js?v=20260525-session-recovery";
 import {
   allocateNextCloudFolioNumber,
   initSyncEngine,
   recordCloudMutation,
   startCloudSyncSession
-} from "./syncEngine.js?v=20260525-multi-session";
-import { renderBoard } from "./ui.js?v=20260525-multi-session";
+} from "./syncEngine.js?v=20260525-session-recovery";
+import { renderBoard } from "./ui.js?v=20260525-session-recovery";
 
 const state = {
   chartCards: [],
@@ -308,11 +308,12 @@ async function tryRestoreOwnerSession() {
   }
 
   try {
+    const localSnapshot = await exportBoardSnapshot();
     const pendingImport = await getMetaValue("pendingOwnerImport");
     const anonymousBackup = await getMetaValue("anonymousBackup");
     const result = await restoreOwnerSession({
       clientId,
-      fallbackLocalSnapshot: anonymousBackup?.snapshot || null,
+      fallbackLocalSnapshot: getBestRecoverySnapshot(localSnapshot, anonymousBackup?.snapshot),
       pendingImport
     });
     if (!result?.cloud?.snapshot) {
@@ -332,6 +333,12 @@ async function tryRestoreOwnerSession() {
   } catch (error) {
     setSyncStatus("error", error.message);
   }
+}
+
+function getBestRecoverySnapshot(currentSnapshot, backupSnapshot) {
+  const currentTaskCount = Array.isArray(currentSnapshot?.tasks) ? currentSnapshot.tasks.length : 0;
+  const backupTaskCount = Array.isArray(backupSnapshot?.tasks) ? backupSnapshot.tasks.length : 0;
+  return currentTaskCount >= backupTaskCount ? currentSnapshot : backupSnapshot;
 }
 
 async function handleCreateOwnerAccount({ confirmPassword, email, password }) {

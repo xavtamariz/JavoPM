@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260525-multi-session";
+} from "./models.js?v=20260525-session-recovery";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 5;
