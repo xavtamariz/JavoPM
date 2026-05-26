@@ -25,7 +25,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260525-logout-wipe";
+} from "./db.js?v=20260526-metrics-history";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -42,24 +42,24 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260525-logout-wipe";
-import { initAccountModal } from "./accountModal.js?v=20260525-logout-wipe";
+} from "./models.js?v=20260526-metrics-history";
+import { initAccountModal } from "./accountModal.js?v=20260526-metrics-history";
 import {
   canUseAccounts,
   createOwnerAccount,
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260525-logout-wipe";
-import { openTaskModal } from "./modal.js?v=20260525-logout-wipe";
+} from "./auth.js?v=20260526-metrics-history";
+import { openTaskModal } from "./modal.js?v=20260526-metrics-history";
 import {
   allocateNextCloudFolioNumber,
   initSyncEngine,
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260525-logout-wipe";
-import { renderBoard } from "./ui.js?v=20260525-logout-wipe";
+} from "./syncEngine.js?v=20260526-metrics-history";
+import { renderBoard } from "./ui.js?v=20260526-metrics-history";
 
 const state = {
   chartCards: [],
@@ -875,6 +875,75 @@ function getDefaultProjectName() {
   return state.projects[0]?.name || DEFAULT_PROJECT_NAME;
 }
 
+async function createTrackedTaskEvent({ currentTask, eventType, metadata = {}, occurredAt, previousTask }) {
+  const taskEvent = await createTaskEvent(
+    buildTaskEventPayload({
+      currentTask,
+      eventType,
+      metadata,
+      occurredAt,
+      previousTask
+    })
+  );
+  state.taskEvents = [...state.taskEvents, taskEvent];
+  await recordCloudMutation({
+    critical: true,
+    entity: taskEvent,
+    entityId: taskEvent.id,
+    entityType: "taskEvent",
+    operation: "insert",
+    patch: taskEvent
+  });
+  return taskEvent;
+}
+
+function buildTaskEventPayload({ currentTask, eventType, metadata = {}, occurredAt, previousTask }) {
+  const task = currentTask || previousTask || {};
+  const eventTime = occurredAt || new Date().toISOString();
+
+  return {
+    taskId: task.id,
+    columnId: task.columnId,
+    fromColumnId: previousTask?.columnId || "",
+    toColumnId: currentTask?.columnId || task.columnId,
+    eventType,
+    createdAt: eventTime,
+    occurredAt: eventTime,
+    responsibleName: task.responsible || DEFAULT_RESPONSIBLE_NAME,
+    projectName: task.project || DEFAULT_PROJECT_NAME,
+    pointsSnapshot: Number.isFinite(Number(task.points)) ? Number(task.points) : 0,
+    folio: task.folio || "",
+    metadata
+  };
+}
+
+async function recordTaskFieldEvents(previousTask, nextTask) {
+  if (!previousTask || !nextTask) {
+    return;
+  }
+
+  const changedFields = [
+    ["project", "project_changed"],
+    ["responsible", "responsible_changed"],
+    ["points", "points_changed"]
+  ];
+
+  for (const [field, eventType] of changedFields) {
+    if (String(previousTask[field]) !== String(nextTask[field])) {
+      await createTrackedTaskEvent({
+        currentTask: nextTask,
+        eventType,
+        metadata: {
+          field,
+          from: previousTask[field],
+          to: nextTask[field]
+        },
+        previousTask
+      });
+    }
+  }
+}
+
 async function handleAddTask(columnId) {
   const project = getDefaultProjectName();
   const folio = await createFolio(project);
@@ -887,13 +956,6 @@ async function handleAddTask(columnId) {
 
   const savedTask = await createTask(task);
   state.tasks = sortByOrder([...state.tasks, savedTask]);
-  const taskEvent = await createTaskEvent({
-    taskId: savedTask.id,
-    columnId: savedTask.columnId,
-    eventType: "created",
-    createdAt: savedTask.createdAt
-  });
-  state.taskEvents = [...state.taskEvents, taskEvent];
   await recordCloudMutation({
     critical: true,
     entity: savedTask,
@@ -902,13 +964,10 @@ async function handleAddTask(columnId) {
     operation: "insert",
     patch: savedTask
   });
-  await recordCloudMutation({
-    critical: true,
-    entity: taskEvent,
-    entityId: taskEvent.id,
-    entityType: "taskEvent",
-    operation: "insert",
-    patch: taskEvent
+  await createTrackedTaskEvent({
+    currentTask: savedTask,
+    eventType: "created",
+    occurredAt: savedTask.createdAt
   });
   render();
   handleOpenTask(savedTask.id);
@@ -961,6 +1020,7 @@ async function handleSaveTask(task) {
     operation: "update",
     patch: getTaskPatch(previousTask, savedTask)
   });
+  await recordTaskFieldEvents(previousTask, savedTask);
   render();
 }
 
@@ -1046,27 +1106,23 @@ async function handleMoveTask(taskId, targetColumnId) {
 
   try {
     await Promise.all([saveTaskOrder(normalizedCards.tasks), saveChartCards(normalizedCards.chartCards)]);
-    const taskEvent = await createTaskEvent({
-      taskId,
-      columnId: targetColumnId,
-      eventType: "moved"
-    });
-    state.taskEvents = [...state.taskEvents, taskEvent];
+    const savedMovedTask = state.tasks.find((task) => task.id === taskId);
     await recordCloudMutation({
       critical: true,
-      entity: state.tasks.find((task) => task.id === taskId),
+      entity: savedMovedTask,
       entityId: taskId,
       entityType: "task",
       operation: "move",
       patch: { columnId: targetColumnId }
     });
-    await recordCloudMutation({
-      critical: true,
-      entity: taskEvent,
-      entityId: taskEvent.id,
-      entityType: "taskEvent",
-      operation: "insert",
-      patch: taskEvent
+    await createTrackedTaskEvent({
+      currentTask: savedMovedTask,
+      eventType: "moved",
+      metadata: {
+        fromColumnId: taskToMove.columnId,
+        toColumnId: targetColumnId
+      },
+      previousTask: taskToMove
     });
     render();
   } catch (error) {
@@ -1117,6 +1173,7 @@ async function handleMoveChartCard(chartCardId, targetColumnId) {
 }
 
 async function handleDeleteTask(taskId) {
+  const taskToDelete = state.tasks.find((task) => task.id === taskId);
   const nextTasks = state.tasks.filter((task) => task.id !== taskId);
   const normalizedCards = normalizeOrdersByColumn(nextTasks, state.chartCards);
 
@@ -1127,6 +1184,12 @@ async function handleDeleteTask(taskId) {
   try {
     await deleteTask(taskId);
     await Promise.all([saveTaskOrder(normalizedCards.tasks), saveChartCards(normalizedCards.chartCards)]);
+    if (taskToDelete) {
+      await createTrackedTaskEvent({
+        eventType: "deleted",
+        previousTask: taskToDelete
+      });
+    }
     await recordCloudMutation({
       critical: true,
       entityId: taskId,

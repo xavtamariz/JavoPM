@@ -12,7 +12,7 @@ import {
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
   sortByOrder
-} from "./models.js?v=20260525-logout-wipe";
+} from "./models.js?v=20260526-metrics-history";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -23,6 +23,7 @@ const AXIS_LABELS = {
   completed: "C"
 };
 const COMPLETED_COLUMN_ID = "completed";
+const COLUMN_ACTIVITY_EVENT_TYPES = new Set(["created", "moved"]);
 const LEADERBOARD_MODE_LABELS = {
   points: "Puntos",
   tasks: "Completadas"
@@ -397,22 +398,22 @@ function getChartData({ chartCard, columns, tasks, taskEvents }) {
   const tasksById = new Map(tasks.map((task) => [task.id, task]));
   const columnIds = new Set(workflowColumns.map((column) => column.id));
   const selectedEvents = taskEvents.filter((event) => {
-    const task = tasksById.get(event.taskId);
-    if (!task || !columnIds.has(event.columnId)) {
+    const columnId = getTaskEventColumnId(event);
+    if (!COLUMN_ACTIVITY_EVENT_TYPES.has(event.eventType) || !columnIds.has(columnId)) {
       return false;
     }
 
-    if (cutoff && new Date(event.createdAt).getTime() < cutoff) {
+    if (cutoff && getTaskEventTime(event) < cutoff) {
       return false;
     }
 
-    return teamMember === DEFAULT_CHART_TEAM || task.responsible === teamMember;
+    return teamMember === DEFAULT_CHART_TEAM || getTaskEventResponsible(event, tasksById) === teamMember;
   });
 
   const source = selectedEvents.length > 0 ? "events" : "current";
   const values = workflowColumns.map((column) => {
     if (source === "events") {
-      return selectedEvents.filter((event) => event.columnId === column.id).length;
+      return selectedEvents.filter((event) => getTaskEventColumnId(event) === column.id).length;
     }
 
     return tasks.filter(
@@ -440,13 +441,18 @@ function getStageChartData({ chartCard, columns, tasks, taskEvents, teamMembers 
 
   const selectedEvents = hasTeamMember
     ? taskEvents.filter((event) => {
-        const task = tasksById.get(event.taskId);
-
-        if (!task || task.responsible !== selectedTeamMember || !columnIds.has(event.columnId)) {
+        if (!COLUMN_ACTIVITY_EVENT_TYPES.has(event.eventType)) {
           return false;
         }
 
-        if (cutoff && new Date(event.createdAt).getTime() < cutoff) {
+        if (
+          getTaskEventResponsible(event, tasksById) !== selectedTeamMember ||
+          !columnIds.has(getTaskEventColumnId(event))
+        ) {
+          return false;
+        }
+
+        if (cutoff && getTaskEventTime(event) < cutoff) {
           return false;
         }
 
@@ -457,7 +463,7 @@ function getStageChartData({ chartCard, columns, tasks, taskEvents, teamMembers 
   const source = selectedEvents.length > 0 ? "events" : "current";
   const values = workflowColumns.map((column) => {
     if (source === "events") {
-      return selectedEvents.filter((event) => event.columnId === column.id).length;
+      return selectedEvents.filter((event) => getTaskEventColumnId(event) === column.id).length;
     }
 
     return tasks.filter(
@@ -517,11 +523,15 @@ function getLeaderboardData({ chartCard, tasks, taskEvents, teamMembers }) {
   const completedTaskIds = new Set(completedTasks.map((task) => task.id));
   const completionEvents = cutoff
     ? taskEvents.filter((event) => {
-        if (event.columnId !== COMPLETED_COLUMN_ID || !completedTaskIds.has(event.taskId)) {
+        if (
+          !COLUMN_ACTIVITY_EVENT_TYPES.has(event.eventType) ||
+          getTaskEventColumnId(event) !== COMPLETED_COLUMN_ID ||
+          !completedTaskIds.has(event.taskId)
+        ) {
           return false;
         }
 
-        return new Date(event.createdAt).getTime() >= cutoff;
+        return getTaskEventTime(event) >= cutoff;
       })
     : [];
   const tasksInScope = completionEvents.length > 0
@@ -568,6 +578,19 @@ function getPeriodCutoff(periodValue) {
   }
 
   return Date.now() - period.days * 24 * 60 * 60 * 1000;
+}
+
+function getTaskEventColumnId(event) {
+  return event.toColumnId || event.columnId;
+}
+
+function getTaskEventResponsible(event, tasksById) {
+  return event.responsibleName || tasksById.get(event.taskId)?.responsible || "";
+}
+
+function getTaskEventTime(event) {
+  const time = new Date(event.occurredAt || event.createdAt).getTime();
+  return Number.isFinite(time) ? time : 0;
 }
 
 function createLineChart({ labels, values }) {

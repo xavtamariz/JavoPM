@@ -103,15 +103,37 @@ export function createChartCardModel({
   };
 }
 
-export function createTaskEventModel({ taskId, columnId, eventType = "created", createdAt }) {
-  const now = createdAt || new Date().toISOString();
+export function createTaskEventModel({
+  columnId,
+  createdAt,
+  eventType = "created",
+  folio = "",
+  fromColumnId = "",
+  metadata = {},
+  occurredAt,
+  pointsSnapshot = null,
+  projectName = "",
+  responsibleName = "",
+  taskId,
+  toColumnId = ""
+}) {
+  const now = occurredAt || createdAt || new Date().toISOString();
+  const targetColumnId = sanitizeText(toColumnId) || sanitizeText(columnId);
 
   return {
     id: createId("task_event"),
     taskId: sanitizeText(taskId),
-    columnId: sanitizeText(columnId),
+    columnId: targetColumnId,
+    fromColumnId: sanitizeText(fromColumnId),
+    toColumnId: targetColumnId,
     eventType: sanitizeText(eventType) || "created",
-    createdAt: now
+    createdAt: createdAt || now,
+    occurredAt: now,
+    responsibleName: normalizeTeamMemberName(responsibleName),
+    projectName: normalizeProjectName(projectName),
+    pointsSnapshot: normalizeOptionalNumber(pointsSnapshot),
+    folio: sanitizeText(folio),
+    metadata: normalizeMetadata(metadata)
   };
 }
 
@@ -217,12 +239,23 @@ export function normalizeChartCard(chartCard, chartCardIndex = 0) {
 }
 
 export function normalizeTaskEvent(taskEvent) {
+  const columnId = sanitizeText(taskEvent.toColumnId) || sanitizeText(taskEvent.columnId);
+  const occurredAt = taskEvent.occurredAt || taskEvent.createdAt || new Date().toISOString();
+
   return {
     id: taskEvent.id || createId("task_event"),
     taskId: sanitizeText(taskEvent.taskId),
-    columnId: sanitizeText(taskEvent.columnId),
+    columnId,
+    fromColumnId: sanitizeText(taskEvent.fromColumnId),
+    toColumnId: columnId,
     eventType: sanitizeText(taskEvent.eventType) || "created",
-    createdAt: taskEvent.createdAt || new Date().toISOString()
+    createdAt: taskEvent.createdAt || occurredAt,
+    occurredAt,
+    responsibleName: normalizeTeamMemberName(taskEvent.responsibleName),
+    projectName: normalizeProjectName(taskEvent.projectName),
+    pointsSnapshot: normalizeOptionalNumber(taskEvent.pointsSnapshot),
+    folio: sanitizeText(taskEvent.folio),
+    metadata: normalizeMetadata(taskEvent.metadata)
   };
 }
 
@@ -352,4 +385,16 @@ function formatDate(value) {
 
 function sanitizeText(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeOptionalNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  return Number.isFinite(Number(value)) ? Number(value) : null;
+}
+
+function normalizeMetadata(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }

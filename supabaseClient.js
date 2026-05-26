@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260525-logout-wipe";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260526-metrics-history";
 
 let clientPromise;
 

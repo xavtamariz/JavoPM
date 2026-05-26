@@ -13,10 +13,10 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260525-logout-wipe";
+} from "./models.js?v=20260526-metrics-history";
 
 const DB_NAME = "JavoPM";
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 const STORES = {
   chartCards: "chartCards",
   columns: "columns",
@@ -67,6 +67,12 @@ export function initDB() {
           taskEventStore.createIndex("taskId", "taskId", { unique: false });
           taskEventStore.createIndex("columnId", "columnId", { unique: false });
           taskEventStore.createIndex("createdAt", "createdAt", { unique: false });
+          taskEventStore.createIndex("occurredAt", "occurredAt", { unique: false });
+        } else {
+          const taskEventStore = request.transaction.objectStore(STORES.taskEvents);
+          if (!taskEventStore.indexNames.contains("occurredAt")) {
+            taskEventStore.createIndex("occurredAt", "occurredAt", { unique: false });
+          }
         }
 
         if (!db.objectStoreNames.contains(STORES.meta)) {

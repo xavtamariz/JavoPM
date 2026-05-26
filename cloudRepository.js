@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260525-logout-wipe";
+} from "./models.js?v=20260526-metrics-history";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
@@ -335,8 +335,18 @@ function rowsToLocalSnapshot(rows) {
       columnId: row.column_id,
       createdAt: row.created_at,
       eventType: row.event_type,
+      folio: row.folio || "",
+      fromColumnId: row.from_column_id || "",
       id: row.id,
-      taskId: row.task_id
+      metadata: row.metadata || {},
+      occurredAt: row.occurred_at || row.created_at,
+      pointsSnapshot: row.points_snapshot === null || row.points_snapshot === undefined
+        ? null
+        : Number(row.points_snapshot),
+      projectName: row.project_name || "",
+      responsibleName: row.responsible_name || "",
+      taskId: row.task_id,
+      toColumnId: row.to_column_id || row.column_id
     })),
     tasks,
     teamMembers: rows.teamMembers.map((row) => ({
@@ -538,8 +548,18 @@ function taskEventToRow(taskEvent, { boardId, clientId }) {
   return withBoardFields({
     column_id: taskEvent.columnId,
     event_type: taskEvent.eventType,
+    folio: taskEvent.folio || null,
+    from_column_id: taskEvent.fromColumnId || null,
     id: taskEvent.id,
-    task_id: taskEvent.taskId
+    metadata: taskEvent.metadata || {},
+    occurred_at: taskEvent.occurredAt || taskEvent.createdAt,
+    points_snapshot: taskEvent.pointsSnapshot === null || taskEvent.pointsSnapshot === undefined
+      ? null
+      : Number(taskEvent.pointsSnapshot),
+    project_name: taskEvent.projectName || null,
+    responsible_name: taskEvent.responsibleName || null,
+    task_id: taskEvent.taskId,
+    to_column_id: taskEvent.toColumnId || taskEvent.columnId
   }, {
     boardId,
     clientId,
