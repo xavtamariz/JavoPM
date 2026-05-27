@@ -26,7 +26,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-delete-button";
+} from "./db.js?v=20260527-responsible-nicknames";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -45,8 +45,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-delete-button";
-import { initAccountModal } from "./accountModal.js?v=20260527-delete-button";
+} from "./models.js?v=20260527-responsible-nicknames";
+import { initAccountModal } from "./accountModal.js?v=20260527-responsible-nicknames";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -54,15 +54,15 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-delete-button";
+} from "./auth.js?v=20260527-responsible-nicknames";
 import {
   completeMemberPassword,
   createCloudTeamMember,
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-delete-button";
-import { openTaskModal } from "./modal.js?v=20260527-delete-button";
+} from "./memberApi.js?v=20260527-responsible-nicknames";
+import { openTaskModal } from "./modal.js?v=20260527-responsible-nicknames";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -70,8 +70,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-delete-button";
-import { renderBoard } from "./ui.js?v=20260527-delete-button";
+} from "./syncEngine.js?v=20260527-responsible-nicknames";
+import { renderBoard } from "./ui.js?v=20260527-responsible-nicknames";
 
 const state = {
   chartCards: [],

@@ -11,8 +11,9 @@ import {
   TASK_LEADERBOARD_CHART_TYPE,
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
+  normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-delete-button";
+} from "./models.js?v=20260527-responsible-nicknames";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -188,7 +189,7 @@ function createColumn({
       return;
     }
 
-    taskList.append(createTaskCard(card.data, onOpenTask, onMoveCard));
+    taskList.append(createTaskCard(card.data, onOpenTask, onMoveCard, teamMembers));
   });
 
   if (column.allowTaskCreation !== false) {
@@ -204,7 +205,7 @@ function createColumn({
   return section;
 }
 
-function createTaskCard(task, onOpenTask, onMoveCard) {
+function createTaskCard(task, onOpenTask, onMoveCard, teamMembers = []) {
   const card = document.createElement("article");
   card.className = "task-card";
   card.role = "button";
@@ -278,7 +279,7 @@ function createTaskCard(task, onOpenTask, onMoveCard) {
 
   const responsible = document.createElement("span");
   responsible.className = "responsible";
-  responsible.textContent = task.responsible;
+  responsible.textContent = getResponsibleDisplayName(task.responsible, teamMembers);
 
   const dateRow = document.createElement("div");
   dateRow.className = "task-date-row";
@@ -340,7 +341,7 @@ function createChartCard({
 
   if (isLeaderboardChart) {
     const leaderboardData = getLeaderboardData({ chartCard, taskEvents, tasks, teamMembers });
-    const leaderboard = createLeaderboardList(leaderboardData);
+    const leaderboard = createLeaderboardList(leaderboardData, teamMembers);
     const periodControls = createPeriodControls(chartCard, onUpdateChartCard);
 
     card.append(header, leaderboard, periodControls, moveHandle);
@@ -871,7 +872,7 @@ function createLeaderboardModeControl(chartCard, onUpdateChartCard) {
   return select;
 }
 
-function createLeaderboardList({ metric, rows }) {
+function createLeaderboardList({ metric, rows }, teamMembers = []) {
   const list = document.createElement("div");
   list.className = "leaderboard-list";
 
@@ -893,7 +894,7 @@ function createLeaderboardList({ metric, rows }) {
 
     const name = document.createElement("span");
     name.className = "leaderboard-name";
-    name.textContent = row.name;
+    name.textContent = getResponsibleDisplayName(row.name, teamMembers);
 
     const value = document.createElement("span");
     value.className = "leaderboard-value";
@@ -936,7 +937,7 @@ function createStageTeamControl(chartCard, teamMembers, selectedTeamMember, onUp
     teamNames.forEach((teamMemberName) => {
       const option = document.createElement("option");
       option.value = teamMemberName;
-      option.textContent = teamMemberName;
+      option.textContent = getResponsibleDisplayName(teamMemberName, teamMembers);
       select.append(option);
     });
     select.value = selectedTeamMember;
@@ -1004,7 +1005,7 @@ function createTeamControl(chartCard, teamMembers, onUpdateChartCard) {
   teamMembers.forEach((teamMember) => {
     const option = document.createElement("option");
     option.value = teamMember.name;
-    option.textContent = teamMember.name;
+    option.textContent = getTeamMemberDisplayName(teamMember);
     select.append(option);
   });
 
@@ -1022,6 +1023,30 @@ function createTeamControl(chartCard, teamMembers, onUpdateChartCard) {
 
   wrapper.append(select);
   return wrapper;
+}
+
+function getResponsibleDisplayName(responsibleName, teamMembers = []) {
+  const normalizedResponsible = normalizeTeamMemberName(responsibleName);
+  if (!normalizedResponsible || normalizedResponsible === DEFAULT_RESPONSIBLE_NAME) {
+    return normalizedResponsible || DEFAULT_RESPONSIBLE_NAME;
+  }
+
+  const responsibleKey = normalizedResponsible.toLocaleLowerCase("es-MX");
+  const teamMember = teamMembers.find((member) => {
+    const memberName = normalizeTeamMemberName(member.name).toLocaleLowerCase("es-MX");
+    const memberNickname = String(member.nickname || "").toLocaleLowerCase("es-MX");
+    return memberName === responsibleKey || memberNickname === responsibleKey;
+  });
+
+  return getTeamMemberDisplayName(teamMember, normalizedResponsible);
+}
+
+function getTeamMemberDisplayName(teamMember, fallbackName = "") {
+  if (teamMember?.status !== "local" && teamMember?.nickname) {
+    return `@${teamMember.nickname}`;
+  }
+
+  return fallbackName || normalizeTeamMemberName(teamMember?.name) || DEFAULT_RESPONSIBLE_NAME;
 }
 
 function clearDragTargets() {

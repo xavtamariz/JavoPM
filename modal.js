@@ -6,8 +6,8 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260527-delete-button";
-import { renderChecklists } from "./checklist.js?v=20260527-delete-button";
+} from "./models.js?v=20260527-responsible-nicknames";
+import { renderChecklists } from "./checklist.js?v=20260527-responsible-nicknames";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
@@ -265,10 +265,10 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     const select = document.createElement("select");
     select.id = "task-responsible";
 
-    getTeamMemberNames().forEach((teamMemberName) => {
+    getTeamMemberOptions().forEach((teamMember) => {
       const option = document.createElement("option");
-      option.value = teamMemberName;
-      option.textContent = teamMemberName;
+      option.value = teamMember.value;
+      option.textContent = teamMember.label;
       select.append(option);
     });
 
@@ -440,24 +440,50 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     return names.length > 0 ? names : [currentProject || "Proyecto"];
   }
 
-  function getTeamMemberNames() {
-    const names = teamMembers
-      .map((teamMember) => normalizeTeamMemberName(teamMember.name))
-      .filter(Boolean);
-    const currentResponsible = normalizeTeamMemberName(workingTask.responsible);
-    const options = [DEFAULT_RESPONSIBLE_NAME];
-
-    names.forEach((name) => {
-      if (!options.includes(name)) {
-        options.push(name);
+  function getTeamMemberOptions() {
+    const membersByName = new Map();
+    teamMembers.forEach((teamMember) => {
+      const name = normalizeTeamMemberName(teamMember.name);
+      if (name && !membersByName.has(name)) {
+        membersByName.set(name, teamMember);
       }
     });
 
-    if (currentResponsible && !options.includes(currentResponsible)) {
-      options.push(currentResponsible);
+    const currentResponsible = normalizeTeamMemberName(workingTask.responsible);
+    const options = [
+      {
+        label: DEFAULT_RESPONSIBLE_NAME,
+        value: DEFAULT_RESPONSIBLE_NAME
+      }
+    ];
+    const values = new Set([DEFAULT_RESPONSIBLE_NAME]);
+
+    membersByName.forEach((teamMember, name) => {
+      if (!values.has(name)) {
+        values.add(name);
+        options.push({
+          label: getResponsibleLabel(teamMember, name),
+          value: name
+        });
+      }
+    });
+
+    if (currentResponsible && !values.has(currentResponsible)) {
+      options.push({
+        label: currentResponsible,
+        value: currentResponsible
+      });
     }
 
     return options;
+  }
+
+  function getResponsibleLabel(teamMember, fallbackName) {
+    if (teamMember?.status !== "local" && teamMember?.nickname) {
+      return `@${teamMember.nickname}`;
+    }
+
+    return fallbackName;
   }
 
   function syncTopbarTitle() {

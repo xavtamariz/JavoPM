@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-delete-button";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-responsible-nicknames";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");
