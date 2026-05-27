@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260526-cumulative-metrics";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260526-cumulative-metrics";
+} from "./cloudRepository.js?v=20260526-stage-current";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260526-stage-current";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();

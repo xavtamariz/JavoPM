@@ -12,7 +12,7 @@ import {
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
   sortByOrder
-} from "./models.js?v=20260526-cumulative-metrics";
+} from "./models.js?v=20260526-stage-current";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -434,7 +434,7 @@ function getStageChartData({ chartCard, columns, tasks, taskEvents, teamMembers 
   const selectedStates = metricState.states.filter(
     (state) => selectedTeamMember === DEFAULT_CHART_TEAM || state.responsibleName === selectedTeamMember
   );
-  const values = getCumulativeStageValues(workflowColumns, selectedStates);
+  const values = getCurrentStageValues(workflowColumns, selectedStates);
   const total = values.reduce((sum, value) => sum + value, 0);
   const stages = workflowColumns.map((column, index) => {
     const count = values[index];
@@ -602,6 +602,12 @@ function buildTaskMetricState({ columnIndexById, events, task }) {
 function getCumulativeStageValues(workflowColumns, states) {
   return workflowColumns.map((column, index) =>
     states.filter((state) => state.retainedIndex >= index).length
+  );
+}
+
+function getCurrentStageValues(workflowColumns, states) {
+  return workflowColumns.map((column, index) =>
+    states.filter((state) => state.retainedIndex === index).length
   );
 }
 

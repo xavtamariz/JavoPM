@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260526-cumulative-metrics";
+} from "./models.js?v=20260526-stage-current";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 6;

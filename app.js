@@ -25,7 +25,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260526-cumulative-metrics";
+} from "./db.js?v=20260526-stage-current";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -42,24 +42,24 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260526-cumulative-metrics";
-import { initAccountModal } from "./accountModal.js?v=20260526-cumulative-metrics";
+} from "./models.js?v=20260526-stage-current";
+import { initAccountModal } from "./accountModal.js?v=20260526-stage-current";
 import {
   canUseAccounts,
   createOwnerAccount,
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260526-cumulative-metrics";
-import { openTaskModal } from "./modal.js?v=20260526-cumulative-metrics";
+} from "./auth.js?v=20260526-stage-current";
+import { openTaskModal } from "./modal.js?v=20260526-stage-current";
 import {
   allocateNextCloudFolioNumber,
   initSyncEngine,
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260526-cumulative-metrics";
-import { renderBoard } from "./ui.js?v=20260526-cumulative-metrics";
+} from "./syncEngine.js?v=20260526-stage-current";
+import { renderBoard } from "./ui.js?v=20260526-stage-current";
 
 const state = {
   chartCards: [],

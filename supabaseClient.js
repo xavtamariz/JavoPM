@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260526-cumulative-metrics";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260526-stage-current";
 
 let clientPromise;
 
