@@ -439,7 +439,7 @@ async function syncConversationParticipants({
     const row = {
       id: existing?.id || createId("chat_participant"),
       board_id: board.id,
-      client_id: clientId || null,
+      client_id: existing?.client_id || clientId || null,
       conversation_id: conversation.id,
       is_active: true,
       last_read_at: existing?.last_read_at || (member.userId === userId ? new Date().toISOString() : null),
@@ -451,7 +451,6 @@ async function syncConversationParticipants({
 
     const shouldSaveParticipant = !existing ||
       existing.is_active !== row.is_active ||
-      String(existing.client_id || "") !== String(row.client_id || "") ||
       String(existing.last_read_at || "") !== String(row.last_read_at || "") ||
       String(existing.nickname_snapshot || "") !== String(row.nickname_snapshot || "") ||
       String(existing.team_member_id || "") !== String(row.team_member_id || "");
