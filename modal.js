@@ -6,8 +6,8 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260527-chat-draft-fix";
-import { renderChecklists } from "./checklist.js?v=20260527-chat-draft-fix";
+} from "./models.js?v=20260527-chat-optimistic-send";
+import { renderChecklists } from "./checklist.js?v=20260527-chat-optimistic-send";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");

@@ -14,7 +14,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-chat-draft-fix";
+} from "./models.js?v=20260527-chat-optimistic-send";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -520,14 +520,20 @@ function createChatComposer({ chat, onSendChatMessage, onUpdateChatDraft }) {
     event.preventDefault();
     const textarea = form.querySelector("textarea");
     const fileInput = form.querySelector('input[type="file"]');
+    const body = textarea.value;
+    const files = [...fileInput.files];
+
+    textarea.value = "";
+    fileInput.value = "";
+    onUpdateChatDraft?.("");
+
     const wasSent = await onSendChatMessage({
-      body: textarea.value,
-      files: fileInput.files
+      body,
+      files
     });
-    if (wasSent !== false) {
-      textarea.value = "";
-      fileInput.value = "";
-      onUpdateChatDraft?.("");
+    if (wasSent === false) {
+      textarea.value = body;
+      onUpdateChatDraft?.(body);
     }
   });
 

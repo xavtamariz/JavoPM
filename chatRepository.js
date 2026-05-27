@@ -1,5 +1,5 @@
-import { createId } from "./models.js?v=20260527-chat-draft-fix";
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-chat-draft-fix";
+import { createId } from "./models.js?v=20260527-chat-optimistic-send";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-chat-optimistic-send";
 
 const CHAT_IMAGE_BUCKET = "chat-images";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -49,7 +49,9 @@ export async function sendChatMessage({
   body,
   clientId,
   conversation,
+  createdAt,
   files = [],
+  messageId,
   workspaceId
 }) {
   const trimmedBody = String(body || "").trim();
@@ -68,8 +70,8 @@ export async function sendChatMessage({
   }
 
   const supabase = await getSupabaseClient();
-  const now = new Date().toISOString();
-  const messageId = createId("chat_message");
+  const now = createdAt || new Date().toISOString();
+  const resolvedMessageId = messageId || createId("chat_message");
   const uploadedAttachments = [];
 
   for (const file of imageFiles) {
@@ -79,7 +81,7 @@ export async function sendChatMessage({
       workspaceId,
       boardId,
       conversation.id,
-      messageId,
+      resolvedMessageId,
       `${attachmentId}.${extension}`
     ].join("/");
     const { error: uploadError } = await supabase.storage
@@ -105,7 +107,7 @@ export async function sendChatMessage({
     ? "text"
     : trimmedBody ? "mixed" : "image";
   const messageRow = {
-    id: messageId,
+    id: resolvedMessageId,
     board_id: boardId,
     body: trimmedBody,
     client_id: clientId,
@@ -137,7 +139,7 @@ export async function sendChatMessage({
     conversation_id: conversation.id,
     created_at: now,
     file_name: file.name || "imagen",
-    message_id: messageId,
+    message_id: resolvedMessageId,
     mime_type: file.type,
     size_bytes: file.size,
     storage_path: storagePath,

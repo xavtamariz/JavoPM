@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-chat-draft-fix";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-chat-optimistic-send";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({

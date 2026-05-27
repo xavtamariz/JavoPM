@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260527-chat-draft-fix";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260527-chat-draft-fix";
+} from "./cloudRepository.js?v=20260527-chat-optimistic-send";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260527-chat-optimistic-send";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();

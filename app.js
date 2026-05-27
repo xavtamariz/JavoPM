@@ -29,7 +29,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-chat-draft-fix";
+} from "./db.js?v=20260527-chat-optimistic-send";
 import {
   bootstrapChat,
   createChatGroup,
@@ -38,12 +38,13 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260527-chat-draft-fix";
+} from "./chatRepository.js?v=20260527-chat-optimistic-send";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
   DEFAULT_RESPONSIBLE_NAME,
   TASK_CARD_TYPE,
+  createId,
   createProjectModel,
   createTeamMemberModel,
   createTaskModel,
@@ -57,8 +58,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-chat-draft-fix";
-import { initAccountModal } from "./accountModal.js?v=20260527-chat-draft-fix";
+} from "./models.js?v=20260527-chat-optimistic-send";
+import { initAccountModal } from "./accountModal.js?v=20260527-chat-optimistic-send";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -66,7 +67,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-chat-draft-fix";
+} from "./auth.js?v=20260527-chat-optimistic-send";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -74,8 +75,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-chat-draft-fix";
-import { openTaskModal } from "./modal.js?v=20260527-chat-draft-fix";
+} from "./memberApi.js?v=20260527-chat-optimistic-send";
+import { openTaskModal } from "./modal.js?v=20260527-chat-optimistic-send";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -83,8 +84,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-chat-draft-fix";
-import { renderBoard } from "./ui.js?v=20260527-chat-draft-fix";
+} from "./syncEngine.js?v=20260527-chat-optimistic-send";
+import { renderBoard } from "./ui.js?v=20260527-chat-optimistic-send";
 
 const state = {
   chartCards: [],
@@ -686,15 +687,17 @@ function scheduleChatRefresh() {
   }
 
   clearTimeout(chatRefreshTimer);
-  chatRefreshTimer = window.setTimeout(refreshChatSnapshot, 250);
+  chatRefreshTimer = window.setTimeout(() => refreshChatSnapshot({ silent: true }), 250);
 }
 
-async function refreshChatSnapshot() {
+async function refreshChatSnapshot({ silent = false } = {}) {
   if (!state.chat.isEnabled || !state.chat.boardId) {
     return;
   }
 
-  state.chat.isLoading = true;
+  if (!silent) {
+    state.chat.isLoading = true;
+  }
   state.chat.error = "";
   updateChatButton();
 
@@ -707,7 +710,9 @@ async function refreshChatSnapshot() {
   } catch (error) {
     state.chat.error = error.message || "No se pudo actualizar el chat.";
   } finally {
-    state.chat.isLoading = false;
+    if (!silent) {
+      state.chat.isLoading = false;
+    }
     updateChatButton();
     render();
   }
@@ -1001,33 +1006,122 @@ async function handleSendChatMessage({ body, files }) {
     return false;
   }
 
+  const messageBody = String(body || "");
+  const selectedFiles = [...(files || [])];
+  if (!messageBody.trim() && selectedFiles.length === 0) {
+    return false;
+  }
+
+  const isTextOnly = selectedFiles.length === 0;
+  const messageId = createId("chat_message");
+  const createdAt = new Date().toISOString();
+  let optimisticMessage = null;
+
   try {
     state.chat.error = "";
-    state.chat.isLoading = true;
-    render();
-    await sendChatMessage({
-      account: state.account,
-      boardId: state.chat.boardId,
-      body,
-      clientId,
-      conversation,
-      files,
-      workspaceId: state.chat.workspaceId
-    });
     state.chat.drafts = {
       ...(state.chat.drafts || {}),
       [conversation.id]: ""
     };
-    await refreshChatSnapshot();
+
+    if (isTextOnly) {
+      optimisticMessage = createOptimisticChatMessage({
+        body: messageBody,
+        conversation,
+        createdAt,
+        messageId
+      });
+      upsertChatMessage(optimisticMessage);
+    }
+
+    render();
+    const result = await sendChatMessage({
+      account: state.account,
+      boardId: state.chat.boardId,
+      body: messageBody,
+      clientId,
+      conversation,
+      createdAt,
+      files: selectedFiles,
+      messageId,
+      workspaceId: state.chat.workspaceId
+    });
+
+    if (result?.message) {
+      upsertChatMessage(result.message);
+    }
+    if (result?.attachments?.length) {
+      upsertChatAttachments(result.attachments);
+    }
+    await importChatSnapshot(state.chat.snapshot);
+    render();
+    scheduleChatRefresh();
     scheduleMarkActiveChatRead();
     return true;
   } catch (error) {
+    if (optimisticMessage) {
+      removeChatMessage(optimisticMessage.id);
+    }
+    state.chat.drafts = {
+      ...(state.chat.drafts || {}),
+      [conversation.id]: messageBody
+    };
     state.chat.error = error.message || "No se pudo enviar el mensaje.";
-    return false;
-  } finally {
-    state.chat.isLoading = false;
     render();
+    return false;
   }
+}
+
+function createOptimisticChatMessage({ body, conversation, createdAt, messageId }) {
+  return {
+    boardId: state.chat.boardId,
+    body: String(body || "").trim(),
+    clientId,
+    conversationId: conversation.id,
+    createdAt,
+    deletedAt: "",
+    id: messageId,
+    messageType: "text",
+    metadata: { pending: true },
+    senderNicknameSnapshot: state.account?.nickname || state.account?.displayName || "Cuenta",
+    senderTeamMemberId: state.account?.teamMemberId || "",
+    senderUserId: state.account?.userId || "",
+    updatedAt: createdAt,
+    workspaceId: state.chat.workspaceId
+  };
+}
+
+function upsertChatMessage(message) {
+  const messages = Array.isArray(state.chat.snapshot.messages) ? [...state.chat.snapshot.messages] : [];
+  const index = messages.findIndex((item) => item.id === message.id);
+  if (index >= 0) {
+    messages[index] = message;
+  } else {
+    messages.push(message);
+  }
+
+  state.chat.snapshot = {
+    ...state.chat.snapshot,
+    messages
+  };
+}
+
+function removeChatMessage(messageId) {
+  state.chat.snapshot = {
+    ...state.chat.snapshot,
+    messages: (state.chat.snapshot.messages || []).filter((message) => message.id !== messageId)
+  };
+}
+
+function upsertChatAttachments(attachments = []) {
+  const existing = new Map((state.chat.snapshot.attachments || []).map((attachment) => [attachment.id, attachment]));
+  attachments.forEach((attachment) => {
+    existing.set(attachment.id, attachment);
+  });
+  state.chat.snapshot = {
+    ...state.chat.snapshot,
+    attachments: [...existing.values()]
+  };
 }
 
 function scheduleMarkActiveChatRead() {
