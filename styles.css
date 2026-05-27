@@ -657,8 +657,10 @@ h1 {
 
 .team-list-item {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   align-items: stretch;
+  justify-items: stretch;
   padding: 10px;
 }
 
@@ -667,12 +669,15 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  width: 100%;
 }
 
 .team-member-actions {
   display: flex;
   align-items: center;
   gap: 6px;
+  justify-content: flex-end;
+  margin-left: auto;
   min-width: 0;
 }
 
@@ -1956,6 +1961,16 @@ h1 {
   background: var(--surface);
   color: var(--ink-soft);
   white-space: nowrap;
+}
+
+.small-button.team-member-delete-button {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.small-button.team-member-delete-button:hover {
+  background: var(--danger-hover);
 }
 
 .danger-button {

@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260527-owner-profile";
+} from "./models.js?v=20260527-delete-button";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",

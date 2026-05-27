@@ -26,7 +26,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-owner-profile";
+} from "./db.js?v=20260527-delete-button";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -45,8 +45,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-owner-profile";
-import { initAccountModal } from "./accountModal.js?v=20260527-owner-profile";
+} from "./models.js?v=20260527-delete-button";
+import { initAccountModal } from "./accountModal.js?v=20260527-delete-button";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -54,15 +54,15 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-owner-profile";
+} from "./auth.js?v=20260527-delete-button";
 import {
   completeMemberPassword,
   createCloudTeamMember,
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-owner-profile";
-import { openTaskModal } from "./modal.js?v=20260527-owner-profile";
+} from "./memberApi.js?v=20260527-delete-button";
+import { openTaskModal } from "./modal.js?v=20260527-delete-button";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -70,8 +70,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-owner-profile";
-import { renderBoard } from "./ui.js?v=20260527-owner-profile";
+} from "./syncEngine.js?v=20260527-delete-button";
+import { renderBoard } from "./ui.js?v=20260527-delete-button";
 
 const state = {
   chartCards: [],
@@ -1019,6 +1019,9 @@ function createOwnerProfileEditPanel() {
 function createTeamMemberListItem(teamMember, revealedKey) {
   const item = document.createElement("li");
   item.className = "project-list-item team-list-item";
+  if (teamMember.status === "local") {
+    item.classList.add("is-local-responsible");
+  }
 
   const summary = document.createElement("div");
   summary.className = "team-member-summary";
@@ -1035,6 +1038,9 @@ function createTeamMemberListItem(teamMember, revealedKey) {
   copy.append(name, meta);
   summary.append(copy);
 
+  const actions = document.createElement("div");
+  actions.className = "team-member-actions";
+
   if (isOwnerAccount() && teamMember.status !== "local") {
     const editButton = document.createElement("button");
     editButton.className = "small-button team-member-edit-button";
@@ -1045,7 +1051,7 @@ function createTeamMemberListItem(teamMember, revealedKey) {
       isOwnerProfileExpanded = false;
       renderTeamModalBody();
     });
-    summary.append(editButton);
+    actions.append(editButton);
   }
 
   if (!isMemberAccount() && teamMember.status === "local") {
@@ -1054,7 +1060,11 @@ function createTeamMemberListItem(teamMember, revealedKey) {
     deleteButton.type = "button";
     deleteButton.textContent = "Eliminar";
     deleteButton.addEventListener("click", () => handleDeleteLocalTeamMember(teamMember));
-    summary.append(deleteButton);
+    actions.append(deleteButton);
+  }
+
+  if (actions.childElementCount > 0) {
+    summary.append(actions);
   }
 
   item.append(summary);

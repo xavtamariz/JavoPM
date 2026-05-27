@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-owner-profile";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-delete-button";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({

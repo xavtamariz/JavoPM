@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-owner-profile";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-delete-button";
 
 let clientPromise;
 
