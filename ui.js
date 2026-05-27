@@ -6,6 +6,7 @@ import {
   DEFAULT_CHART_TEAM,
   DEFAULT_LEADERBOARD_METRIC,
   LEADERBOARD_METRICS,
+  CHAT_COLUMN_ID,
   METRICS_COLUMN_ID,
   TASK_CARD_TYPE,
   TASK_LEADERBOARD_CHART_TYPE,
@@ -13,7 +14,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-theme-toggle-side-menu";
+} from "./models.js?v=20260527-cloud-chat-v190";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -46,17 +47,37 @@ export function renderBoard({
   columns,
   tasks,
   chartCards = [],
+  chat = {},
   teamMembers = [],
   taskEvents = [],
   onAddTask,
+  onBackChatList,
+  onCreateChatGroup,
+  onOpenChatConversation,
   onOpenTask,
   onMoveCard,
+  onSendChatMessage,
+  onShowChatGroupForm,
   onUpdateChartCard
 }) {
   boardElement.innerHTML = "";
-  boardElement.style.gridTemplateColumns = `repeat(${columns.length}, var(--column-width))`;
+  const visibleColumnCount = columns.length + (chat.isOpen ? 1 : 0);
+  boardElement.style.gridTemplateColumns = `repeat(${visibleColumnCount}, var(--column-width))`;
 
   const workflowTaskTotal = tasks.filter((task) => task.columnId !== METRICS_COLUMN_ID).length;
+
+  if (chat.isOpen) {
+    boardElement.append(
+      createChatColumn({
+        chat,
+        onBackChatList,
+        onCreateChatGroup,
+        onOpenChatConversation,
+        onSendChatMessage,
+        onShowChatGroupForm
+      })
+    );
+  }
 
   columns.forEach((column) => {
     const cards = getColumnCards(column.id, tasks, chartCards);
@@ -203,6 +224,445 @@ function createColumn({
 
   section.append(header, taskList);
   return section;
+}
+
+function createChatColumn({
+  chat,
+  onBackChatList,
+  onCreateChatGroup,
+  onOpenChatConversation,
+  onSendChatMessage,
+  onShowChatGroupForm
+}) {
+  const section = document.createElement("section");
+  section.className = "column chat-column";
+  section.dataset.columnId = CHAT_COLUMN_ID;
+
+  const header = document.createElement("header");
+  header.className = "column-header";
+
+  const title = document.createElement("h2");
+  title.className = "column-title";
+  title.textContent = "Chat";
+
+  const indicators = document.createElement("div");
+  indicators.className = "column-indicators";
+
+  const count = document.createElement("span");
+  count.className = "column-count";
+  count.textContent = String(chat.totalUnread || 0);
+  count.setAttribute("aria-label", `${chat.totalUnread || 0} mensajes pendientes`);
+
+  indicators.append(count);
+  header.append(title, indicators);
+
+  const body = document.createElement("div");
+  body.className = "chat-column-body";
+
+  if (chat.view === "conversation") {
+    body.append(createChatConversationView({ chat, onBackChatList, onSendChatMessage }));
+  } else {
+    body.append(createChatListView({ chat, onCreateChatGroup, onOpenChatConversation, onShowChatGroupForm }));
+  }
+
+  section.append(header, body);
+  return section;
+}
+
+function createChatListView({ chat, onCreateChatGroup, onOpenChatConversation, onShowChatGroupForm }) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "chat-list-view";
+
+  if (chat.error) {
+    wrapper.append(createChatNotice(chat.error, "error"));
+  }
+
+  if (chat.isLoading) {
+    wrapper.append(createChatNotice("Actualizando chat...", "muted"));
+  }
+
+  const list = document.createElement("div");
+  list.className = "chat-list";
+
+  if (!chat.items.length) {
+    list.append(createChatNotice("Sin conversaciones todavía.", "muted"));
+  } else {
+    chat.items.forEach((item) => {
+      list.append(createChatListItem(item, onOpenChatConversation));
+    });
+  }
+
+  wrapper.append(list);
+
+  if (chat.canCreateGroups) {
+    if (chat.groupDraftOpen) {
+      wrapper.append(createChatGroupForm({ chat, onCreateChatGroup, onShowChatGroupForm }));
+    } else {
+      const createButton = document.createElement("button");
+      createButton.className = "add-task-button chat-create-group-button";
+      createButton.type = "button";
+      createButton.innerHTML = '<span class="plus-mark" aria-hidden="true"></span>Crear grupo';
+      createButton.addEventListener("click", () => onShowChatGroupForm(true));
+      wrapper.append(createButton);
+    }
+  }
+
+  return wrapper;
+}
+
+function createChatListItem(item, onOpenChatConversation) {
+  const button = document.createElement("button");
+  button.className = `chat-list-item${item.locked ? " is-locked" : ""}`;
+  button.type = "button";
+  button.addEventListener("click", () => onOpenChatConversation(item));
+
+  const copy = document.createElement("span");
+  copy.className = "chat-list-copy";
+
+  const title = document.createElement("strong");
+  title.textContent = item.title;
+
+  const meta = document.createElement("span");
+  meta.textContent = item.locked ? `${item.meta} · Bloqueado` : item.meta;
+
+  copy.append(title, meta);
+  button.append(copy);
+
+  if (item.unreadCount > 0) {
+    const unread = document.createElement("span");
+    unread.className = "chat-unread-pill";
+    unread.textContent = String(item.unreadCount);
+    button.append(unread);
+  }
+
+  return button;
+}
+
+function createChatGroupForm({ chat, onCreateChatGroup, onShowChatGroupForm }) {
+  const form = document.createElement("form");
+  form.className = "chat-group-form";
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    onCreateChatGroup({
+      includeCurrentUser: formData.get("includeCurrentUser") === "on",
+      participantUserIds: formData.getAll("participants"),
+      title: formData.get("title")
+    });
+  });
+
+  const title = document.createElement("input");
+  title.name = "title";
+  title.type = "text";
+  title.placeholder = "Nombre del grupo";
+
+  const members = document.createElement("div");
+  members.className = "chat-group-members";
+
+  const currentUserOption = document.createElement("label");
+  currentUserOption.className = "chat-group-member-option";
+  const currentCheckbox = document.createElement("input");
+  currentCheckbox.name = "includeCurrentUser";
+  currentCheckbox.type = "checkbox";
+  currentCheckbox.checked = true;
+  currentUserOption.append(currentCheckbox, document.createTextNode("Incluirme"));
+  members.append(currentUserOption);
+
+  chat.directory
+    .filter((member) => member.userId !== chat.currentUserId)
+    .forEach((member) => {
+      const label = document.createElement("label");
+      label.className = "chat-group-member-option";
+
+      const checkbox = document.createElement("input");
+      checkbox.name = "participants";
+      checkbox.type = "checkbox";
+      checkbox.value = member.userId;
+
+      label.append(checkbox, document.createTextNode(member.nickname ? `@${member.nickname}` : member.displayName));
+      members.append(label);
+    });
+
+  const actions = document.createElement("div");
+  actions.className = "chat-group-actions";
+
+  const cancelButton = document.createElement("button");
+  cancelButton.className = "small-button";
+  cancelButton.type = "button";
+  cancelButton.textContent = "Cancelar";
+  cancelButton.addEventListener("click", () => onShowChatGroupForm(false));
+
+  const createButton = document.createElement("button");
+  createButton.className = "save-task-button";
+  createButton.type = "submit";
+  createButton.textContent = "Crear";
+
+  actions.append(cancelButton, createButton);
+  form.append(title, members, actions);
+  return form;
+}
+
+function createChatConversationView({ chat, onBackChatList, onSendChatMessage }) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "chat-conversation-view";
+
+  const topbar = document.createElement("div");
+  topbar.className = "chat-conversation-topbar";
+
+  const backButton = document.createElement("button");
+  backButton.className = "small-button";
+  backButton.type = "button";
+  backButton.textContent = "Volver";
+  backButton.addEventListener("click", onBackChatList);
+
+  const title = document.createElement("div");
+  title.className = "chat-conversation-title";
+  const titleStrong = document.createElement("strong");
+  titleStrong.textContent = getChatConversationTitle(chat);
+  const meta = document.createElement("span");
+  meta.textContent = getChatConversationMeta(chat);
+  title.append(titleStrong, meta);
+  topbar.append(backButton, title);
+  wrapper.append(topbar);
+
+  if (chat.error) {
+    wrapper.append(createChatNotice(chat.error, "error"));
+  }
+
+  const activeConversation = chat.activeConversation;
+  if (!activeConversation) {
+    wrapper.append(createChatNotice("No encontramos esta conversación.", "muted"));
+    return wrapper;
+  }
+
+  if (!activeConversation.isParticipant) {
+    wrapper.append(createChatNotice("Este grupo fue creado por ti, pero no estás dentro. Puedes verlo en la lista, sin leer ni enviar mensajes.", "muted"));
+    return wrapper;
+  }
+
+  const messageList = document.createElement("div");
+  messageList.className = "chat-message-list";
+
+  if (chat.activeMessages.length === 0) {
+    messageList.append(createChatNotice("Sin mensajes todavía.", "muted"));
+  } else {
+    chat.activeMessages.forEach((message) => {
+      messageList.append(createChatMessageBubble({ chat, message }));
+    });
+  }
+
+  wrapper.append(messageList, createChatComposer({ chat, onSendChatMessage }));
+  return wrapper;
+}
+
+function createChatMessageBubble({ chat, message }) {
+  const isOwn = message.senderUserId === chat.currentUserId;
+  const row = document.createElement("div");
+  row.className = `chat-message-row${isOwn ? " is-own" : ""}`;
+
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble";
+
+  if (!isOwn && chat.activeConversation?.type === "group") {
+    const sender = document.createElement("span");
+    sender.className = "chat-message-sender";
+    sender.textContent = message.senderNicknameSnapshot
+      ? `@${message.senderNicknameSnapshot}`
+      : "Miembro";
+    bubble.append(sender);
+  }
+
+  if (message.body) {
+    const body = document.createElement("p");
+    body.className = "chat-message-text";
+    appendLinkedText(body, message.body);
+    bubble.append(body);
+  }
+
+  const attachments = chat.attachmentsByMessage.get(message.id) || [];
+  attachments.forEach((attachment) => {
+    if (attachment.signedUrl) {
+      const link = document.createElement("a");
+      link.className = "chat-image-link";
+      link.href = attachment.signedUrl;
+      link.target = "_blank";
+      link.rel = "noreferrer noopener";
+
+      const image = document.createElement("img");
+      image.src = attachment.signedUrl;
+      image.alt = attachment.fileName || "Imagen enviada";
+      link.append(image);
+      bubble.append(link);
+    }
+  });
+
+  if (message.body) {
+    appendImageUrlPreviews(bubble, message.body);
+  }
+
+  const time = document.createElement("time");
+  time.className = "chat-message-time";
+  time.dateTime = message.createdAt || "";
+  time.textContent = formatMessageTime(message.createdAt);
+  bubble.append(time);
+
+  row.append(bubble);
+  return row;
+}
+
+function createChatComposer({ chat, onSendChatMessage }) {
+  const form = document.createElement("form");
+  form.className = "chat-composer";
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const textarea = form.querySelector("textarea");
+    const fileInput = form.querySelector('input[type="file"]');
+    onSendChatMessage({
+      body: textarea.value,
+      files: fileInput.files
+    });
+    textarea.value = "";
+    fileInput.value = "";
+  });
+
+  const textarea = document.createElement("textarea");
+  textarea.placeholder = navigator.onLine ? "Escribe un mensaje" : "Sin conexión";
+  textarea.rows = 2;
+  textarea.disabled = !navigator.onLine || chat.isLoading;
+  textarea.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  const controls = document.createElement("div");
+  controls.className = "chat-composer-controls";
+
+  const imageLabel = document.createElement("label");
+  imageLabel.className = "small-button chat-image-picker";
+  imageLabel.textContent = "Imagen";
+
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "image/jpeg,image/png,image/webp,image/gif";
+  fileInput.multiple = true;
+  fileInput.disabled = !navigator.onLine || chat.isLoading;
+  imageLabel.append(fileInput);
+
+  const sendButton = document.createElement("button");
+  sendButton.className = "save-task-button";
+  sendButton.type = "submit";
+  sendButton.disabled = !navigator.onLine || chat.isLoading;
+  sendButton.textContent = "Enviar";
+
+  controls.append(imageLabel, sendButton);
+  form.append(textarea, controls);
+  return form;
+}
+
+function createChatNotice(text, tone) {
+  const notice = document.createElement("p");
+  notice.className = `chat-notice${tone === "error" ? " is-error" : ""}`;
+  notice.textContent = text;
+  return notice;
+}
+
+function getChatConversationTitle(chat) {
+  const conversation = chat.activeConversation;
+  if (!conversation) {
+    return "Chat";
+  }
+
+  if (conversation.type === "general") {
+    return "General";
+  }
+
+  if (conversation.type === "group") {
+    return conversation.title || "Grupo";
+  }
+
+  const participants = chat.participants || [];
+  const targetParticipant = participants.find(
+    (participant) => participant.conversationId === conversation.id && participant.userId !== chat.currentUserId
+  );
+  const member = chat.directory.find((item) => item.userId === targetParticipant?.userId);
+  return member?.nickname ? `@${member.nickname}` : member?.displayName || "Directo";
+}
+
+function getChatConversationMeta(chat) {
+  const conversation = chat.activeConversation;
+  if (!conversation) {
+    return "";
+  }
+
+  if (conversation.type === "direct") {
+    return "Mensaje directo";
+  }
+
+  if (conversation.type === "group") {
+    return conversation.isParticipant ? "Grupo" : "Sin acceso a mensajes";
+  }
+
+  return "Equipo completo";
+}
+
+function appendLinkedText(node, text) {
+  const urlPattern = /(https?:\/\/[^\s]+)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = urlPattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      node.append(document.createTextNode(text.slice(lastIndex, match.index)));
+    }
+
+    const href = match[0];
+    const link = document.createElement("a");
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noreferrer noopener";
+    link.textContent = href;
+    node.append(link);
+    lastIndex = match.index + href.length;
+  }
+
+  if (lastIndex < text.length) {
+    node.append(document.createTextNode(text.slice(lastIndex)));
+  }
+}
+
+function appendImageUrlPreviews(node, text) {
+  const urls = text.match(/https?:\/\/[^\s]+/g) || [];
+  urls
+    .filter((url) => /\.(png|jpe?g|webp|gif)(\?.*)?$/i.test(url))
+    .slice(0, 3)
+    .forEach((url) => {
+      const link = document.createElement("a");
+      link.className = "chat-image-link";
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noreferrer noopener";
+
+      const image = document.createElement("img");
+      image.src = url;
+      image.alt = "Vista previa";
+      image.loading = "lazy";
+      link.append(image);
+      node.append(link);
+    });
+}
+
+function formatMessageTime(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleTimeString("es-MX", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
 function createTaskCard(task, onOpenTask, onMoveCard, teamMembers = []) {

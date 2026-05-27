@@ -13,12 +13,16 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260527-theme-toggle-side-menu";
+} from "./models.js?v=20260527-cloud-chat-v190";
 
 const DB_NAME = "JavoPM";
-const DB_VERSION = 6;
+const DB_VERSION = 8;
 const STORES = {
   chartCards: "chartCards",
+  chatAttachments: "chatAttachments",
+  chatConversations: "chatConversations",
+  chatMessages: "chatMessages",
+  chatParticipants: "chatParticipants",
   columns: "columns",
   projects: "projects",
   teamMembers: "teamMembers",
@@ -85,6 +89,29 @@ export function initDB() {
           });
           pendingMutationStore.createIndex("status", "status", { unique: false });
           pendingMutationStore.createIndex("createdAt", "createdAt", { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains(STORES.chatConversations)) {
+          const chatConversationStore = db.createObjectStore(STORES.chatConversations, { keyPath: "id" });
+          chatConversationStore.createIndex("updatedAt", "updatedAt", { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains(STORES.chatParticipants)) {
+          const chatParticipantStore = db.createObjectStore(STORES.chatParticipants, { keyPath: "id" });
+          chatParticipantStore.createIndex("conversationId", "conversationId", { unique: false });
+          chatParticipantStore.createIndex("userId", "userId", { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains(STORES.chatMessages)) {
+          const chatMessageStore = db.createObjectStore(STORES.chatMessages, { keyPath: "id" });
+          chatMessageStore.createIndex("conversationId", "conversationId", { unique: false });
+          chatMessageStore.createIndex("createdAt", "createdAt", { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains(STORES.chatAttachments)) {
+          const chatAttachmentStore = db.createObjectStore(STORES.chatAttachments, { keyPath: "id" });
+          chatAttachmentStore.createIndex("messageId", "messageId", { unique: false });
+          chatAttachmentStore.createIndex("conversationId", "conversationId", { unique: false });
         }
       };
 
@@ -322,6 +349,49 @@ export async function clearPendingMutations() {
   await replaceStore(db, STORES.pendingMutations, []);
 }
 
+export async function getCachedChatSnapshot() {
+  const db = await initDB();
+  const [conversations, participants, messages, attachments] = await Promise.all([
+    getAllFromStore(db, STORES.chatConversations),
+    getAllFromStore(db, STORES.chatParticipants),
+    getAllFromStore(db, STORES.chatMessages),
+    getAllFromStore(db, STORES.chatAttachments)
+  ]);
+
+  return {
+    attachments,
+    conversations,
+    directory: [],
+    messages,
+    participants
+  };
+}
+
+export async function importChatSnapshot(snapshot = {}) {
+  const db = await initDB();
+  const conversations = Array.isArray(snapshot.conversations) ? snapshot.conversations : [];
+  const participants = Array.isArray(snapshot.participants) ? snapshot.participants : [];
+  const messages = Array.isArray(snapshot.messages) ? snapshot.messages : [];
+  const attachments = Array.isArray(snapshot.attachments) ? snapshot.attachments : [];
+
+  await Promise.all([
+    replaceStore(db, STORES.chatConversations, conversations),
+    replaceStore(db, STORES.chatParticipants, participants),
+    replaceStore(db, STORES.chatMessages, messages),
+    replaceStore(db, STORES.chatAttachments, attachments)
+  ]);
+}
+
+export async function clearChatSnapshot() {
+  const db = await initDB();
+  await Promise.all([
+    replaceStore(db, STORES.chatConversations, []),
+    replaceStore(db, STORES.chatParticipants, []),
+    replaceStore(db, STORES.chatMessages, []),
+    replaceStore(db, STORES.chatAttachments, [])
+  ]);
+}
+
 export async function exportBoardSnapshot() {
   const [columns, tasks, projects, teamMembers, chartCards, taskEvents] = await Promise.all([
     getColumns(),
@@ -381,6 +451,10 @@ export async function resetLocalBoardAfterLogout() {
     replaceStore(db, STORES.projects, []),
     replaceStore(db, STORES.teamMembers, []),
     replaceStore(db, STORES.chartCards, createDefaultChartCards().map(normalizeChartCard)),
+    replaceStore(db, STORES.chatConversations, []),
+    replaceStore(db, STORES.chatParticipants, []),
+    replaceStore(db, STORES.chatMessages, []),
+    replaceStore(db, STORES.chatAttachments, []),
     replaceStore(db, STORES.taskEvents, []),
     replaceStore(db, STORES.pendingMutations, []),
     replaceStore(db, STORES.meta, metaRecords)

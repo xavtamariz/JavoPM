@@ -4,9 +4,11 @@ import {
   createTeamMember,
   createTaskEvent,
   clearPendingMutations,
+  clearChatSnapshot,
   deleteTask,
   deleteTeamMember,
   exportBoardSnapshot,
+  getCachedChatSnapshot,
   getChartCards,
   getColumns,
   getMetaValue,
@@ -15,6 +17,7 @@ import {
   getTaskEvents,
   getTasks,
   importBoardSnapshot,
+  importChatSnapshot,
   initDB,
   resetSeedDataIfNeeded,
   resetLocalBoardAfterLogout,
@@ -26,7 +29,16 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-theme-toggle-side-menu";
+} from "./db.js?v=20260527-cloud-chat-v190";
+import {
+  bootstrapChat,
+  createChatGroup,
+  ensureDirectConversation,
+  markChatRead,
+  sendChatMessage,
+  startChatRealtime,
+  stopChatRealtime
+} from "./chatRepository.js?v=20260527-cloud-chat-v190";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -45,8 +57,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-theme-toggle-side-menu";
-import { initAccountModal } from "./accountModal.js?v=20260527-theme-toggle-side-menu";
+} from "./models.js?v=20260527-cloud-chat-v190";
+import { initAccountModal } from "./accountModal.js?v=20260527-cloud-chat-v190";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -54,7 +66,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-theme-toggle-side-menu";
+} from "./auth.js?v=20260527-cloud-chat-v190";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -62,8 +74,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-theme-toggle-side-menu";
-import { openTaskModal } from "./modal.js?v=20260527-theme-toggle-side-menu";
+} from "./memberApi.js?v=20260527-cloud-chat-v190";
+import { openTaskModal } from "./modal.js?v=20260527-cloud-chat-v190";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -71,8 +83,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-theme-toggle-side-menu";
-import { renderBoard } from "./ui.js?v=20260527-theme-toggle-side-menu";
+} from "./syncEngine.js?v=20260527-cloud-chat-v190";
+import { renderBoard } from "./ui.js?v=20260527-cloud-chat-v190";
 
 const state = {
   chartCards: [],
@@ -82,11 +94,30 @@ const state = {
   projects: [],
   teamMembers: [],
   taskEvents: [],
-  tasks: []
+  tasks: [],
+  chat: {
+    activeConversationId: "",
+    error: "",
+    groupDraftOpen: false,
+    isEnabled: false,
+    isLoading: false,
+    isOpen: false,
+    snapshot: {
+      attachments: [],
+      canCreateGroups: false,
+      conversations: [],
+      currentUserId: "",
+      directory: [],
+      messages: [],
+      participants: []
+    },
+    view: "list"
+  }
 };
 
 const boardElement = document.querySelector("#board");
 const accountMenuToggle = document.querySelector("[data-account-menu-toggle]");
+const chatMenuToggle = document.querySelector("[data-chat-menu-toggle]");
 const projectMenuToggle = document.querySelector("[data-project-menu-toggle]");
 const teamMenuToggle = document.querySelector("[data-team-menu-toggle]");
 const themeToggle = document.querySelector("[data-theme-toggle]");
@@ -107,6 +138,8 @@ let sideMenuKeydownHandler;
 let teamModalKeydownHandler;
 let expandedTeamMemberId = "";
 let isOwnerProfileExpanded = false;
+let chatRefreshTimer;
+let chatMarkReadTimer;
 
 async function startApp() {
   try {
@@ -121,6 +154,7 @@ async function startApp() {
       onStatusChange: setSyncStatus
     });
     initAccountMenu();
+    initChatMenu();
     initProjectMenu();
     initTeamMenu();
     await tryRestoreOwnerSession();
@@ -272,13 +306,19 @@ function render() {
   renderBoard({
     boardElement,
     chartCards: state.chartCards,
+    chat: buildChatViewModel(),
     columns: state.columns,
     taskEvents: state.taskEvents,
     teamMembers: getAssignableTeamMembers(),
     tasks: state.tasks,
     onAddTask: handleAddTask,
+    onBackChatList: handleBackChatList,
+    onCreateChatGroup: handleCreateChatGroup,
+    onOpenChatConversation: handleOpenChatConversation,
     onOpenTask: handleOpenTask,
     onMoveCard: handleMoveCard,
+    onSendChatMessage: handleSendChatMessage,
+    onShowChatGroupForm: handleShowChatGroupForm,
     onUpdateChartCard: handleUpdateChartCard
   });
 }
@@ -297,6 +337,28 @@ function initTeamMenu() {
   }
 
   teamMenuToggle.addEventListener("click", openTeamModal);
+}
+
+function initChatMenu() {
+  if (!chatMenuToggle) {
+    return;
+  }
+
+  chatMenuToggle.addEventListener("click", async () => {
+    if (!state.chat.isEnabled) {
+      return;
+    }
+
+    state.chat.isOpen = !state.chat.isOpen;
+    state.chat.view = state.chat.isOpen ? state.chat.view || "list" : "list";
+    state.chat.error = "";
+    updateChatButton();
+    render();
+
+    if (state.chat.isOpen && state.chat.snapshot.conversations.length === 0) {
+      await refreshChatSnapshot();
+    }
+  });
 }
 
 function initAccountMenu() {
@@ -468,16 +530,22 @@ async function startAuthenticatedSync(result) {
     userId: result.user.id,
     workspaceId: result.cloud.workspaceId
   });
+  await startChatSession({
+    boardId: result.cloud.boardId,
+    workspaceId: result.cloud.workspaceId
+  });
 }
 
 async function handleLogoutOwnerAccount() {
   await signOutOwnerAccount();
   await stopCloudSyncSession();
+  await stopChatSession();
   await resetLocalBoardAfterLogout();
   await reloadBoardState();
   state.account = null;
   state.ownerProfile = null;
   updateAccountButton();
+  updateChatButton();
   setSyncStatus("local");
   render();
 }
@@ -531,6 +599,8 @@ function updateAccountButton() {
   if (sideAccountMessage) {
     sideAccountMessage.textContent = "";
   }
+
+  updateChatButton();
 }
 
 function getAccountTypeLabel() {
@@ -541,9 +611,418 @@ function getAccountTypeLabel() {
   return "Cuenta maestra";
 }
 
+function updateChatButton() {
+  if (!chatMenuToggle) {
+    return;
+  }
+
+  const enabled = Boolean(state.account?.userId && state.chat.isEnabled);
+  chatMenuToggle.hidden = !enabled;
+  chatMenuToggle.dataset.open = String(Boolean(enabled && state.chat.isOpen));
+  chatMenuToggle.setAttribute("aria-expanded", String(Boolean(enabled && state.chat.isOpen)));
+}
+
+async function startChatSession({ boardId, workspaceId }) {
+  state.chat = {
+    ...state.chat,
+    activeConversationId: "",
+    boardId,
+    error: "",
+    groupDraftOpen: false,
+    isEnabled: true,
+    isLoading: true,
+    isOpen: false,
+    view: "list",
+    workspaceId
+  };
+  updateChatButton();
+
+  const cachedSnapshot = await getCachedChatSnapshot();
+  state.chat.snapshot = {
+    ...state.chat.snapshot,
+    ...cachedSnapshot,
+    currentUserId: state.account?.userId || cachedSnapshot.currentUserId || ""
+  };
+
+  await startChatRealtime({
+    boardId,
+    onChange: scheduleChatRefresh
+  });
+  await refreshChatSnapshot();
+}
+
+async function stopChatSession() {
+  clearTimeout(chatRefreshTimer);
+  clearTimeout(chatMarkReadTimer);
+  await stopChatRealtime();
+  await clearChatSnapshot();
+  state.chat = {
+    activeConversationId: "",
+    error: "",
+    groupDraftOpen: false,
+    isEnabled: false,
+    isLoading: false,
+    isOpen: false,
+    snapshot: {
+      attachments: [],
+      canCreateGroups: false,
+      conversations: [],
+      currentUserId: "",
+      directory: [],
+      messages: [],
+      participants: []
+    },
+    view: "list"
+  };
+}
+
+function scheduleChatRefresh() {
+  if (!state.chat.isEnabled) {
+    return;
+  }
+
+  clearTimeout(chatRefreshTimer);
+  chatRefreshTimer = window.setTimeout(refreshChatSnapshot, 250);
+}
+
+async function refreshChatSnapshot() {
+  if (!state.chat.isEnabled || !state.chat.boardId) {
+    return;
+  }
+
+  state.chat.isLoading = true;
+  state.chat.error = "";
+  updateChatButton();
+
+  try {
+    const result = await bootstrapChat({
+      boardId: state.chat.boardId,
+      clientId
+    });
+    await applyChatSnapshot(result.snapshot);
+  } catch (error) {
+    state.chat.error = error.message || "No se pudo actualizar el chat.";
+  } finally {
+    state.chat.isLoading = false;
+    updateChatButton();
+    render();
+  }
+}
+
+async function applyChatSnapshot(snapshot = {}) {
+  state.chat.snapshot = {
+    attachments: Array.isArray(snapshot.attachments) ? snapshot.attachments : [],
+    canCreateGroups: Boolean(snapshot.canCreateGroups),
+    conversations: Array.isArray(snapshot.conversations) ? snapshot.conversations : [],
+    currentUserId: snapshot.currentUserId || state.account?.userId || "",
+    directory: Array.isArray(snapshot.directory) ? snapshot.directory : [],
+    messages: Array.isArray(snapshot.messages) ? snapshot.messages : [],
+    participants: Array.isArray(snapshot.participants) ? snapshot.participants : []
+  };
+  await importChatSnapshot(state.chat.snapshot);
+
+  const activeConversation = getActiveChatConversation();
+  if (state.chat.view === "conversation" && activeConversation?.isParticipant) {
+    scheduleMarkActiveChatRead();
+  }
+}
+
+function buildChatViewModel() {
+  const snapshot = state.chat.snapshot;
+  const currentUserId = state.account?.userId || snapshot.currentUserId || "";
+  const conversations = Array.isArray(snapshot.conversations) ? snapshot.conversations : [];
+  const participants = Array.isArray(snapshot.participants) ? snapshot.participants : [];
+  const messages = Array.isArray(snapshot.messages) ? snapshot.messages : [];
+  const attachments = Array.isArray(snapshot.attachments) ? snapshot.attachments : [];
+  const directory = (Array.isArray(snapshot.directory) ? snapshot.directory : []).filter((member) => member.userId);
+  const activeConversation = conversations.find((conversation) => conversation.id === state.chat.activeConversationId) || null;
+  const items = buildChatListItems({
+    conversations,
+    currentUserId,
+    directory,
+    messages,
+    participants
+  });
+  const activeMessages = activeConversation
+    ? messages
+      .filter((message) => message.conversationId === activeConversation.id)
+      .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+    : [];
+  const attachmentsByMessage = attachments.reduce((map, attachment) => {
+    if (!map.has(attachment.messageId)) {
+      map.set(attachment.messageId, []);
+    }
+    map.get(attachment.messageId).push(attachment);
+    return map;
+  }, new Map());
+
+  return {
+    activeConversation,
+    activeMessages,
+    attachmentsByMessage,
+    canCreateGroups: Boolean(snapshot.canCreateGroups),
+    currentUserId,
+    directory,
+    error: state.chat.error,
+    groupDraftOpen: state.chat.groupDraftOpen,
+    isEnabled: state.chat.isEnabled,
+    isLoading: state.chat.isLoading,
+    isOpen: state.chat.isOpen,
+    items,
+    participants,
+    totalUnread: items.reduce((sum, item) => sum + (item.unreadCount || 0), 0),
+    view: state.chat.view
+  };
+}
+
+function buildChatListItems({ conversations, currentUserId, directory, messages, participants }) {
+  const items = [];
+  const unreadByConversation = getUnreadCounts({ currentUserId, messages, participants });
+  const general = conversations.find((conversation) => conversation.type === "general");
+
+  if (general) {
+    items.push({
+      conversation: general,
+      conversationId: general.id,
+      kind: "conversation",
+      locked: !general.isParticipant,
+      meta: "Todos los integrantes",
+      title: "General",
+      type: "general",
+      unreadCount: unreadByConversation.get(general.id) || 0
+    });
+  }
+
+  const directByUserId = getDirectConversationByTargetUser({
+    conversations,
+    currentUserId,
+    participants
+  });
+  directory
+    .filter((member) => member.userId !== currentUserId)
+    .forEach((member) => {
+      const direct = directByUserId.get(member.userId);
+      items.push({
+        conversation: direct || null,
+        conversationId: direct?.id || "",
+        kind: direct ? "conversation" : "direct",
+        locked: false,
+        meta: member.role === "owner" ? "Cuenta maestra" : "Miembro",
+        targetUserId: member.userId,
+        title: member.nickname ? `@${member.nickname}` : member.displayName,
+        type: "direct",
+        unreadCount: direct ? unreadByConversation.get(direct.id) || 0 : 0
+      });
+    });
+
+  conversations
+    .filter((conversation) => conversation.type === "group")
+    .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
+    .forEach((conversation) => {
+      const groupParticipants = participants.filter(
+        (participant) => participant.conversationId === conversation.id && participant.isActive
+      );
+      items.push({
+        conversation,
+        conversationId: conversation.id,
+        kind: "conversation",
+        locked: !conversation.isParticipant,
+        meta: conversation.isParticipant
+          ? `${groupParticipants.length} integrantes`
+          : "Grupo creado, sin acceso a mensajes",
+        title: conversation.title || "Grupo",
+        type: "group",
+        unreadCount: conversation.isParticipant ? unreadByConversation.get(conversation.id) || 0 : 0
+      });
+    });
+
+  return items;
+}
+
+function getUnreadCounts({ currentUserId, messages, participants }) {
+  const currentParticipants = new Map(
+    participants
+      .filter((participant) => participant.userId === currentUserId && participant.isActive)
+      .map((participant) => [participant.conversationId, participant])
+  );
+  const counts = new Map();
+
+  messages.forEach((message) => {
+    if (message.senderUserId === currentUserId) {
+      return;
+    }
+
+    const participant = currentParticipants.get(message.conversationId);
+    if (!participant) {
+      return;
+    }
+
+    const lastReadTime = participant.lastReadAt ? new Date(participant.lastReadAt).getTime() : 0;
+    const messageTime = new Date(message.createdAt).getTime();
+    if (Number.isFinite(messageTime) && messageTime > lastReadTime) {
+      counts.set(message.conversationId, (counts.get(message.conversationId) || 0) + 1);
+    }
+  });
+
+  return counts;
+}
+
+function getDirectConversationByTargetUser({ conversations, currentUserId, participants }) {
+  const map = new Map();
+  conversations
+    .filter((conversation) => conversation.type === "direct")
+    .forEach((conversation) => {
+      const memberIds = participants
+        .filter((participant) => participant.conversationId === conversation.id && participant.isActive)
+        .map((participant) => participant.userId);
+      const targetUserId = memberIds.find((userId) => userId !== currentUserId);
+      if (targetUserId) {
+        map.set(targetUserId, conversation);
+      }
+    });
+  return map;
+}
+
+function getActiveChatConversation() {
+  return state.chat.snapshot.conversations.find(
+    (conversation) => conversation.id === state.chat.activeConversationId
+  ) || null;
+}
+
+async function handleOpenChatConversation(item) {
+  if (!state.chat.isEnabled) {
+    return;
+  }
+
+  state.chat.error = "";
+
+  try {
+    if (item.kind === "direct" && item.targetUserId) {
+      state.chat.isLoading = true;
+      render();
+      const result = await ensureDirectConversation({
+        boardId: state.chat.boardId,
+        clientId,
+        targetUserId: item.targetUserId
+      });
+      await applyChatSnapshot(result.snapshot);
+      state.chat.activeConversationId = result.conversationId;
+    } else if (item.conversationId) {
+      state.chat.activeConversationId = item.conversationId;
+    }
+
+    state.chat.groupDraftOpen = false;
+    state.chat.view = "conversation";
+    scheduleMarkActiveChatRead();
+  } catch (error) {
+    state.chat.error = error.message || "No se pudo abrir el chat.";
+  } finally {
+    state.chat.isLoading = false;
+    render();
+  }
+}
+
+function handleBackChatList() {
+  state.chat.view = "list";
+  state.chat.activeConversationId = "";
+  state.chat.groupDraftOpen = false;
+  state.chat.error = "";
+  render();
+}
+
+function handleShowChatGroupForm(show) {
+  state.chat.groupDraftOpen = Boolean(show);
+  state.chat.error = "";
+  render();
+}
+
+async function handleCreateChatGroup({ includeCurrentUser, participantUserIds, title }) {
+  const selectedIds = new Set(participantUserIds || []);
+  if (includeCurrentUser && state.account?.userId) {
+    selectedIds.add(state.account.userId);
+  }
+
+  try {
+    state.chat.isLoading = true;
+    render();
+    const result = await createChatGroup({
+      boardId: state.chat.boardId,
+      clientId,
+      participantUserIds: [...selectedIds],
+      title
+    });
+    await applyChatSnapshot(result.snapshot);
+    state.chat.activeConversationId = result.conversationId;
+    state.chat.groupDraftOpen = false;
+    state.chat.view = "conversation";
+    scheduleMarkActiveChatRead();
+  } catch (error) {
+    state.chat.error = error.message || "No se pudo crear el grupo.";
+  } finally {
+    state.chat.isLoading = false;
+    render();
+  }
+}
+
+async function handleSendChatMessage({ body, files }) {
+  const conversation = getActiveChatConversation();
+  if (!conversation) {
+    return;
+  }
+
+  try {
+    state.chat.error = "";
+    state.chat.isLoading = true;
+    render();
+    await sendChatMessage({
+      account: state.account,
+      boardId: state.chat.boardId,
+      body,
+      clientId,
+      conversation,
+      files,
+      workspaceId: state.chat.workspaceId
+    });
+    await refreshChatSnapshot();
+    scheduleMarkActiveChatRead();
+  } catch (error) {
+    state.chat.error = error.message || "No se pudo enviar el mensaje.";
+  } finally {
+    state.chat.isLoading = false;
+    render();
+  }
+}
+
+function scheduleMarkActiveChatRead() {
+  const conversation = getActiveChatConversation();
+  if (!conversation?.isParticipant) {
+    return;
+  }
+
+  clearTimeout(chatMarkReadTimer);
+  chatMarkReadTimer = window.setTimeout(async () => {
+    try {
+      const result = await markChatRead({
+        boardId: state.chat.boardId,
+        clientId,
+        conversationId: conversation.id
+      });
+      if (result?.snapshot) {
+        await applyChatSnapshot(result.snapshot);
+        render();
+      }
+    } catch {
+      // Read markers should not interrupt chat usage.
+    }
+  }, 500);
+}
+
 async function handleRemoteSnapshot(snapshot) {
   await importBoardSnapshot(snapshot);
   await reloadBoardState();
+  if (state.chat.isEnabled) {
+    scheduleChatRefresh();
+  }
   render();
 }
 

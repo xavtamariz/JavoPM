@@ -22,7 +22,7 @@
         supabaseUrl: "https://scoacquwvbchdsldxaep.supabase.co"
       };
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260527-theme-toggle-side-menu" />
+    <link rel="stylesheet" href="./styles.css?v=20260527-cloud-chat-v190" />
   </head>
   <body>
     <div class="app-shell">
@@ -41,6 +41,15 @@
               aria-haspopup="dialog"
             >
               <span class="account-menu-label">Cuenta</span>
+            </button>
+            <button
+              class="chat-menu-button"
+              type="button"
+              data-chat-menu-toggle
+              aria-expanded="false"
+              hidden
+            >
+              <span class="chat-menu-label">Chat</span>
             </button>
             <div class="project-menu" data-project-menu>
               <button
@@ -121,6 +130,6 @@
 
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260527-theme-toggle-side-menu"></script>
+    <script type="module" src="./app.js?v=20260527-cloud-chat-v190"></script>
   </body>
 </html>
