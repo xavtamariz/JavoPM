@@ -526,7 +526,7 @@ h1 {
 
 .account-mode-tabs {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -646,6 +646,105 @@ h1 {
   color: var(--muted);
 }
 
+.team-list {
+  max-height: 260px;
+}
+
+.team-list-item {
+  display: grid;
+  gap: 10px;
+  align-items: stretch;
+  padding: 10px;
+}
+
+.team-member-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.team-member-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.team-member-copy strong,
+.team-member-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-member-copy strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.team-member-copy span,
+.team-mode-note {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.team-mode-note {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.team-member-edit-button {
+  min-height: 30px;
+  padding: 0 9px;
+}
+
+.team-access-create-form,
+.team-member-edit-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr) auto;
+  gap: 6px;
+}
+
+.team-member-edit-panel {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr) minmax(96px, 0.45fr) auto auto;
+}
+
+.team-member-edit-panel input,
+.team-member-edit-panel select {
+  min-width: 0;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+  padding: 0 9px;
+}
+
+.member-key-callout {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--save-border);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.member-key-callout span {
+  font-size: 11px;
+  font-weight: 780;
+  text-transform: uppercase;
+}
+
+.member-key-callout strong {
+  font-family: var(--mono);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
 .project-create-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -661,6 +760,13 @@ h1 {
   color: var(--ink);
   outline: none;
   padding: 0 9px;
+}
+
+.team-member-edit-panel input:focus,
+.team-member-edit-panel select:focus,
+.team-access-create-form .project-create-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .project-create-input:focus {

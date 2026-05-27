@@ -4,7 +4,9 @@ export function initAccountModal({
   getAccountState,
   isConfigured,
   onCreateAccount,
+  onCompleteMemberPassword,
   onLogin,
+  onLoginMember,
   onLogout
 }) {
   if (!button) {
@@ -14,6 +16,8 @@ export function initAccountModal({
   let mode = "login";
   let message = "";
   let keydownHandler;
+  let needsPasswordSetup = false;
+  let preservedNickname = "";
   let preservedEmail = "";
 
   button.addEventListener("click", () => open());
@@ -22,6 +26,7 @@ export function initAccountModal({
     beforeOpen?.();
     mode = nextMode;
     message = "";
+    needsPasswordSetup = false;
     render();
   }
 
@@ -79,7 +84,9 @@ export function initAccountModal({
     document.addEventListener("keydown", keydownHandler);
 
     requestAnimationFrame(() => {
-      overlay.querySelector("[data-account-email]")?.focus({ preventScroll: true });
+      overlay
+        .querySelector("[data-account-email], [data-account-nickname], [data-account-new-password]")
+        ?.focus({ preventScroll: true });
     });
   }
 
@@ -108,7 +115,7 @@ export function initAccountModal({
     body.className = "account-modal-body";
     const accountState = getAccountState?.();
 
-    if (accountState?.email) {
+    if (accountState?.email || accountState?.nickname) {
       const sessionPanel = document.createElement("div");
       sessionPanel.className = "account-session-panel";
 
@@ -118,10 +125,36 @@ export function initAccountModal({
 
       const email = document.createElement("p");
       email.className = "account-session-email";
-      email.textContent = accountState.email;
+      email.textContent = accountState.email || accountState.nickname;
 
       sessionPanel.append(label, email);
       body.append(sessionPanel);
+      return body;
+    }
+
+    if (needsPasswordSetup) {
+      const setupIntro = document.createElement("p");
+      setupIntro.className = "account-message is-visible";
+      setupIntro.textContent = "Crea tu contraseña personal para terminar el primer acceso.";
+
+      const fields = document.createElement("div");
+      fields.className = "account-fields";
+      fields.append(
+        createInputField("Nueva contraseña", "newPassword", "password", "", {
+          autocomplete: "new-password",
+          dataAccountNewPassword: "true"
+        }),
+        createInputField("Confirmar contraseña", "confirmPassword", "password", "", {
+          autocomplete: "new-password"
+        })
+      );
+
+      const notice = document.createElement("p");
+      notice.className = `account-message${message ? " is-visible" : ""}`;
+      notice.dataset.accountMessage = "true";
+      notice.textContent = message;
+
+      body.append(setupIntro, fields, notice);
       return body;
     }
 
@@ -129,21 +162,38 @@ export function initAccountModal({
     tabs.className = "account-mode-tabs";
     tabs.append(
       createModeButton("login", "Iniciar sesión"),
-      createModeButton("create", "Crear cuenta")
+      createModeButton("create", "Crear cuenta"),
+      createModeButton("member", "Miembro")
     );
 
     const fields = document.createElement("div");
     fields.className = "account-fields";
-    fields.append(
-      createInputField("Correo", "email", "email", preservedEmail, {
-        autocomplete: "email",
-        dataAccountEmail: "true"
-      }),
-      createInputField("Contraseña", "password", "password", "", {
-        autocomplete: mode === "create" ? "new-password" : "current-password",
-        dataAccountPassword: "true"
-      })
-    );
+
+    if (mode === "member") {
+      fields.append(
+        createInputField("Nickname", "nickname", "text", preservedNickname, {
+          autocomplete: "username",
+          autocapitalize: "none",
+          dataAccountNickname: "true",
+          spellcheck: "false"
+        }),
+        createInputField("Contraseña o clave", "password", "password", "", {
+          autocomplete: "current-password",
+          dataAccountPassword: "true"
+        })
+      );
+    } else {
+      fields.append(
+        createInputField("Correo", "email", "email", preservedEmail, {
+          autocomplete: "email",
+          dataAccountEmail: "true"
+        }),
+        createInputField("Contraseña", "password", "password", "", {
+          autocomplete: mode === "create" ? "new-password" : "current-password",
+          dataAccountPassword: "true"
+        })
+      );
+    }
 
     if (mode === "create") {
       fields.append(
@@ -185,7 +235,9 @@ export function initAccountModal({
     primaryButton.disabled = !isConfigured();
     primaryButton.textContent = getAccountState?.()?.email
       ? "Cerrar sesión"
-      : mode === "create" ? "Crear cuenta" : "Iniciar sesión";
+      : needsPasswordSetup
+        ? "Guardar contraseña"
+        : mode === "create" ? "Crear cuenta" : mode === "member" ? "Entrar como miembro" : "Iniciar sesión";
 
     footer.append(cancelButton, primaryButton);
     return footer;
@@ -201,7 +253,9 @@ export function initAccountModal({
       mode = value;
       message = "";
       const emailInput = document.querySelector("[data-account-email]");
+      const nicknameInput = document.querySelector("[data-account-nickname]");
       preservedEmail = emailInput?.value || preservedEmail;
+      preservedNickname = nicknameInput?.value || preservedNickname;
       render();
     });
     return modeButton;
@@ -259,16 +313,36 @@ export function initAccountModal({
 
     const form = event.currentTarget;
     const formData = new FormData(form);
+    if (needsPasswordSetup) {
+      const newPassword = String(formData.get("newPassword") || "");
+      const confirmPassword = String(formData.get("confirmPassword") || "");
+      setBusy(form, true);
+      try {
+        await onCompleteMemberPassword?.({ confirmPassword, password: newPassword });
+        close();
+      } catch (error) {
+        message = error.message || "No se pudo guardar la contraseña.";
+        render();
+      } finally {
+        setBusy(form, false);
+      }
+      return;
+    }
+
     const email = String(formData.get("email") || "").trim();
+    const nickname = String(formData.get("nickname") || "").trim().toLocaleLowerCase("es-MX");
     const password = String(formData.get("password") || "");
     const confirmPassword = String(formData.get("confirmPassword") || "");
     preservedEmail = email;
+    preservedNickname = nickname;
     setBusy(form, true);
 
     try {
       const result = mode === "create"
         ? await onCreateAccount({ confirmPassword, email, password })
-        : await onLogin({ email, password });
+        : mode === "member"
+          ? await onLoginMember({ nickname, password })
+          : await onLogin({ email, password });
 
       if (result?.status === "existing_email") {
         mode = "login";
@@ -279,6 +353,13 @@ export function initAccountModal({
 
       if (result?.status === "verification_required") {
         message = "Revisa tu correo para confirmar la cuenta y luego inicia sesión desde este dispositivo.";
+        render();
+        return;
+      }
+
+      if (result?.passwordSetupRequired) {
+        needsPasswordSetup = true;
+        message = "";
         render();
         return;
       }

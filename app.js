@@ -25,7 +25,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260526-stage-current";
+} from "./db.js?v=20260527-member-access";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -38,28 +38,38 @@ import {
   generateFolio,
   getFolioNumber,
   getNextGlobalFolioNumber,
+  isValidMemberNickname,
+  normalizeNickname,
   normalizeProjectName,
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260526-stage-current";
-import { initAccountModal } from "./accountModal.js?v=20260526-stage-current";
+} from "./models.js?v=20260527-member-access";
+import { initAccountModal } from "./accountModal.js?v=20260527-member-access";
 import {
   canUseAccounts,
   createOwnerAccount,
+  loginMemberAccount,
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260526-stage-current";
-import { openTaskModal } from "./modal.js?v=20260526-stage-current";
+} from "./auth.js?v=20260527-member-access";
+import {
+  completeMemberPassword,
+  createCloudTeamMember,
+  resetCloudTeamMemberKey,
+  updateCloudTeamMember
+} from "./memberApi.js?v=20260527-member-access";
+import { openTaskModal } from "./modal.js?v=20260527-member-access";
 import {
   allocateNextCloudFolioNumber,
+  getCloudSyncContext,
   initSyncEngine,
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260526-stage-current";
-import { renderBoard } from "./ui.js?v=20260526-stage-current";
+} from "./syncEngine.js?v=20260527-member-access";
+import { renderBoard } from "./ui.js?v=20260527-member-access";
 
 const state = {
   chartCards: [],
@@ -91,6 +101,7 @@ let clientId;
 let projectModalKeydownHandler;
 let sideMenuKeydownHandler;
 let teamModalKeydownHandler;
+let expandedTeamMemberId = "";
 
 async function startApp() {
   try {
@@ -293,8 +304,10 @@ function initAccountMenu() {
     button: accountMenuToggle,
     isConfigured: canUseAccounts,
     getAccountState: () => state.account,
+    onCompleteMemberPassword: handleCompleteMemberPassword,
     onCreateAccount: handleCreateOwnerAccount,
     onLogin: handleLoginOwnerAccount,
+    onLoginMember: handleLoginMemberAccount,
     onLogout: handleLogoutOwnerAccount
   });
 }
@@ -396,9 +409,49 @@ async function handleLoginOwnerAccount({ email, password }) {
   return result;
 }
 
+async function handleLoginMemberAccount({ nickname, password }) {
+  const backup = await exportBoardSnapshot();
+  await saveAnonymousBackup(backup);
+
+  const result = await loginMemberAccount({
+    clientId,
+    nickname,
+    password
+  });
+
+  if (result.status === "authenticated") {
+    await importBoardSnapshot(result.cloud.snapshot);
+    await clearPendingMutations();
+    await reloadBoardState();
+    await startAuthenticatedSync(result);
+    render();
+  }
+
+  return result;
+}
+
+async function handleCompleteMemberPassword({ confirmPassword, password }) {
+  if (password !== confirmPassword) {
+    throw new Error("Las contraseñas no coinciden.");
+  }
+
+  await completeMemberPassword({ confirmPassword, password });
+  if (state.account) {
+    state.account.passwordSetupRequired = false;
+  }
+  updateAccountButton();
+}
+
 async function startAuthenticatedSync(result) {
+  const accountType = result.accountType || "owner";
   state.account = {
-    email: result.email || result.user?.email || "",
+    accountType,
+    displayName: result.displayName || result.email || result.nickname || "Cuenta",
+    email: accountType === "member" ? "" : result.email || result.user?.email || "",
+    nickname: result.nickname || "",
+    passwordSetupRequired: Boolean(result.passwordSetupRequired),
+    role: result.role || (accountType === "member" ? "member" : "owner"),
+    teamMemberId: result.teamMemberId || "",
     userId: result.user?.id || ""
   };
   updateAccountButton();
@@ -445,7 +498,8 @@ async function handleSideMenuLogout() {
 
 function updateAccountButton() {
   const label = accountMenuToggle?.querySelector(".account-menu-label");
-  const isAuthenticated = Boolean(state.account?.email);
+  const isAuthenticated = Boolean(state.account?.userId);
+  const accountLabel = state.account?.email || state.account?.nickname || state.account?.displayName || "";
 
   if (accountMenuToggle && label) {
     label.textContent = "Cuenta";
@@ -453,7 +507,7 @@ function updateAccountButton() {
     accountMenuToggle.dataset.authenticated = String(isAuthenticated);
     accountMenuToggle.setAttribute(
       "aria-label",
-      isAuthenticated ? `Cuenta activa: ${state.account.email}` : "Cuenta"
+      isAuthenticated ? `Cuenta activa: ${accountLabel}` : "Cuenta"
     );
     accountMenuToggle.setAttribute("aria-expanded", "false");
   }
@@ -463,10 +517,20 @@ function updateAccountButton() {
   }
 
   sideAccount.hidden = !isAuthenticated;
-  sideAccountEmail.textContent = state.account?.email || "";
+  sideAccountEmail.textContent = isAuthenticated
+    ? `${state.account.displayName || accountLabel} · ${getAccountTypeLabel()}`
+    : "";
   if (sideAccountMessage) {
     sideAccountMessage.textContent = "";
   }
+}
+
+function getAccountTypeLabel() {
+  if (state.account?.accountType === "member") {
+    return state.account.nickname ? `Miembro @${state.account.nickname}` : "Miembro";
+  }
+
+  return "Cuenta maestra";
 }
 
 async function handleRemoteSnapshot(snapshot) {
@@ -750,78 +814,200 @@ function createTeamModalTopbar() {
   return topbar;
 }
 
-function createTeamModalBody(message = "") {
+function createTeamModalBody(message = "", revealedKey = null) {
   const body = document.createElement("div");
-  body.className = "project-modal-body";
+  body.className = "project-modal-body team-modal-body";
   body.dataset.teamModalBody = "true";
 
   const listTitle = document.createElement("p");
   listTitle.className = "project-list-title";
-  listTitle.textContent = "Integrantes del equipo";
+  listTitle.textContent = getTeamModalTitle();
 
   const list = document.createElement("ul");
-  list.className = "project-list";
+  list.className = "project-list team-list";
 
   if (state.teamMembers.length === 0) {
     const emptyItem = document.createElement("li");
     emptyItem.className = "project-list-item is-empty";
-    emptyItem.textContent = "Sin integrantes todavía";
+    emptyItem.textContent = isOwnerAccount()
+      ? "Sin miembros todavía"
+      : "Sin responsables todavía";
     list.append(emptyItem);
   } else {
     state.teamMembers.forEach((teamMember) => {
-      const item = document.createElement("li");
-      item.className = "project-list-item";
-      item.textContent = teamMember.name;
-      list.append(item);
+      list.append(createTeamMemberListItem(teamMember, revealedKey));
     });
   }
-
-  const form = document.createElement("form");
-  form.className = "project-create-form";
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const input = form.querySelector("[data-team-create-input]");
-    await handleCreateTeamMember(input.value);
-  });
-
-  const input = document.createElement("input");
-  input.className = "project-create-input";
-  input.dataset.teamCreateInput = "true";
-  input.placeholder = "Nuevo integrante";
-  input.type = "text";
-
-  const createButton = document.createElement("button");
-  createButton.className = "project-create-button";
-  createButton.type = "submit";
-  createButton.textContent = "Crear";
 
   const validation = document.createElement("div");
   validation.className = `project-menu-message${message ? " is-visible" : ""}`;
   validation.textContent = message;
 
-  form.append(input, createButton);
+  if (isMemberAccount()) {
+    const note = document.createElement("p");
+    note.className = "team-mode-note";
+    note.textContent = "Puedes ver el equipo, pero solo la cuenta maestra puede administrarlo.";
+    body.append(listTitle, list, note, validation);
+    return body;
+  }
+
+  const form = document.createElement("form");
+  form.className = isOwnerAccount() ? "team-access-create-form" : "project-create-form";
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const input = form.querySelector("[data-team-create-input]");
+    const nicknameInput = form.querySelector("[data-team-nickname-input]");
+    await handleCreateTeamMember(input.value, nicknameInput?.value || "");
+  });
+
+  const input = document.createElement("input");
+  input.className = "project-create-input";
+  input.dataset.teamCreateInput = "true";
+  input.placeholder = isOwnerAccount() ? "Nombre visible" : "Nuevo responsable";
+  input.type = "text";
+
+  if (isOwnerAccount()) {
+    const nicknameInput = document.createElement("input");
+    nicknameInput.className = "project-create-input";
+    nicknameInput.dataset.teamNicknameInput = "true";
+    nicknameInput.placeholder = "nickname";
+    nicknameInput.type = "text";
+    nicknameInput.autocapitalize = "none";
+    nicknameInput.spellcheck = false;
+    form.append(input, nicknameInput);
+  } else {
+    form.append(input);
+  }
+
+  const createButton = document.createElement("button");
+  createButton.className = "project-create-button";
+  createButton.type = "submit";
+  createButton.textContent = isOwnerAccount() ? "Crear acceso" : "Crear";
+
+  form.append(createButton);
   body.append(listTitle, list, form, validation);
   return body;
 }
 
-function renderTeamModalBody(message = "") {
+function createTeamMemberListItem(teamMember, revealedKey) {
+  const item = document.createElement("li");
+  item.className = "project-list-item team-list-item";
+
+  const summary = document.createElement("div");
+  summary.className = "team-member-summary";
+
+  const copy = document.createElement("div");
+  copy.className = "team-member-copy";
+
+  const name = document.createElement("strong");
+  name.textContent = teamMember.name;
+
+  const meta = document.createElement("span");
+  meta.textContent = getTeamMemberMeta(teamMember);
+
+  copy.append(name, meta);
+  summary.append(copy);
+
+  if (isOwnerAccount() && teamMember.status !== "local") {
+    const editButton = document.createElement("button");
+    editButton.className = "small-button team-member-edit-button";
+    editButton.type = "button";
+    editButton.textContent = expandedTeamMemberId === teamMember.id ? "Cerrar" : "Editar";
+    editButton.addEventListener("click", () => {
+      expandedTeamMemberId = expandedTeamMemberId === teamMember.id ? "" : teamMember.id;
+      renderTeamModalBody();
+    });
+    summary.append(editButton);
+  }
+
+  item.append(summary);
+
+  if (revealedKey?.teamMemberId === teamMember.id) {
+    const keyBox = document.createElement("div");
+    keyBox.className = "member-key-callout";
+    keyBox.innerHTML = `<span>Clave vigente</span><strong>${revealedKey.ownerKey}</strong>`;
+    item.append(keyBox);
+  }
+
+  if (isOwnerAccount() && expandedTeamMemberId === teamMember.id && teamMember.status !== "local") {
+    item.append(createTeamMemberEditPanel(teamMember));
+  }
+
+  return item;
+}
+
+function createTeamMemberEditPanel(teamMember) {
+  const form = document.createElement("form");
+  form.className = "team-member-edit-panel";
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    await handleUpdateTeamMemberAccess({
+      name: formData.get("name"),
+      nickname: formData.get("nickname"),
+      status: formData.get("status"),
+      teamMemberId: teamMember.id
+    });
+  });
+
+  const nameInput = document.createElement("input");
+  nameInput.name = "name";
+  nameInput.type = "text";
+  nameInput.value = teamMember.name;
+
+  const nicknameInput = document.createElement("input");
+  nicknameInput.name = "nickname";
+  nicknameInput.type = "text";
+  nicknameInput.value = teamMember.nickname || "";
+  nicknameInput.autocapitalize = "none";
+  nicknameInput.spellcheck = false;
+
+  const statusSelect = document.createElement("select");
+  statusSelect.name = "status";
+  [
+    ["active", "Activo"],
+    ["inactive", "Inactivo"]
+  ].forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    statusSelect.append(option);
+  });
+  statusSelect.value = teamMember.status === "inactive" ? "inactive" : "active";
+
+  const saveButton = document.createElement("button");
+  saveButton.className = "save-task-button";
+  saveButton.type = "submit";
+  saveButton.textContent = "Guardar";
+
+  const resetKeyButton = document.createElement("button");
+  resetKeyButton.className = "small-button";
+  resetKeyButton.type = "button";
+  resetKeyButton.textContent = "Nueva clave";
+  resetKeyButton.addEventListener("click", () => handleResetTeamMemberKey(teamMember.id));
+
+  form.append(nameInput, nicknameInput, statusSelect, saveButton, resetKeyButton);
+  return form;
+}
+
+function renderTeamModalBody(message = "", revealedKey = null) {
   const currentBody = document.querySelector("[data-team-modal-body]");
   if (!currentBody) {
     return;
   }
 
-  const nextBody = createTeamModalBody(message);
+  const nextBody = createTeamModalBody(message, revealedKey);
   currentBody.replaceWith(nextBody);
   requestAnimationFrame(() => {
     nextBody.querySelector("[data-team-create-input]")?.focus({ preventScroll: true });
   });
 }
 
-async function handleCreateTeamMember(value) {
+async function handleCreateTeamMember(value, nicknameValue = "") {
   const name = normalizeTeamMemberName(value);
 
   if (!name) {
-    renderTeamModalBody("Escribe un nombre de integrante.");
+    renderTeamModalBody(isOwnerAccount() ? "Escribe el nombre visible del miembro." : "Escribe un nombre de responsable.");
     return null;
   }
 
@@ -830,9 +1016,56 @@ async function handleCreateTeamMember(value) {
     return null;
   }
 
-  if (teamMemberNameExists(name)) {
+  if (teamMemberNameExists(name) && !canUpgradeLocalTeamMember(name)) {
     renderTeamModalBody("Ese integrante ya existe.");
     return null;
+  }
+
+  if (isOwnerAccount()) {
+    const nickname = normalizeNickname(nicknameValue);
+    if (!isValidMemberNickname(nickname)) {
+      renderTeamModalBody("El nickname debe ir en minúsculas, sin espacios, mínimo 3 caracteres.");
+      return null;
+    }
+
+    if (teamMemberNicknameExists(nickname)) {
+      renderTeamModalBody("Ese nickname ya existe.");
+      return null;
+    }
+
+    const context = getCloudSyncContext();
+    if (!context?.boardId) {
+      renderTeamModalBody("No encontramos el tablero cloud para crear el acceso.");
+      return null;
+    }
+
+    try {
+      const result = await createCloudTeamMember({
+        boardId: context.boardId,
+        clientId,
+        name,
+        nickname
+      });
+      const existingIndex = state.teamMembers.findIndex((teamMember) => teamMember.id === result.teamMember.id);
+      const savedTeamMember = await createTeamMember({
+        ...result.teamMember,
+        order: existingIndex >= 0 ? state.teamMembers[existingIndex].order : state.teamMembers.length
+      });
+      state.teamMembers = sortByOrder(
+        existingIndex >= 0
+          ? state.teamMembers.map((teamMember, index) => index === existingIndex ? savedTeamMember : teamMember)
+          : [...state.teamMembers, savedTeamMember]
+      );
+      renderTeamModalBody("", {
+        ownerKey: result.teamMember.ownerKey,
+        teamMemberId: savedTeamMember.id
+      });
+      render();
+      return savedTeamMember;
+    } catch (error) {
+      renderTeamModalBody(error.message || "No se pudo crear el acceso.");
+      return null;
+    }
   }
 
   const savedTeamMember = await createTeamMember(
@@ -855,6 +1088,67 @@ async function handleCreateTeamMember(value) {
   return savedTeamMember;
 }
 
+async function handleUpdateTeamMemberAccess({ name, nickname, status, teamMemberId }) {
+  const normalizedName = normalizeTeamMemberName(name);
+  const normalizedNickname = normalizeNickname(nickname);
+
+  if (!normalizedName) {
+    renderTeamModalBody("Escribe el nombre visible.");
+    return;
+  }
+
+  if (!isValidMemberNickname(normalizedNickname)) {
+    renderTeamModalBody("El nickname debe ir en minúsculas, sin espacios, mínimo 3 caracteres.");
+    return;
+  }
+
+  try {
+    const result = await updateCloudTeamMember({
+      clientId,
+      name: normalizedName,
+      nickname: normalizedNickname,
+      status,
+      teamMemberId
+    });
+    await upsertLocalTeamMember(result.teamMember);
+    renderTeamModalBody("Cambios guardados.");
+    render();
+  } catch (error) {
+    renderTeamModalBody(error.message || "No se pudo actualizar el miembro.");
+  }
+}
+
+async function handleResetTeamMemberKey(teamMemberId) {
+  try {
+    const result = await resetCloudTeamMemberKey({ clientId, teamMemberId });
+    await upsertLocalTeamMember(result.teamMember);
+    renderTeamModalBody("", {
+      ownerKey: result.teamMember.ownerKey,
+      teamMemberId
+    });
+  } catch (error) {
+    renderTeamModalBody(error.message || "No se pudo regenerar la clave.");
+  }
+}
+
+async function upsertLocalTeamMember(nextTeamMember) {
+  const existingIndex = state.teamMembers.findIndex((teamMember) => teamMember.id === nextTeamMember.id);
+  const normalized = createTeamMemberModel({
+    ...nextTeamMember,
+    order: existingIndex >= 0 ? state.teamMembers[existingIndex].order : state.teamMembers.length
+  });
+  normalized.id = nextTeamMember.id;
+  normalized.createdAt = nextTeamMember.createdAt || normalized.createdAt;
+  normalized.updatedAt = nextTeamMember.updatedAt || new Date().toISOString();
+
+  const nextTeamMembers = existingIndex >= 0
+    ? state.teamMembers.map((teamMember, index) => index === existingIndex ? normalized : teamMember)
+    : [...state.teamMembers, normalized];
+
+  state.teamMembers = await saveTeamMembers(sortByOrder(nextTeamMembers));
+  return normalized;
+}
+
 function projectNameExists(name) {
   return state.projects.some(
     (project) => project.name.toLocaleLowerCase("es-MX") === name.toLocaleLowerCase("es-MX")
@@ -865,6 +1159,53 @@ function teamMemberNameExists(name) {
   return state.teamMembers.some(
     (teamMember) => teamMember.name.toLocaleLowerCase("es-MX") === name.toLocaleLowerCase("es-MX")
   );
+}
+
+function teamMemberNicknameExists(nickname) {
+  return state.teamMembers.some(
+    (teamMember) => teamMember.nickname && teamMember.nickname === nickname
+  );
+}
+
+function canUpgradeLocalTeamMember(name) {
+  if (!isOwnerAccount()) {
+    return false;
+  }
+
+  return state.teamMembers.some(
+    (teamMember) =>
+      teamMember.status === "local" &&
+      teamMember.name.toLocaleLowerCase("es-MX") === name.toLocaleLowerCase("es-MX")
+  );
+}
+
+function getTeamModalTitle() {
+  if (isOwnerAccount()) {
+    return "Miembros con acceso";
+  }
+
+  if (isMemberAccount()) {
+    return "Equipo";
+  }
+
+  return "Responsables locales";
+}
+
+function getTeamMemberMeta(teamMember) {
+  if (teamMember.status === "local") {
+    return "Responsable local";
+  }
+
+  const statusLabel = teamMember.status === "inactive" ? "Inactivo" : "Activo";
+  return teamMember.nickname ? `@${teamMember.nickname} · ${statusLabel}` : statusLabel;
+}
+
+function isOwnerAccount() {
+  return state.account?.role === "owner";
+}
+
+function isMemberAccount() {
+  return state.account?.accountType === "member";
 }
 
 function isDefaultResponsible(name) {

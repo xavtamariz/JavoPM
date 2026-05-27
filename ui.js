@@ -12,7 +12,7 @@ import {
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
   sortByOrder
-} from "./models.js?v=20260526-stage-current";
+} from "./models.js?v=20260527-member-access";
 
 const AXIS_LABELS = {
   frozen: "C",

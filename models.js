@@ -70,15 +70,26 @@ export function createProjectModel({ name = DEFAULT_PROJECT_NAME, order = 0 }) {
   };
 }
 
-export function createTeamMemberModel({ name, order = 0 }) {
+export function createTeamMemberModel({
+  lastLoginAt = "",
+  name,
+  nickname = "",
+  order = 0,
+  status = "local",
+  userId = ""
+}) {
   const now = new Date().toISOString();
 
   return {
     id: createId("team"),
+    lastLoginAt: sanitizeText(lastLoginAt),
     name: normalizeTeamMemberName(name),
+    nickname: normalizeNickname(nickname),
     createdAt: now,
     updatedAt: now,
-    order
+    order,
+    status: normalizeTeamMemberStatus(status),
+    userId: sanitizeText(userId)
   };
 }
 
@@ -216,10 +227,14 @@ export function normalizeTeamMember(teamMember, teamMemberIndex = 0) {
 
   return {
     id: teamMember.id || createId("team"),
+    lastLoginAt: sanitizeText(teamMember.lastLoginAt),
     name: normalizeTeamMemberName(teamMember.name),
+    nickname: normalizeNickname(teamMember.nickname),
     createdAt: teamMember.createdAt || now,
     updatedAt: teamMember.updatedAt || now,
-    order: Number.isFinite(Number(teamMember.order)) ? Number(teamMember.order) : teamMemberIndex
+    order: Number.isFinite(Number(teamMember.order)) ? Number(teamMember.order) : teamMemberIndex,
+    status: normalizeTeamMemberStatus(teamMember.status),
+    userId: sanitizeText(teamMember.userId)
   };
 }
 
@@ -345,6 +360,18 @@ export function normalizeProjectName(value) {
 
 export function normalizeTeamMemberName(value) {
   return sanitizeText(value).replace(/\s+/g, " ");
+}
+
+export function normalizeNickname(value) {
+  return sanitizeText(value).toLocaleLowerCase("es-MX").replace(/\s+/g, "");
+}
+
+export function isValidMemberNickname(value) {
+  return /^[a-z0-9][a-z0-9_-]{2,31}$/.test(normalizeNickname(value));
+}
+
+function normalizeTeamMemberStatus(value) {
+  return ["local", "active", "inactive"].includes(value) ? value : "local";
 }
 
 export function sortByOrder(items) {

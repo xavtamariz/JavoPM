@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260526-stage-current";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-member-access";
 
 let clientPromise;
 

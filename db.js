@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260526-stage-current";
+} from "./models.js?v=20260527-member-access";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 6;

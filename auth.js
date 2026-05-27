@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260526-stage-current";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260526-stage-current";
+} from "./cloudRepository.js?v=20260527-member-access";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260527-member-access";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();
@@ -47,10 +47,15 @@ export async function createOwnerAccount({ clientId, confirmPassword, email, pas
   });
 
   return {
+    accountType: "owner",
     cloud,
+    displayName: getDisplayName(data.user.email),
     email,
+    nickname: "",
+    role: "owner",
     session: data.session,
     status: "authenticated",
+    teamMemberId: "",
     user: data.user
   };
 }
@@ -118,12 +123,71 @@ export async function loginOwnerAccount({
   }
 
   return {
+    accountType: cloud.profile?.account_type || "owner",
     cloud,
     completedPendingImport,
+    displayName: cloud.profile?.display_name || getDisplayName(data.user.email),
     email,
+    nickname: cloud.profile?.nickname || "",
+    role: cloud.membershipRole || "owner",
     session: data.session,
     status: "authenticated",
+    teamMemberId: cloud.profile?.team_member_id || "",
     user: data.user
+  };
+}
+
+export async function loginMemberAccount({
+  clientId,
+  nickname,
+  password
+}) {
+  const normalizedNickname = validateNicknameAndPassword({ nickname, password });
+  const supabase = await getSupabaseClient();
+  const { data, error } = await supabase.functions.invoke("member-auth", {
+    body: {
+      nickname: normalizedNickname,
+      password
+    }
+  });
+
+  if (error || data?.error) {
+    throw new Error(data?.error || error?.message || "No se pudo iniciar como miembro.");
+  }
+
+  const sessionPayload = data?.session;
+  if (!sessionPayload?.access_token || !sessionPayload?.refresh_token) {
+    throw new Error("No recibimos una sesión válida para el miembro.");
+  }
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+    access_token: sessionPayload.access_token,
+    refresh_token: sessionPayload.refresh_token
+  });
+
+  if (sessionError || !sessionData?.session?.user) {
+    throw new Error(sessionError?.message || "No se pudo guardar la sesión del miembro.");
+  }
+
+  const cloud = await pullOwnerBoardSnapshot({
+    supabase,
+    userId: sessionData.session.user.id
+  });
+
+  return {
+    accountType: "member",
+    cloud,
+    completedPendingImport: false,
+    credentialType: data.account?.credentialType || "",
+    displayName: data.account?.displayName || cloud.profile?.display_name || normalizedNickname,
+    email: "",
+    nickname: data.account?.nickname || cloud.profile?.nickname || normalizedNickname,
+    passwordSetupRequired: Boolean(data.passwordSetupRequired),
+    role: "member",
+    session: sessionData.session,
+    status: "authenticated",
+    teamMemberId: data.account?.teamMemberId || cloud.profile?.team_member_id || "",
+    user: sessionData.session.user
   };
 }
 
@@ -187,11 +251,17 @@ export async function restoreOwnerSession({
   }
 
   return {
+    accountType: cloud.profile?.account_type || "owner",
     cloud,
     completedPendingImport,
-    email: data.session.user.email,
+    displayName: cloud.profile?.display_name || getDisplayName(data.session.user.email),
+    email: cloud.profile?.account_type === "member" ? "" : data.session.user.email,
+    nickname: cloud.profile?.nickname || "",
+    passwordSetupRequired: Boolean(cloud.profile?.password_setup_required),
+    role: cloud.membershipRole || "member",
     session: data.session,
     status: "authenticated",
+    teamMemberId: cloud.profile?.team_member_id || "",
     user: data.session.user
   };
 }
@@ -219,6 +289,20 @@ function validateEmailAndPassword({ confirmPassword, email, isCreate, password }
   if (isCreate && password !== confirmPassword) {
     throw new Error("Las contraseñas no coinciden.");
   }
+}
+
+function validateNicknameAndPassword({ nickname, password }) {
+  const normalizedNickname = String(nickname || "").trim().toLocaleLowerCase("es-MX");
+
+  if (!/^[a-z0-9][a-z0-9_-]{2,31}$/.test(normalizedNickname)) {
+    throw new Error("Escribe un nickname válido.");
+  }
+
+  if (!password || String(password).length < 6) {
+    throw new Error("La contraseña debe tener al menos 6 caracteres.");
+  }
+
+  return normalizedNickname;
 }
 
 function getAuthRedirectUrl() {

@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260526-stage-current";
+} from "./models.js?v=20260527-member-access";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
@@ -31,7 +31,7 @@ const DEFAULT_WORKSPACE_NAME = "JavoPM";
 const UPSERT_CONFLICTS = {
   projects: "board_id,name",
   tasks: "board_id,folio",
-  team_members: "board_id,name"
+  team_members: "id"
 };
 
 export async function createOwnerWorkspaceFromSnapshot({ clientId, snapshot, supabase, user }) {
@@ -127,9 +127,22 @@ export async function pullOwnerBoardSnapshot({ supabase, userId }) {
 
   return {
     boardId: board.id,
+    membershipRole: memberships.find((membership) => membership.workspace_id === board.workspace_id)?.role || "member",
+    profile: await fetchProfile({ supabase, userId }),
     snapshot: await fetchBoardSnapshot({ boardId: board.id, supabase }),
     workspaceId: board.workspace_id
   };
+}
+
+async function fetchProfile({ supabase, userId }) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("account_type, display_name, email, nickname, password_setup_required, team_member_id, workspace_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  throwIfError(error);
+  return data || null;
 }
 
 export async function fetchBoardSnapshot({ boardId, supabase }) {
@@ -352,8 +365,12 @@ function rowsToLocalSnapshot(rows) {
     teamMembers: rows.teamMembers.map((row) => ({
       createdAt: row.created_at,
       id: row.id,
+      lastLoginAt: row.last_login_at || "",
       name: row.name,
+      nickname: row.nickname || "",
       order: row.order_index || 0,
+      status: row.status || "local",
+      userId: row.user_id || "",
       updatedAt: row.updated_at
     }))
   };
@@ -481,8 +498,10 @@ function teamMemberToRow(teamMember, { boardId, clientId }) {
   return withBoardFields({
     id: teamMember.id,
     name: teamMember.name,
-    nickname: null,
+    nickname: teamMember.nickname || null,
     order_index: teamMember.order,
+    status: teamMember.status || "local",
+    user_id: teamMember.userId || null,
     sort_key: getSortKey(teamMember.order)
   }, { boardId, clientId, createdAt: teamMember.createdAt, updatedAt: teamMember.updatedAt });
 }
