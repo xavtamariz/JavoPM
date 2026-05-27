@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-responsible-nicknames";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-modal-footer-swap";
 
 let clientPromise;
 

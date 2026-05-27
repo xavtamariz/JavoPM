@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260527-responsible-nicknames";
+} from "./models.js?v=20260527-modal-footer-swap";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 6;

@@ -6,8 +6,8 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260527-responsible-nicknames";
-import { renderChecklists } from "./checklist.js?v=20260527-responsible-nicknames";
+} from "./models.js?v=20260527-modal-footer-swap";
+import { renderChecklists } from "./checklist.js?v=20260527-modal-footer-swap";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
@@ -109,7 +109,7 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     deleteButton.setAttribute("aria-label", "Eliminar tarea");
     deleteButton.addEventListener("click", handleDelete);
 
-    footer.append(saveButton, deleteButton);
+    footer.append(deleteButton, saveButton);
     return footer;
   }
 

@@ -13,7 +13,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-responsible-nicknames";
+} from "./models.js?v=20260527-modal-footer-swap";
 
 const AXIS_LABELS = {
   frozen: "C",

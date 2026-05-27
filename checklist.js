@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-responsible-nicknames";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-modal-footer-swap";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");
