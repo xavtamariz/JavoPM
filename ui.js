@@ -12,7 +12,7 @@ import {
   TASK_STAGE_BY_MEMBER_CHART_TYPE,
   formatDateRange,
   sortByOrder
-} from "./models.js?v=20260526-metrics-history";
+} from "./models.js?v=20260526-cumulative-metrics";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -24,6 +24,13 @@ const AXIS_LABELS = {
 };
 const COMPLETED_COLUMN_ID = "completed";
 const COLUMN_ACTIVITY_EVENT_TYPES = new Set(["created", "moved"]);
+const METRIC_EVENT_TYPES = new Set([
+  "created",
+  "moved",
+  "points_changed",
+  "project_changed",
+  "responsible_changed"
+]);
 const LEADERBOARD_MODE_LABELS = {
   points: "Puntos",
   tasks: "Completadas"
@@ -395,37 +402,20 @@ function getChartData({ chartCard, columns, tasks, taskEvents }) {
   const period = chartCard.settings?.period || DEFAULT_CHART_PERIOD;
   const teamMember = chartCard.settings?.teamMember || DEFAULT_CHART_TEAM;
   const cutoff = getPeriodCutoff(period);
-  const tasksById = new Map(tasks.map((task) => [task.id, task]));
-  const columnIds = new Set(workflowColumns.map((column) => column.id));
-  const selectedEvents = taskEvents.filter((event) => {
-    const columnId = getTaskEventColumnId(event);
-    if (!COLUMN_ACTIVITY_EVENT_TYPES.has(event.eventType) || !columnIds.has(columnId)) {
-      return false;
-    }
-
-    if (cutoff && getTaskEventTime(event) < cutoff) {
-      return false;
-    }
-
-    return teamMember === DEFAULT_CHART_TEAM || getTaskEventResponsible(event, tasksById) === teamMember;
+  const metricState = getMetricTaskStates({
+    cutoff,
+    taskEvents,
+    tasks,
+    workflowColumns
   });
-
-  const source = selectedEvents.length > 0 ? "events" : "current";
-  const values = workflowColumns.map((column) => {
-    if (source === "events") {
-      return selectedEvents.filter((event) => getTaskEventColumnId(event) === column.id).length;
-    }
-
-    return tasks.filter(
-      (task) =>
-        task.columnId === column.id &&
-        (teamMember === DEFAULT_CHART_TEAM || task.responsible === teamMember)
-    ).length;
-  });
+  const selectedStates = metricState.states.filter(
+    (state) => teamMember === DEFAULT_CHART_TEAM || state.responsibleName === teamMember
+  );
+  const values = getCumulativeStageValues(workflowColumns, selectedStates);
 
   return {
     labels: workflowColumns.map((column) => AXIS_LABELS[column.id] || column.title.slice(0, 1)),
-    source,
+    source: metricState.source,
     values
   };
 }
@@ -433,43 +423,18 @@ function getChartData({ chartCard, columns, tasks, taskEvents }) {
 function getStageChartData({ chartCard, columns, tasks, taskEvents, teamMembers }) {
   const workflowColumns = columns.filter((column) => column.id !== METRICS_COLUMN_ID);
   const selectedTeamMember = getStageTeamMember(chartCard, teamMembers);
-  const hasTeamMember = selectedTeamMember !== DEFAULT_CHART_TEAM;
   const period = chartCard.settings?.period || DEFAULT_CHART_PERIOD;
   const cutoff = getPeriodCutoff(period);
-  const tasksById = new Map(tasks.map((task) => [task.id, task]));
-  const columnIds = new Set(workflowColumns.map((column) => column.id));
-
-  const selectedEvents = hasTeamMember
-    ? taskEvents.filter((event) => {
-        if (!COLUMN_ACTIVITY_EVENT_TYPES.has(event.eventType)) {
-          return false;
-        }
-
-        if (
-          getTaskEventResponsible(event, tasksById) !== selectedTeamMember ||
-          !columnIds.has(getTaskEventColumnId(event))
-        ) {
-          return false;
-        }
-
-        if (cutoff && getTaskEventTime(event) < cutoff) {
-          return false;
-        }
-
-        return true;
-      })
-    : [];
-
-  const source = selectedEvents.length > 0 ? "events" : "current";
-  const values = workflowColumns.map((column) => {
-    if (source === "events") {
-      return selectedEvents.filter((event) => getTaskEventColumnId(event) === column.id).length;
-    }
-
-    return tasks.filter(
-      (task) => task.columnId === column.id && task.responsible === selectedTeamMember
-    ).length;
+  const metricState = getMetricTaskStates({
+    cutoff,
+    taskEvents,
+    tasks,
+    workflowColumns
   });
+  const selectedStates = metricState.states.filter(
+    (state) => selectedTeamMember === DEFAULT_CHART_TEAM || state.responsibleName === selectedTeamMember
+  );
+  const values = getCumulativeStageValues(workflowColumns, selectedStates);
   const total = values.reduce((sum, value) => sum + value, 0);
   const stages = workflowColumns.map((column, index) => {
     const count = values[index];
@@ -505,49 +470,40 @@ function getStageTeamMember(chartCard, teamMembers) {
 }
 
 function getLeaderboardData({ chartCard, tasks, taskEvents, teamMembers }) {
+  const workflowColumns = DEFAULT_WORKFLOW_COLUMNS;
   const metric = LEADERBOARD_METRICS.includes(chartCard.settings?.leaderboardMetric)
     ? chartCard.settings.leaderboardMetric
     : DEFAULT_LEADERBOARD_METRIC;
   const cutoff = getPeriodCutoff(chartCard.settings?.period || DEFAULT_CHART_PERIOD);
   const teamNames = new Set(teamMembers.map((teamMember) => teamMember.name).filter(Boolean));
-  const completedTasks = tasks.filter((task) => {
-    const responsible = task.responsible || "";
+  const completedIndex = workflowColumns.findIndex((column) => column.id === COMPLETED_COLUMN_ID);
+  const metricState = getMetricTaskStates({
+    cutoff,
+    taskEvents,
+    tasks,
+    workflowColumns
+  });
+  const tasksInScope = metricState.states.filter((state) => {
+    const responsible = state.responsibleName || "";
 
     return (
-      task.columnId === COMPLETED_COLUMN_ID &&
+      state.retainedIndex >= completedIndex &&
       responsible &&
       responsible !== DEFAULT_RESPONSIBLE_NAME &&
       (teamNames.size === 0 || teamNames.has(responsible))
     );
   });
-  const completedTaskIds = new Set(completedTasks.map((task) => task.id));
-  const completionEvents = cutoff
-    ? taskEvents.filter((event) => {
-        if (
-          !COLUMN_ACTIVITY_EVENT_TYPES.has(event.eventType) ||
-          getTaskEventColumnId(event) !== COMPLETED_COLUMN_ID ||
-          !completedTaskIds.has(event.taskId)
-        ) {
-          return false;
-        }
-
-        return getTaskEventTime(event) >= cutoff;
-      })
-    : [];
-  const tasksInScope = completionEvents.length > 0
-    ? completedTasks.filter((task) => completionEvents.some((event) => event.taskId === task.id))
-    : completedTasks;
   const memberTotals = new Map();
 
-  tasksInScope.forEach((task) => {
-    const name = task.responsible;
+  tasksInScope.forEach((state) => {
+    const name = state.responsibleName;
     const current = memberTotals.get(name) || {
       count: 0,
       name,
       points: 0
     };
     current.count += 1;
-    current.points += Number.isFinite(Number(task.points)) ? Number(task.points) : 0;
+    current.points += Number.isFinite(Number(state.points)) ? Number(state.points) : 0;
     memberTotals.set(name, current);
   });
 
@@ -580,12 +536,100 @@ function getPeriodCutoff(periodValue) {
   return Date.now() - period.days * 24 * 60 * 60 * 1000;
 }
 
-function getTaskEventColumnId(event) {
-  return event.toColumnId || event.columnId;
+const DEFAULT_WORKFLOW_COLUMNS = [
+  { id: "frozen" },
+  { id: "todo" },
+  { id: "in_progress" },
+  { id: "developed" },
+  { id: "verification" },
+  { id: "completed" }
+];
+
+function getMetricTaskStates({ cutoff, workflowColumns, tasks, taskEvents }) {
+  const columnIndexById = new Map(workflowColumns.map((column, index) => [column.id, index]));
+  const tasksById = new Map(
+    tasks.filter((task) => columnIndexById.has(task.columnId)).map((task) => [task.id, task])
+  );
+  const scopedEvents = taskEvents
+    .filter((event) => tasksById.has(event.taskId))
+    .filter((event) => METRIC_EVENT_TYPES.has(event.eventType))
+    .filter((event) => !cutoff || getTaskEventTime(event) >= cutoff)
+    .sort(compareTaskEvents);
+  const eventsByTask = groupEventsByTask(scopedEvents);
+  const source = scopedEvents.length > 0 ? "events" : "current";
+  const sourceTasks = source === "events"
+    ? [...eventsByTask.keys()].map((taskId) => tasksById.get(taskId)).filter(Boolean)
+    : [...tasksById.values()];
+
+  return {
+    source,
+    states: sourceTasks
+      .map((task) => buildTaskMetricState({
+        columnIndexById,
+        events: eventsByTask.get(task.id) || [],
+        task
+      }))
+      .filter((state) => state.retainedIndex >= 0)
+  };
 }
 
-function getTaskEventResponsible(event, tasksById) {
-  return event.responsibleName || tasksById.get(event.taskId)?.responsible || "";
+function buildTaskMetricState({ columnIndexById, events, task }) {
+  const taskColumnIndex = getColumnIndex(task.columnId, columnIndexById);
+  const state = {
+    points: Number.isFinite(Number(task.points)) ? Number(task.points) : 0,
+    projectName: task.project || "",
+    responsibleName: task.responsible || "",
+    retainedIndex: taskColumnIndex,
+    taskId: task.id
+  };
+
+  events.forEach((event) => {
+    if (COLUMN_ACTIVITY_EVENT_TYPES.has(event.eventType)) {
+      const eventColumnIndex = getColumnIndex(getTaskEventColumnId(event), columnIndexById);
+      if (eventColumnIndex >= 0) {
+        state.retainedIndex = eventColumnIndex;
+      }
+    }
+
+    state.responsibleName = event.responsibleName || state.responsibleName;
+    state.projectName = event.projectName || state.projectName;
+    state.points = Number.isFinite(Number(event.pointsSnapshot)) ? Number(event.pointsSnapshot) : state.points;
+  });
+
+  return state;
+}
+
+function getCumulativeStageValues(workflowColumns, states) {
+  return workflowColumns.map((column, index) =>
+    states.filter((state) => state.retainedIndex >= index).length
+  );
+}
+
+function groupEventsByTask(events) {
+  return events.reduce((map, event) => {
+    if (!map.has(event.taskId)) {
+      map.set(event.taskId, []);
+    }
+    map.get(event.taskId).push(event);
+    return map;
+  }, new Map());
+}
+
+function compareTaskEvents(a, b) {
+  const timeDiff = getTaskEventTime(a) - getTaskEventTime(b);
+  if (timeDiff !== 0) {
+    return timeDiff;
+  }
+
+  return String(a.id || "").localeCompare(String(b.id || ""));
+}
+
+function getColumnIndex(columnId, columnIndexById) {
+  return columnIndexById.has(columnId) ? columnIndexById.get(columnId) : -1;
+}
+
+function getTaskEventColumnId(event) {
+  return event.toColumnId || event.columnId;
 }
 
 function getTaskEventTime(event) {

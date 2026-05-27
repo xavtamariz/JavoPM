@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260526-metrics-history";
+} from "./models.js?v=20260526-cumulative-metrics";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
