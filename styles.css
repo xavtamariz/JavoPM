@@ -105,6 +105,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   min-width: 320px;
   background: var(--bg);
@@ -755,7 +759,21 @@ h1 {
 }
 
 .team-member-edit-panel {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr) minmax(96px, 0.45fr) auto auto;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.team-member-edit-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr) minmax(110px, 0.45fr);
+  gap: 6px;
+}
+
+.team-member-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .owner-profile-edit-panel {
@@ -2081,7 +2099,13 @@ h1 {
 
   .team-access-create-form,
   .team-member-edit-panel,
+  .team-member-edit-fields,
   .owner-profile-edit-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .team-member-edit-actions {
+    display: grid;
     grid-template-columns: 1fr;
   }
 

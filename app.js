@@ -26,7 +26,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-member-nickname-display";
+} from "./db.js?v=20260527-team-member-delete-layout";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -45,8 +45,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-member-nickname-display";
-import { initAccountModal } from "./accountModal.js?v=20260527-member-nickname-display";
+} from "./models.js?v=20260527-team-member-delete-layout";
+import { initAccountModal } from "./accountModal.js?v=20260527-team-member-delete-layout";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -54,15 +54,16 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-member-nickname-display";
+} from "./auth.js?v=20260527-team-member-delete-layout";
 import {
   completeMemberPassword,
   createCloudTeamMember,
+  deleteCloudTeamMember,
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-member-nickname-display";
-import { openTaskModal } from "./modal.js?v=20260527-member-nickname-display";
+} from "./memberApi.js?v=20260527-team-member-delete-layout";
+import { openTaskModal } from "./modal.js?v=20260527-team-member-delete-layout";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -70,8 +71,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-member-nickname-display";
-import { renderBoard } from "./ui.js?v=20260527-member-nickname-display";
+} from "./syncEngine.js?v=20260527-team-member-delete-layout";
+import { renderBoard } from "./ui.js?v=20260527-team-member-delete-layout";
 
 const state = {
   chartCards: [],
@@ -1170,7 +1171,26 @@ function createTeamMemberEditPanel(teamMember) {
   resetKeyButton.textContent = "Nueva clave";
   resetKeyButton.addEventListener("click", () => handleResetTeamMemberKey(teamMember.id));
 
-  form.append(nameInput, nicknameInput, statusSelect, saveButton, resetKeyButton);
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "small-button team-member-delete-button";
+  deleteButton.type = "button";
+  deleteButton.textContent = "Eliminar";
+  deleteButton.hidden = statusSelect.value !== "inactive";
+  deleteButton.addEventListener("click", () => handleDeleteCloudTeamMember(teamMember));
+
+  statusSelect.addEventListener("change", () => {
+    deleteButton.hidden = statusSelect.value !== "inactive";
+  });
+
+  const fieldsRow = document.createElement("div");
+  fieldsRow.className = "team-member-edit-fields";
+  fieldsRow.append(nameInput, nicknameInput, statusSelect);
+
+  const actionsRow = document.createElement("div");
+  actionsRow.className = "team-member-edit-actions";
+  actionsRow.append(deleteButton, saveButton, resetKeyButton);
+
+  form.append(fieldsRow, actionsRow);
   return form;
 }
 
@@ -1478,6 +1498,35 @@ async function handleResetTeamMemberKey(teamMemberId) {
     });
   } catch (error) {
     renderTeamModalBody(error.message || "No se pudo regenerar la clave.");
+  }
+}
+
+async function handleDeleteCloudTeamMember(teamMember) {
+  if (!teamMember || teamMember.status === "local") {
+    return;
+  }
+
+  if (!window.confirm(`¿Eliminar el acceso de ${teamMember.nickname ? `@${teamMember.nickname}` : teamMember.name}?`)) {
+    return;
+  }
+
+  try {
+    await deleteCloudTeamMember({ clientId, teamMemberId: teamMember.id });
+    await deleteTeamMember(teamMember.id);
+    state.teamMembers = sortByOrder(
+      state.teamMembers
+        .filter((currentTeamMember) => currentTeamMember.id !== teamMember.id)
+        .map((currentTeamMember, index) => ({
+          ...currentTeamMember,
+          order: index
+        }))
+    );
+    await saveTeamMembers(state.teamMembers);
+    expandedTeamMemberId = "";
+    renderTeamModalBody("Miembro eliminado.");
+    render();
+  } catch (error) {
+    renderTeamModalBody(error.message || "No se pudo eliminar el miembro.");
   }
 }
 

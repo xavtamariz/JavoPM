@@ -13,7 +13,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-member-nickname-display";
+} from "./models.js?v=20260527-team-member-delete-layout";
 
 const AXIS_LABELS = {
   frozen: "C",

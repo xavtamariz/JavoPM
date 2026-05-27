@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-member-nickname-display";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-team-member-delete-layout";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({
@@ -27,6 +27,22 @@ export async function resetCloudTeamMemberKey({ clientId, teamMemberId }) {
     clientId,
     teamMemberId
   });
+}
+
+export async function deleteCloudTeamMember({ clientId, teamMemberId }) {
+  const supabase = await getSupabaseClient();
+  const { data, error } = await supabase.functions.invoke("owner-member-delete", {
+    body: {
+      clientId,
+      teamMemberId
+    }
+  });
+
+  if (error || data?.error) {
+    throw new Error(data?.error || error?.message || "No se pudo eliminar el miembro.");
+  }
+
+  return data;
 }
 
 export async function updateCloudOwnerProfile({ displayName, nickname }) {
