@@ -29,7 +29,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-chat-optimistic-send";
+} from "./db.js?v=20260527-project-edit-delete";
 import {
   bootstrapChat,
   createChatGroup,
@@ -38,12 +38,12 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260527-chat-optimistic-send";
+} from "./chatRepository.js?v=20260527-project-edit-delete";
 import {
   CHART_CARD_TYPE,
-  DEFAULT_PROJECT_NAME,
   DEFAULT_RESPONSIBLE_NAME,
   TASK_CARD_TYPE,
+  UNASSIGNED_PROJECT_NAME,
   createId,
   createProjectModel,
   createTeamMemberModel,
@@ -58,8 +58,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-chat-optimistic-send";
-import { initAccountModal } from "./accountModal.js?v=20260527-chat-optimistic-send";
+} from "./models.js?v=20260527-project-edit-delete";
+import { initAccountModal } from "./accountModal.js?v=20260527-project-edit-delete";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -67,7 +67,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-chat-optimistic-send";
+} from "./auth.js?v=20260527-project-edit-delete";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -75,8 +75,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-chat-optimistic-send";
-import { openTaskModal } from "./modal.js?v=20260527-chat-optimistic-send";
+} from "./memberApi.js?v=20260527-project-edit-delete";
+import { openTaskModal } from "./modal.js?v=20260527-project-edit-delete";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -84,8 +84,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-chat-optimistic-send";
-import { renderBoard } from "./ui.js?v=20260527-chat-optimistic-send";
+} from "./syncEngine.js?v=20260527-project-edit-delete";
+import { renderBoard } from "./ui.js?v=20260527-project-edit-delete";
 
 const state = {
   chartCards: [],
@@ -137,6 +137,7 @@ const syncLabel = document.querySelector("[data-sync-label]");
 const THEME_STORAGE_KEY = "javopm-theme";
 let clientId;
 let projectModalKeydownHandler;
+let editingProjectId = "";
 let sideMenuKeydownHandler;
 let teamModalKeydownHandler;
 let expandedTeamMemberId = "";
@@ -1248,6 +1249,7 @@ function closeProjectModal(options = {}) {
   }
 
   projectMenuToggle?.setAttribute("aria-expanded", "false");
+  editingProjectId = "";
 
   if (clearRoot) {
     const root = document.querySelector("#modal-root");
@@ -1289,11 +1291,15 @@ function createProjectModalBody(message = "") {
   const list = document.createElement("ul");
   list.className = "project-list";
 
-  state.projects.forEach((project) => {
+  if (state.projects.length === 0) {
     const item = document.createElement("li");
-    item.className = "project-list-item";
-    item.textContent = project.name;
+    item.className = "project-list-item is-empty";
+    item.textContent = "Sin proyectos todavía";
     list.append(item);
+  }
+
+  state.projects.forEach((project) => {
+    list.append(createProjectListItem(project));
   });
 
   const form = document.createElement("form");
@@ -1333,8 +1339,80 @@ function renderProjectModalBody(message = "") {
   const nextBody = createProjectModalBody(message);
   currentBody.replaceWith(nextBody);
   requestAnimationFrame(() => {
-    nextBody.querySelector("[data-project-create-input]")?.focus({ preventScroll: true });
+    const editableInput = nextBody.querySelector("[data-project-edit-input]");
+    const createInput = nextBody.querySelector("[data-project-create-input]");
+    (editableInput || createInput)?.focus({ preventScroll: true });
+    editableInput?.select?.();
   });
+}
+
+function createProjectListItem(project) {
+  const item = document.createElement("li");
+  item.className = "project-list-item project-management-item";
+
+  if (editingProjectId === project.id) {
+    const form = document.createElement("form");
+    form.className = "project-edit-form";
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const input = form.querySelector("[data-project-edit-input]");
+      await handleUpdateProject(project.id, input.value);
+    });
+
+    const input = document.createElement("input");
+    input.className = "project-create-input project-edit-input";
+    input.dataset.projectEditInput = "true";
+    input.type = "text";
+    input.value = project.name;
+
+    const actions = document.createElement("div");
+    actions.className = "project-item-actions";
+
+    const saveButton = document.createElement("button");
+    saveButton.className = "project-create-button project-save-button";
+    saveButton.type = "submit";
+    saveButton.textContent = "Guardar";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.className = "project-secondary-button";
+    cancelButton.type = "button";
+    cancelButton.textContent = "Cancelar";
+    cancelButton.addEventListener("click", () => {
+      editingProjectId = "";
+      renderProjectModalBody();
+    });
+
+    actions.append(saveButton, cancelButton);
+    form.append(input, actions);
+    item.append(form);
+    return item;
+  }
+
+  const name = document.createElement("span");
+  name.className = "project-item-name";
+  name.textContent = project.name;
+
+  const actions = document.createElement("div");
+  actions.className = "project-item-actions";
+
+  const editButton = document.createElement("button");
+  editButton.className = "project-secondary-button";
+  editButton.type = "button";
+  editButton.textContent = "Editar";
+  editButton.addEventListener("click", () => {
+    editingProjectId = project.id;
+    renderProjectModalBody();
+  });
+
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "project-danger-button";
+  deleteButton.type = "button";
+  deleteButton.textContent = "Eliminar";
+  deleteButton.addEventListener("click", () => handleDeleteProject(project.id));
+
+  actions.append(editButton, deleteButton);
+  item.append(name, actions);
+  return item;
 }
 
 async function handleCreateProject(value) {
@@ -1342,6 +1420,11 @@ async function handleCreateProject(value) {
 
   if (!name) {
     renderProjectModalBody("Escribe un nombre de proyecto.");
+    return null;
+  }
+
+  if (isReservedProjectName(name)) {
+    renderProjectModalBody(`"${UNASSIGNED_PROJECT_NAME}" está reservado para tareas sin proyecto.`);
     return null;
   }
 
@@ -1368,6 +1451,177 @@ async function handleCreateProject(value) {
   });
   renderProjectModalBody();
   return savedProject;
+}
+
+async function handleUpdateProject(projectId, value) {
+  const project = state.projects.find((item) => item.id === projectId);
+  const name = normalizeProjectName(value);
+
+  if (!project) {
+    renderProjectModalBody("No encontramos ese proyecto.");
+    return;
+  }
+
+  if (!name) {
+    renderProjectModalBody("Escribe un nombre de proyecto.");
+    return;
+  }
+
+  if (isReservedProjectName(name)) {
+    renderProjectModalBody(`"${UNASSIGNED_PROJECT_NAME}" está reservado para tareas sin proyecto.`);
+    return;
+  }
+
+  if (projectNameExists(name, projectId)) {
+    renderProjectModalBody("Ese proyecto ya existe.");
+    return;
+  }
+
+  if (project.name === name) {
+    editingProjectId = "";
+    renderProjectModalBody();
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const updatedProject = {
+    ...project,
+    name,
+    updatedAt: now
+  };
+  const previousProjects = state.projects;
+  const previousTasks = state.tasks;
+  const nextProjects = sortByOrder(
+    state.projects.map((item) => item.id === projectId ? updatedProject : item)
+  );
+  const nextTasks = state.tasks.map((task) => {
+    if (!isSameProjectName(task.project, project.name)) {
+      return task;
+    }
+
+    return {
+      ...task,
+      project: name,
+      folio: updateFolioProjectName(task.folio, name),
+      updatedAt: now
+    };
+  });
+  const changedTasks = nextTasks.filter((task) => {
+    const previousTask = state.tasks.find((item) => item.id === task.id);
+    return previousTask && (previousTask.project !== task.project || previousTask.folio !== task.folio);
+  });
+
+  try {
+    state.projects = await saveProjects(nextProjects);
+    state.tasks = sortByOrder(await saveTaskOrder(nextTasks));
+    await recordCloudMutation({
+      critical: true,
+      entity: updatedProject,
+      entityId: updatedProject.id,
+      entityType: "project",
+      operation: "update",
+      patch: { name: updatedProject.name, updatedAt: updatedProject.updatedAt }
+    });
+
+    for (const task of changedTasks) {
+      const previousTask = previousTasks.find((item) => item.id === task.id);
+      await recordCloudMutation({
+        critical: true,
+        entity: task,
+        entityId: task.id,
+        entityType: "task",
+        operation: "update",
+        patch: getTaskPatch(previousTask, task)
+      });
+      await recordTaskFieldEvents(previousTask, task);
+    }
+
+    editingProjectId = "";
+    renderProjectModalBody("Proyecto actualizado.");
+    render();
+  } catch (error) {
+    state.projects = previousProjects;
+    state.tasks = previousTasks;
+    await Promise.all([saveProjects(previousProjects), saveTaskOrder(previousTasks)]);
+    renderProjectModalBody(error.message || "No se pudo actualizar el proyecto.");
+    render();
+  }
+}
+
+async function handleDeleteProject(projectId) {
+  const project = state.projects.find((item) => item.id === projectId);
+
+  if (!project) {
+    renderProjectModalBody("No encontramos ese proyecto.");
+    return;
+  }
+
+  if (!window.confirm(`¿Eliminar el proyecto "${project.name}"? Las tareas asignadas quedarán sin proyecto.`)) {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const previousProjects = state.projects;
+  const previousTasks = state.tasks;
+  const nextProjects = sortByOrder(
+    state.projects
+      .filter((item) => item.id !== projectId)
+      .map((item, index) => ({
+        ...item,
+        order: index
+      }))
+  );
+  const nextTasks = state.tasks.map((task) => {
+    if (!isSameProjectName(task.project, project.name)) {
+      return task;
+    }
+
+    return {
+      ...task,
+      project: UNASSIGNED_PROJECT_NAME,
+      folio: updateFolioProjectName(task.folio, UNASSIGNED_PROJECT_NAME),
+      updatedAt: now
+    };
+  });
+  const changedTasks = nextTasks.filter((task) => {
+    const previousTask = state.tasks.find((item) => item.id === task.id);
+    return previousTask && previousTask.project !== task.project;
+  });
+
+  try {
+    state.projects = await saveProjects(nextProjects);
+    state.tasks = sortByOrder(await saveTaskOrder(nextTasks));
+    await recordCloudMutation({
+      critical: true,
+      entityId: project.id,
+      entityType: "project",
+      operation: "delete",
+      patch: { deletedAt: now }
+    });
+
+    for (const task of changedTasks) {
+      const previousTask = previousTasks.find((item) => item.id === task.id);
+      await recordCloudMutation({
+        critical: true,
+        entity: task,
+        entityId: task.id,
+        entityType: "task",
+        operation: "update",
+        patch: getTaskPatch(previousTask, task)
+      });
+      await recordTaskFieldEvents(previousTask, task);
+    }
+
+    editingProjectId = "";
+    renderProjectModalBody("Proyecto eliminado. Las tareas quedaron sin proyecto.");
+    render();
+  } catch (error) {
+    state.projects = previousProjects;
+    state.tasks = previousTasks;
+    await Promise.all([saveProjects(previousProjects), saveTaskOrder(previousTasks)]);
+    renderProjectModalBody(error.message || "No se pudo eliminar el proyecto.");
+    render();
+  }
 }
 
 function openTeamModal() {
@@ -2174,10 +2428,22 @@ async function upsertLocalTeamMember(nextTeamMember) {
   return normalized;
 }
 
-function projectNameExists(name) {
+function projectNameExists(name, exceptProjectId = "") {
   return state.projects.some(
-    (project) => project.name.toLocaleLowerCase("es-MX") === name.toLocaleLowerCase("es-MX")
+    (project) =>
+      project.id !== exceptProjectId &&
+      project.name.toLocaleLowerCase("es-MX") === name.toLocaleLowerCase("es-MX")
   );
+}
+
+function isReservedProjectName(name) {
+  return isSameProjectName(name, UNASSIGNED_PROJECT_NAME);
+}
+
+function isSameProjectName(left, right) {
+  const leftName = normalizeProjectName(left).toLocaleLowerCase("es-MX");
+  const rightName = normalizeProjectName(right).toLocaleLowerCase("es-MX");
+  return Boolean(leftName) && leftName === rightName;
 }
 
 function teamMemberNameExists(name) {
@@ -2382,7 +2648,7 @@ function isDefaultResponsible(name) {
 }
 
 function getDefaultProjectName() {
-  return state.projects[0]?.name || DEFAULT_PROJECT_NAME;
+  return state.projects[0]?.name || UNASSIGNED_PROJECT_NAME;
 }
 
 async function createTrackedTaskEvent({ currentTask, eventType, metadata = {}, occurredAt, previousTask }) {
@@ -2420,7 +2686,7 @@ function buildTaskEventPayload({ currentTask, eventType, metadata = {}, occurred
     createdAt: eventTime,
     occurredAt: eventTime,
     responsibleName: task.responsible || DEFAULT_RESPONSIBLE_NAME,
-    projectName: task.project || DEFAULT_PROJECT_NAME,
+    projectName: task.project || UNASSIGNED_PROJECT_NAME,
     pointsSnapshot: Number.isFinite(Number(task.points)) ? Number(task.points) : 0,
     folio: task.folio || "",
     metadata
@@ -2722,7 +2988,7 @@ async function syncProjectsWithTasks(projects, tasks) {
     const projectName = normalizeProjectName(name);
     const key = projectName.toLocaleLowerCase("es-MX");
 
-    if (!projectName || seen.has(key)) {
+    if (!projectName || isReservedProjectName(projectName) || seen.has(key)) {
       return;
     }
 
@@ -2736,10 +3002,6 @@ async function syncProjectsWithTasks(projects, tasks) {
 
   projects.forEach((project) => addProjectName(project.name));
   tasks.forEach((task) => addProjectName(task.project));
-
-  if (nextProjects.length === 0) {
-    addProjectName(DEFAULT_PROJECT_NAME);
-  }
 
   const sortedProjects = sortByOrder(
     nextProjects.map((project, index) => ({
@@ -2760,7 +3022,7 @@ async function syncTaskFoliosWithProjects(tasks) {
   let fallbackNumber = getNextGlobalFolioNumber(tasks);
 
   const migratedTasks = tasks.map((task) => {
-    const project = normalizeProjectName(task.project) || DEFAULT_PROJECT_NAME;
+    const project = normalizeProjectName(task.project) || UNASSIGNED_PROJECT_NAME;
     const number = getFolioNumber(task.folio) || fallbackNumber++;
     const folio = updateFolioProjectName(task.folio, project, number);
 

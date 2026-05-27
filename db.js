@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260527-chat-optimistic-send";
+} from "./models.js?v=20260527-project-edit-delete";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 8;
@@ -166,7 +166,7 @@ export async function createProject(project) {
 export async function saveProjects(projects) {
   const db = await initDB();
   const normalizedProjects = projects.map(normalizeProject);
-  await writeMany(db, STORES.projects, normalizedProjects);
+  await replaceStore(db, STORES.projects, normalizedProjects);
   return sortByOrder(normalizedProjects);
 }
 

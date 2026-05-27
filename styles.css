@@ -705,6 +705,62 @@ h1 {
   color: var(--muted);
 }
 
+.project-management-item {
+  align-items: stretch;
+  min-height: 38px;
+  padding: 6px;
+}
+
+.project-item-name {
+  align-self: center;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-item-actions,
+.project-edit-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.project-edit-form {
+  width: 100%;
+}
+
+.project-edit-input {
+  min-width: 0;
+  flex: 1;
+}
+
+.project-secondary-button,
+.project-danger-button {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.project-secondary-button {
+  border: 1px solid var(--line);
+  background: var(--button-bg);
+  color: var(--ink-soft);
+}
+
+.project-danger-button {
+  border: 1px solid var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+}
+
+.project-save-button {
+  min-height: 30px;
+  padding: 0 10px;
+}
+
 .team-list {
   max-height: none;
   overflow: visible;
@@ -2479,6 +2535,23 @@ h1 {
   .team-member-edit-actions {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .project-list-item,
+  .project-item-actions,
+  .project-edit-form {
+    align-items: stretch;
+  }
+
+  .project-management-item,
+  .project-edit-form {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .project-item-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .team-member-summary {

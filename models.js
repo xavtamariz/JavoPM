@@ -10,6 +10,7 @@ export const DEFAULT_COLUMNS = [
 
 export const ALLOWED_TYPES = ["Bug", "Tarea", "Evento"];
 export const DEFAULT_PROJECT_NAME = "Proyecto";
+export const UNASSIGNED_PROJECT_NAME = "Sin proyecto";
 export const DEFAULT_RESPONSIBLE_NAME = "Sin asignar";
 export const CHAT_COLUMN_ID = "chat";
 export const METRICS_COLUMN_ID = "metrics";

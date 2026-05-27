@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-chat-optimistic-send";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-project-edit-delete";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

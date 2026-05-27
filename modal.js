@@ -1,13 +1,14 @@
 import {
   ALLOWED_TYPES,
   DEFAULT_RESPONSIBLE_NAME,
+  UNASSIGNED_PROJECT_NAME,
   createDefaultChecklist,
   normalizeProjectName,
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260527-chat-optimistic-send";
-import { renderChecklists } from "./checklist.js?v=20260527-chat-optimistic-send";
+} from "./models.js?v=20260527-project-edit-delete";
+import { renderChecklists } from "./checklist.js?v=20260527-project-edit-delete";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
@@ -441,7 +442,7 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
       names.unshift(currentProject);
     }
 
-    return names.length > 0 ? names : [currentProject || "Proyecto"];
+    return names.length > 0 ? names : [currentProject || UNASSIGNED_PROJECT_NAME];
   }
 
   function getTeamMemberOptions() {

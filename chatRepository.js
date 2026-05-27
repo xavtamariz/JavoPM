@@ -1,5 +1,5 @@
-import { createId } from "./models.js?v=20260527-chat-optimistic-send";
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-chat-optimistic-send";
+import { createId } from "./models.js?v=20260527-project-edit-delete";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-project-edit-delete";
 
 const CHAT_IMAGE_BUCKET = "chat-images";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;

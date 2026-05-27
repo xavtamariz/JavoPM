@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260527-chat-optimistic-send";
+} from "./models.js?v=20260527-project-edit-delete";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
