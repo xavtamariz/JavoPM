@@ -651,7 +651,8 @@ h1 {
 }
 
 .team-list {
-  max-height: 260px;
+  max-height: none;
+  overflow: visible;
 }
 
 .team-list-section {

@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-cloud-team-no-local-responsibles";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-mobile-team-edit-contained";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

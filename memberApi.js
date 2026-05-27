@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-cloud-team-no-local-responsibles";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-mobile-team-edit-contained";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({

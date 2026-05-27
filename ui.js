@@ -13,7 +13,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-cloud-team-no-local-responsibles";
+} from "./models.js?v=20260527-mobile-team-edit-contained";
 
 const AXIS_LABELS = {
   frozen: "C",

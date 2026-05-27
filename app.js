@@ -26,7 +26,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-cloud-team-no-local-responsibles";
+} from "./db.js?v=20260527-mobile-team-edit-contained";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -45,8 +45,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-cloud-team-no-local-responsibles";
-import { initAccountModal } from "./accountModal.js?v=20260527-cloud-team-no-local-responsibles";
+} from "./models.js?v=20260527-mobile-team-edit-contained";
+import { initAccountModal } from "./accountModal.js?v=20260527-mobile-team-edit-contained";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -54,7 +54,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-cloud-team-no-local-responsibles";
+} from "./auth.js?v=20260527-mobile-team-edit-contained";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -62,8 +62,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-cloud-team-no-local-responsibles";
-import { openTaskModal } from "./modal.js?v=20260527-cloud-team-no-local-responsibles";
+} from "./memberApi.js?v=20260527-mobile-team-edit-contained";
+import { openTaskModal } from "./modal.js?v=20260527-mobile-team-edit-contained";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -71,8 +71,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-cloud-team-no-local-responsibles";
-import { renderBoard } from "./ui.js?v=20260527-cloud-team-no-local-responsibles";
+} from "./syncEngine.js?v=20260527-mobile-team-edit-contained";
+import { renderBoard } from "./ui.js?v=20260527-mobile-team-edit-contained";
 
 const state = {
   chartCards: [],

@@ -6,8 +6,8 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260527-cloud-team-no-local-responsibles";
-import { renderChecklists } from "./checklist.js?v=20260527-cloud-team-no-local-responsibles";
+} from "./models.js?v=20260527-mobile-team-edit-contained";
+import { renderChecklists } from "./checklist.js?v=20260527-mobile-team-edit-contained";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");

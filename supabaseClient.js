@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-cloud-team-no-local-responsibles";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-mobile-team-edit-contained";
 
 let clientPromise;
 
