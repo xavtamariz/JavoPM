@@ -13,7 +13,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-member-password-setup";
+} from "./models.js?v=20260527-member-nickname-display";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -364,7 +364,7 @@ function createChartCard({
     return card;
   }
 
-  const chartData = getChartData({ chartCard, columns, taskEvents, tasks });
+  const chartData = getChartData({ chartCard, columns, taskEvents, tasks, teamMembers });
   const chart = createLineChart(chartData);
   const periodControls = createPeriodControls(chartCard, onUpdateChartCard);
   const teamControl = createTeamControl(chartCard, teamMembers, onUpdateChartCard);
@@ -398,7 +398,7 @@ function createMoveHandle({ card, cardId, cardType, item, label, onMoveCard }) {
   return moveHandle;
 }
 
-function getChartData({ chartCard, columns, tasks, taskEvents }) {
+function getChartData({ chartCard, columns, tasks, taskEvents, teamMembers = [] }) {
   const workflowColumns = columns.filter((column) => column.id !== METRICS_COLUMN_ID);
   const period = chartCard.settings?.period || DEFAULT_CHART_PERIOD;
   const teamMember = chartCard.settings?.teamMember || DEFAULT_CHART_TEAM;
@@ -410,7 +410,7 @@ function getChartData({ chartCard, columns, tasks, taskEvents }) {
     workflowColumns
   });
   const selectedStates = metricState.states.filter(
-    (state) => teamMember === DEFAULT_CHART_TEAM || state.responsibleName === teamMember
+    (state) => matchesResponsibleSelection(state.responsibleName, teamMember, teamMembers)
   );
   const values = getCumulativeStageValues(workflowColumns, selectedStates);
 
@@ -433,7 +433,7 @@ function getStageChartData({ chartCard, columns, tasks, taskEvents, teamMembers 
     workflowColumns
   });
   const selectedStates = metricState.states.filter(
-    (state) => selectedTeamMember === DEFAULT_CHART_TEAM || state.responsibleName === selectedTeamMember
+    (state) => matchesResponsibleSelection(state.responsibleName, selectedTeamMember, teamMembers)
   );
   const values = getCurrentStageValues(workflowColumns, selectedStates);
   const total = values.reduce((sum, value) => sum + value, 0);
@@ -456,18 +456,18 @@ function getStageChartData({ chartCard, columns, tasks, taskEvents, teamMembers 
 }
 
 function getStageTeamMember(chartCard, teamMembers) {
-  const teamNames = teamMembers.map((teamMember) => teamMember.name).filter(Boolean);
+  const teamValues = teamMembers.map((teamMember) => getTeamMemberChartValue(teamMember)).filter(Boolean);
   const selectedTeamMember = chartCard.settings?.teamMember;
 
   if (
     selectedTeamMember &&
     selectedTeamMember !== DEFAULT_CHART_TEAM &&
-    teamNames.includes(selectedTeamMember)
+    findTeamMemberByResponsibleName(selectedTeamMember, teamMembers)
   ) {
-    return selectedTeamMember;
+    return getTeamMemberChartValue(findTeamMemberByResponsibleName(selectedTeamMember, teamMembers));
   }
 
-  return teamNames[0] || DEFAULT_CHART_TEAM;
+  return teamValues[0] || DEFAULT_CHART_TEAM;
 }
 
 function getLeaderboardData({ chartCard, tasks, taskEvents, teamMembers }) {
@@ -476,7 +476,7 @@ function getLeaderboardData({ chartCard, tasks, taskEvents, teamMembers }) {
     ? chartCard.settings.leaderboardMetric
     : DEFAULT_LEADERBOARD_METRIC;
   const cutoff = getPeriodCutoff(chartCard.settings?.period || DEFAULT_CHART_PERIOD);
-  const teamNames = new Set(teamMembers.map((teamMember) => teamMember.name).filter(Boolean));
+  const teamKeys = getKnownResponsibleKeys(teamMembers);
   const completedIndex = workflowColumns.findIndex((column) => column.id === COMPLETED_COLUMN_ID);
   const metricState = getMetricTaskStates({
     cutoff,
@@ -491,13 +491,13 @@ function getLeaderboardData({ chartCard, tasks, taskEvents, teamMembers }) {
       state.retainedIndex >= completedIndex &&
       responsible &&
       responsible !== DEFAULT_RESPONSIBLE_NAME &&
-      (teamNames.size === 0 || teamNames.has(responsible))
+      (teamKeys.size === 0 || teamKeys.has(getResponsibleKey(responsible)))
     );
   });
   const memberTotals = new Map();
 
   tasksInScope.forEach((state) => {
-    const name = state.responsibleName;
+    const name = getCanonicalResponsibleValue(state.responsibleName, teamMembers);
     const current = memberTotals.get(name) || {
       count: 0,
       name,
@@ -925,19 +925,23 @@ function createStageTeamControl(chartCard, teamMembers, selectedTeamMember, onUp
   const select = document.createElement("select");
   select.setAttribute("aria-label", "Integrante del equipo para tareas por etapa");
 
-  const teamNames = teamMembers.map((teamMember) => teamMember.name).filter(Boolean);
+  const teamValues = teamMembers.map((teamMember) => getTeamMemberChartValue(teamMember)).filter(Boolean);
 
-  if (teamNames.length === 0) {
+  if (teamValues.length === 0) {
     const emptyOption = document.createElement("option");
     emptyOption.value = DEFAULT_CHART_TEAM;
     emptyOption.textContent = "Sin integrantes";
     select.append(emptyOption);
     select.disabled = true;
   } else {
-    teamNames.forEach((teamMemberName) => {
+    teamMembers.forEach((teamMember) => {
+      const teamMemberValue = getTeamMemberChartValue(teamMember);
+      if (!teamMemberValue) {
+        return;
+      }
       const option = document.createElement("option");
-      option.value = teamMemberName;
-      option.textContent = getResponsibleDisplayName(teamMemberName, teamMembers);
+      option.value = teamMemberValue;
+      option.textContent = getResponsibleDisplayName(teamMemberValue, teamMembers);
       select.append(option);
     });
     select.value = selectedTeamMember;
@@ -1003,13 +1007,19 @@ function createTeamControl(chartCard, teamMembers, onUpdateChartCard) {
   select.append(allOption);
 
   teamMembers.forEach((teamMember) => {
+    const teamMemberValue = getTeamMemberChartValue(teamMember);
+    if (!teamMemberValue) {
+      return;
+    }
     const option = document.createElement("option");
-    option.value = teamMember.name;
+    option.value = teamMemberValue;
     option.textContent = getTeamMemberDisplayName(teamMember);
     select.append(option);
   });
 
-  select.value = chartCard.settings?.teamMember || DEFAULT_CHART_TEAM;
+  select.value = chartCard.settings?.teamMember === DEFAULT_CHART_TEAM
+    ? DEFAULT_CHART_TEAM
+    : getCanonicalResponsibleValue(chartCard.settings?.teamMember, teamMembers) || DEFAULT_CHART_TEAM;
   select.addEventListener("change", () => {
     onUpdateChartCard({
       ...chartCard,
@@ -1031,12 +1041,7 @@ function getResponsibleDisplayName(responsibleName, teamMembers = []) {
     return normalizedResponsible || DEFAULT_RESPONSIBLE_NAME;
   }
 
-  const responsibleKey = normalizedResponsible.toLocaleLowerCase("es-MX");
-  const teamMember = teamMembers.find((member) => {
-    const memberName = normalizeTeamMemberName(member.name).toLocaleLowerCase("es-MX");
-    const memberNickname = String(member.nickname || "").toLocaleLowerCase("es-MX");
-    return memberName === responsibleKey || memberNickname === responsibleKey;
-  });
+  const teamMember = findTeamMemberByResponsibleName(normalizedResponsible, teamMembers);
 
   return getTeamMemberDisplayName(teamMember, normalizedResponsible);
 }
@@ -1047,6 +1052,86 @@ function getTeamMemberDisplayName(teamMember, fallbackName = "") {
   }
 
   return fallbackName || normalizeTeamMemberName(teamMember?.name) || DEFAULT_RESPONSIBLE_NAME;
+}
+
+function getTeamMemberChartValue(teamMember) {
+  if (teamMember?.status !== "local" && teamMember?.nickname) {
+    return teamMember.nickname;
+  }
+
+  return normalizeTeamMemberName(teamMember?.name);
+}
+
+function matchesResponsibleSelection(responsibleName, selectedTeamMember, teamMembers = []) {
+  if (selectedTeamMember === DEFAULT_CHART_TEAM) {
+    return true;
+  }
+
+  const selectedKeys = getResponsibleMatchKeys(selectedTeamMember, teamMembers);
+  return selectedKeys.has(getResponsibleKey(responsibleName));
+}
+
+function getCanonicalResponsibleValue(responsibleName, teamMembers = []) {
+  if (!responsibleName || responsibleName === DEFAULT_CHART_TEAM) {
+    return responsibleName || "";
+  }
+
+  const teamMember = findTeamMemberByResponsibleName(responsibleName, teamMembers);
+  return teamMember ? getTeamMemberChartValue(teamMember) : normalizeTeamMemberName(responsibleName);
+}
+
+function getKnownResponsibleKeys(teamMembers = []) {
+  const keys = new Set();
+  teamMembers.forEach((teamMember) => {
+    const nameKey = getResponsibleKey(teamMember.name);
+    const nicknameKey = getResponsibleKey(teamMember.nickname);
+    if (nameKey) {
+      keys.add(nameKey);
+    }
+    if (nicknameKey) {
+      keys.add(nicknameKey);
+    }
+  });
+  return keys;
+}
+
+function getResponsibleMatchKeys(responsibleName, teamMembers = []) {
+  const keys = new Set();
+  const directKey = getResponsibleKey(responsibleName);
+  if (directKey) {
+    keys.add(directKey);
+  }
+
+  const teamMember = findTeamMemberByResponsibleName(responsibleName, teamMembers);
+  if (teamMember) {
+    const nameKey = getResponsibleKey(teamMember.name);
+    const nicknameKey = getResponsibleKey(teamMember.nickname);
+    if (nameKey) {
+      keys.add(nameKey);
+    }
+    if (nicknameKey) {
+      keys.add(nicknameKey);
+    }
+  }
+
+  return keys;
+}
+
+function findTeamMemberByResponsibleName(responsibleName, teamMembers = []) {
+  const responsibleKey = getResponsibleKey(responsibleName);
+  if (!responsibleKey || responsibleKey === getResponsibleKey(DEFAULT_RESPONSIBLE_NAME)) {
+    return null;
+  }
+
+  return teamMembers.find((member) => {
+    const memberName = getResponsibleKey(member.name);
+    const memberNickname = getResponsibleKey(member.nickname);
+    return memberName === responsibleKey || memberNickname === responsibleKey;
+  }) || null;
+}
+
+function getResponsibleKey(value) {
+  return normalizeTeamMemberName(value).toLocaleLowerCase("es-MX");
 }
 
 function clearDragTargets() {

@@ -6,8 +6,8 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260527-member-password-setup";
-import { renderChecklists } from "./checklist.js?v=20260527-member-password-setup";
+} from "./models.js?v=20260527-member-nickname-display";
+import { renderChecklists } from "./checklist.js?v=20260527-member-nickname-display";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
@@ -272,7 +272,11 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
       select.append(option);
     });
 
-    select.value = workingTask.responsible;
+    const normalizedResponsible = getResponsibleSelectValue(workingTask.responsible);
+    select.value = normalizedResponsible;
+    if (normalizedResponsible !== workingTask.responsible) {
+      updateWorkingTask({ responsible: normalizedResponsible });
+    }
     select.addEventListener("change", () => {
       updateWorkingTask({ responsible: select.value });
     });
@@ -459,23 +463,39 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     const values = new Set([DEFAULT_RESPONSIBLE_NAME]);
 
     membersByName.forEach((teamMember, name) => {
-      if (!values.has(name)) {
-        values.add(name);
+      const value = getResponsibleValue(teamMember, name);
+      if (!values.has(value)) {
+        values.add(value);
         options.push({
           label: getResponsibleLabel(teamMember, name),
-          value: name
+          value
         });
       }
     });
 
-    if (currentResponsible && !values.has(currentResponsible)) {
+    const currentTeamMember = findTeamMemberByResponsibleName(currentResponsible);
+    const currentValue = getResponsibleValue(currentTeamMember, currentResponsible);
+    if (currentValue && !values.has(currentValue)) {
       options.push({
-        label: currentResponsible,
-        value: currentResponsible
+        label: getResponsibleLabel(currentTeamMember, currentValue),
+        value: currentValue
       });
     }
 
     return options;
+  }
+
+  function getResponsibleSelectValue(responsibleName) {
+    const teamMember = findTeamMemberByResponsibleName(responsibleName);
+    return getResponsibleValue(teamMember, normalizeTeamMemberName(responsibleName));
+  }
+
+  function getResponsibleValue(teamMember, fallbackName) {
+    if (teamMember?.status !== "local" && teamMember?.nickname) {
+      return teamMember.nickname;
+    }
+
+    return fallbackName;
   }
 
   function getResponsibleLabel(teamMember, fallbackName) {
@@ -484,6 +504,19 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     }
 
     return fallbackName;
+  }
+
+  function findTeamMemberByResponsibleName(responsibleName) {
+    const responsibleKey = normalizeTeamMemberName(responsibleName).toLocaleLowerCase("es-MX");
+    if (!responsibleKey || responsibleKey === DEFAULT_RESPONSIBLE_NAME.toLocaleLowerCase("es-MX")) {
+      return null;
+    }
+
+    return teamMembers.find((teamMember) => {
+      const name = normalizeTeamMemberName(teamMember.name).toLocaleLowerCase("es-MX");
+      const nickname = String(teamMember.nickname || "").toLocaleLowerCase("es-MX");
+      return name === responsibleKey || nickname === responsibleKey;
+    }) || null;
   }
 
   function syncTopbarTitle() {

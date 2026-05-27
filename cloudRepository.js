@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260527-member-password-setup";
+} from "./models.js?v=20260527-member-nickname-display";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
@@ -128,6 +128,7 @@ export async function pullOwnerBoardSnapshot({ supabase, userId }) {
   return {
     boardId: board.id,
     membershipRole: memberships.find((membership) => membership.workspace_id === board.workspace_id)?.role || "member",
+    ownerProfile: await fetchBoardOwnerProfile({ boardId: board.id, supabase }),
     profile: await fetchProfile({ supabase, userId }),
     snapshot: await fetchBoardSnapshot({ boardId: board.id, supabase }),
     workspaceId: board.workspace_id
@@ -143,6 +144,25 @@ async function fetchProfile({ supabase, userId }) {
 
   throwIfError(error);
   return data || null;
+}
+
+async function fetchBoardOwnerProfile({ boardId, supabase }) {
+  const { data, error } = await supabase.rpc("get_board_owner_profile", {
+    p_board_id: boardId
+  });
+
+  throwIfError(error);
+
+  const ownerProfile = Array.isArray(data) ? data[0] : data;
+  if (!ownerProfile) {
+    return null;
+  }
+
+  return {
+    displayName: ownerProfile.display_name || "",
+    nickname: ownerProfile.nickname || "",
+    userId: ownerProfile.user_id || ""
+  };
 }
 
 export async function fetchBoardSnapshot({ boardId, supabase }) {

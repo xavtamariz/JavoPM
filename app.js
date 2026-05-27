@@ -26,7 +26,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-member-password-setup";
+} from "./db.js?v=20260527-member-nickname-display";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -45,8 +45,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-member-password-setup";
-import { initAccountModal } from "./accountModal.js?v=20260527-member-password-setup";
+} from "./models.js?v=20260527-member-nickname-display";
+import { initAccountModal } from "./accountModal.js?v=20260527-member-nickname-display";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -54,15 +54,15 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-member-password-setup";
+} from "./auth.js?v=20260527-member-nickname-display";
 import {
   completeMemberPassword,
   createCloudTeamMember,
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-member-password-setup";
-import { openTaskModal } from "./modal.js?v=20260527-member-password-setup";
+} from "./memberApi.js?v=20260527-member-nickname-display";
+import { openTaskModal } from "./modal.js?v=20260527-member-nickname-display";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -70,13 +70,14 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-member-password-setup";
-import { renderBoard } from "./ui.js?v=20260527-member-password-setup";
+} from "./syncEngine.js?v=20260527-member-nickname-display";
+import { renderBoard } from "./ui.js?v=20260527-member-nickname-display";
 
 const state = {
   chartCards: [],
   columns: [],
   account: null,
+  ownerProfile: null,
   projects: [],
   teamMembers: [],
   taskEvents: [],
@@ -457,6 +458,7 @@ async function startAuthenticatedSync(result) {
     teamMemberId: result.teamMemberId || "",
     userId: result.user?.id || ""
   };
+  state.ownerProfile = getAuthenticatedOwnerProfile(result);
   await cleanupOwnerLocalResponsible();
   updateAccountButton();
   await startCloudSyncSession({
@@ -473,6 +475,7 @@ async function handleLogoutOwnerAccount() {
   await resetLocalBoardAfterLogout();
   await reloadBoardState();
   state.account = null;
+  state.ownerProfile = null;
   updateAccountButton();
   setSyncStatus("local");
   render();
@@ -825,11 +828,15 @@ function createTeamModalBody(message = "", revealedKey = null) {
 
   if (isOwnerAccount()) {
     body.append(createOwnerProfileSection());
+  } else if (isMemberAccount()) {
+    body.append(createOwnerReadOnlySection());
   }
 
   const accessMembers = state.teamMembers.filter((teamMember) => teamMember.status !== "local");
   const localResponsibles = state.teamMembers.filter((teamMember) => teamMember.status === "local");
-  const visibleMembers = isOwnerAccount() || isMemberAccount() ? accessMembers : localResponsibles;
+  const visibleMembers = isMemberAccount()
+    ? accessMembers.filter((teamMember) => teamMember.status === "active")
+    : isOwnerAccount() ? accessMembers : localResponsibles;
 
   body.append(
     createTeamListSection({
@@ -981,6 +988,36 @@ function createOwnerProfileSection() {
   return section;
 }
 
+function createOwnerReadOnlySection() {
+  const section = document.createElement("section");
+  section.className = "team-list-section owner-profile-section";
+
+  const title = document.createElement("p");
+  title.className = "project-list-title";
+  title.textContent = "Cuenta maestra";
+
+  const card = document.createElement("div");
+  card.className = "project-list-item team-list-item owner-profile-card";
+
+  const summary = document.createElement("div");
+  summary.className = "team-member-summary";
+
+  const copy = document.createElement("div");
+  copy.className = "team-member-copy";
+
+  const nickname = document.createElement("strong");
+  nickname.textContent = getOwnerNicknameLabel();
+
+  const meta = document.createElement("span");
+  meta.textContent = "Cuenta maestra";
+
+  copy.append(nickname, meta);
+  summary.append(copy);
+  card.append(summary);
+  section.append(title, card);
+  return section;
+}
+
 function createOwnerProfileEditPanel() {
   const form = document.createElement("form");
   form.className = "team-member-edit-panel owner-profile-edit-panel";
@@ -1030,7 +1067,7 @@ function createTeamMemberListItem(teamMember, revealedKey) {
   copy.className = "team-member-copy";
 
   const name = document.createElement("strong");
-  name.textContent = teamMember.name;
+  name.textContent = getTeamMemberListName(teamMember);
 
   const meta = document.createElement("span");
   meta.textContent = getTeamMemberMeta(teamMember);
@@ -1180,6 +1217,11 @@ async function handleUpdateOwnerProfile({ displayName, nickname }) {
       ...state.account,
       displayName: nextDisplayName,
       nickname: result.account?.nickname || normalizedNickname
+    };
+    state.ownerProfile = {
+      displayName: nextDisplayName,
+      nickname: result.account?.nickname || normalizedNickname,
+      userId: state.account?.userId || ""
     };
     await updateTasksResponsibleName(previousOwnerName, nextDisplayName);
     isOwnerProfileExpanded = false;
@@ -1504,18 +1546,39 @@ function getTeamMemberMeta(teamMember) {
     return "Responsable local";
   }
 
+  if (isMemberAccount()) {
+    return teamMember.status === "inactive" ? "Inactivo" : "Activo";
+  }
+
   const statusLabel = teamMember.status === "inactive" ? "Inactivo" : "Activo";
   return teamMember.nickname ? `@${teamMember.nickname} · ${statusLabel}` : statusLabel;
+}
+
+function getTeamMemberListName(teamMember) {
+  if (isMemberAccount() && teamMember.status !== "local") {
+    return getNicknameLabel(teamMember.nickname);
+  }
+
+  return teamMember.name;
 }
 
 function getOwnerDisplayName() {
   return state.account?.displayName || state.account?.email || "Cuenta maestra";
 }
 
+function getOwnerNicknameLabel() {
+  const nickname = isOwnerAccount() ? state.account?.nickname : state.ownerProfile?.nickname;
+  return getNicknameLabel(nickname);
+}
+
 function getOwnerMeta() {
   const nickname = state.account?.nickname ? `@${state.account.nickname}` : "Sin nickname";
   const email = state.account?.email || "";
   return email ? `${nickname} · ${email}` : nickname;
+}
+
+function getNicknameLabel(nickname) {
+  return nickname ? `@${nickname}` : "Sin nickname";
 }
 
 function getAssignableTeamMembers() {
@@ -1525,7 +1588,8 @@ function getAssignableTeamMembers() {
     return teamMembers;
   }
 
-  const ownerName = normalizeTeamMemberName(getOwnerDisplayName());
+  const ownerProfile = getOwnerProfileForAssignableList();
+  const ownerName = normalizeTeamMemberName(ownerProfile.displayName || ownerProfile.nickname);
   if (!ownerName) {
     return teamMembers;
   }
@@ -1534,7 +1598,7 @@ function getAssignableTeamMembers() {
   const hasOwner = teamMembers.some(
     (teamMember) =>
       teamMember.name.toLocaleLowerCase("es-MX") === ownerKey &&
-      teamMember.userId === state.account.userId
+      teamMember.userId === ownerProfile.userId
   );
 
   if (hasOwner) {
@@ -1544,17 +1608,49 @@ function getAssignableTeamMembers() {
   return [
     {
       createdAt: new Date().toISOString(),
-      id: `owner_${state.account.userId}`,
+      id: `owner_${ownerProfile.userId || state.account.userId}`,
       lastLoginAt: "",
       name: ownerName,
-      nickname: state.account.nickname || "",
+      nickname: ownerProfile.nickname || "",
       order: -1,
       status: "owner",
       updatedAt: new Date().toISOString(),
-      userId: state.account.userId
+      userId: ownerProfile.userId || state.account.userId
     },
     ...teamMembers
   ];
+}
+
+function getOwnerProfileForAssignableList() {
+  if (isOwnerAccount()) {
+    return {
+      displayName: getOwnerDisplayName(),
+      nickname: state.account?.nickname || "",
+      userId: state.account?.userId || ""
+    };
+  }
+
+  return {
+    displayName: state.ownerProfile?.displayName || "",
+    nickname: state.ownerProfile?.nickname || "",
+    userId: state.ownerProfile?.userId || ""
+  };
+}
+
+function getAuthenticatedOwnerProfile(result) {
+  if ((result.accountType || "owner") === "owner") {
+    return {
+      displayName: result.displayName || result.email || "",
+      nickname: result.nickname || "",
+      userId: result.user?.id || ""
+    };
+  }
+
+  return {
+    displayName: result.cloud?.ownerProfile?.displayName || "",
+    nickname: result.cloud?.ownerProfile?.nickname || "",
+    userId: result.cloud?.ownerProfile?.userId || ""
+  };
 }
 
 async function cleanupOwnerLocalResponsible() {
