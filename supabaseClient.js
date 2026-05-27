@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-team-member-delete-layout";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-member-delete-persisted-inactive";
 
 let clientPromise;
 

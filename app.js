@@ -26,7 +26,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-team-member-delete-layout";
+} from "./db.js?v=20260527-member-delete-persisted-inactive";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -45,8 +45,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-team-member-delete-layout";
-import { initAccountModal } from "./accountModal.js?v=20260527-team-member-delete-layout";
+} from "./models.js?v=20260527-member-delete-persisted-inactive";
+import { initAccountModal } from "./accountModal.js?v=20260527-member-delete-persisted-inactive";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -54,7 +54,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-team-member-delete-layout";
+} from "./auth.js?v=20260527-member-delete-persisted-inactive";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -62,8 +62,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-team-member-delete-layout";
-import { openTaskModal } from "./modal.js?v=20260527-team-member-delete-layout";
+} from "./memberApi.js?v=20260527-member-delete-persisted-inactive";
+import { openTaskModal } from "./modal.js?v=20260527-member-delete-persisted-inactive";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -71,8 +71,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-team-member-delete-layout";
-import { renderBoard } from "./ui.js?v=20260527-team-member-delete-layout";
+} from "./syncEngine.js?v=20260527-member-delete-persisted-inactive";
+import { renderBoard } from "./ui.js?v=20260527-member-delete-persisted-inactive";
 
 const state = {
   chartCards: [],
@@ -1175,11 +1175,11 @@ function createTeamMemberEditPanel(teamMember) {
   deleteButton.className = "small-button team-member-delete-button";
   deleteButton.type = "button";
   deleteButton.textContent = "Eliminar";
-  deleteButton.hidden = statusSelect.value !== "inactive";
+  deleteButton.hidden = teamMember.status !== "inactive" || statusSelect.value !== "inactive";
   deleteButton.addEventListener("click", () => handleDeleteCloudTeamMember(teamMember));
 
   statusSelect.addEventListener("change", () => {
-    deleteButton.hidden = statusSelect.value !== "inactive";
+    deleteButton.hidden = teamMember.status !== "inactive" || statusSelect.value !== "inactive";
   });
 
   const fieldsRow = document.createElement("div");
@@ -1506,7 +1506,13 @@ async function handleDeleteCloudTeamMember(teamMember) {
     return;
   }
 
-  if (!window.confirm(`¿Eliminar el acceso de ${teamMember.nickname ? `@${teamMember.nickname}` : teamMember.name}?`)) {
+  if (teamMember.status !== "inactive") {
+    renderTeamModalBody("Primero guarda el miembro como inactivo.");
+    return;
+  }
+
+  const displayName = teamMember.nickname ? `@${teamMember.nickname}` : teamMember.name;
+  if (!window.confirm(`¿Eliminar el acceso de ${displayName}?`)) {
     return;
   }
 

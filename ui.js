@@ -13,7 +13,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-team-member-delete-layout";
+} from "./models.js?v=20260527-member-delete-persisted-inactive";
 
 const AXIS_LABELS = {
   frozen: "C",
