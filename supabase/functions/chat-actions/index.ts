@@ -427,7 +427,7 @@ async function syncConversationParticipants({
   for (const member of members) {
     const { data: existing, error: existingError } = await admin
       .from("chat_participants")
-      .select("id, last_read_at")
+      .select("id, client_id, is_active, last_read_at, nickname_snapshot, team_member_id")
       .eq("conversation_id", conversation.id)
       .eq("user_id", member.userId)
       .maybeSingle();
@@ -449,17 +449,26 @@ async function syncConversationParticipants({
       workspace_id: board.workspace_id
     };
 
-    const { error } = await admin.from("chat_participants").upsert(row, {
-      onConflict: "conversation_id,user_id"
-    });
-    if (error) {
-      throw new Error(error.message || "No se pudo guardar participante.");
+    const shouldSaveParticipant = !existing ||
+      existing.is_active !== row.is_active ||
+      String(existing.client_id || "") !== String(row.client_id || "") ||
+      String(existing.last_read_at || "") !== String(row.last_read_at || "") ||
+      String(existing.nickname_snapshot || "") !== String(row.nickname_snapshot || "") ||
+      String(existing.team_member_id || "") !== String(row.team_member_id || "");
+
+    if (shouldSaveParticipant) {
+      const { error } = await admin.from("chat_participants").upsert(row, {
+        onConflict: "conversation_id,user_id"
+      });
+      if (error) {
+        throw new Error(error.message || "No se pudo guardar participante.");
+      }
     }
   }
 
   const { data: existingRows, error } = await admin
     .from("chat_participants")
-    .select("id, user_id")
+    .select("id, user_id, is_active")
     .eq("conversation_id", conversation.id)
     .is("deleted_at", null);
 
@@ -467,7 +476,7 @@ async function syncConversationParticipants({
     throw new Error(error.message || "No se pudo limpiar participantes.");
   }
 
-  const staleRows = (existingRows || []).filter((row) => !activeUserIds.has(row.user_id));
+  const staleRows = (existingRows || []).filter((row) => row.is_active && !activeUserIds.has(row.user_id));
   if (staleRows.length > 0) {
     const { error: inactiveError } = await admin
       .from("chat_participants")
@@ -496,15 +505,49 @@ async function markConversationRead({
     return;
   }
 
+  const { data: participant, error: participantError } = await admin
+    .from("chat_participants")
+    .select("id, last_read_at")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (participantError) {
+    throw new Error(participantError.message || "No se pudo leer el estado del chat.");
+  }
+
+  if (!participant) {
+    return;
+  }
+
+  const { data: latestMessage, error: messageError } = await admin
+    .from("chat_messages")
+    .select("created_at")
+    .eq("conversation_id", conversationId)
+    .neq("sender_user_id", userId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (messageError) {
+    throw new Error(messageError.message || "No se pudo leer el último mensaje.");
+  }
+
+  const lastReadTime = participant.last_read_at ? new Date(participant.last_read_at).getTime() : 0;
+  const latestMessageTime = latestMessage?.created_at ? new Date(latestMessage.created_at).getTime() : 0;
+  if (!Number.isFinite(latestMessageTime) || latestMessageTime <= lastReadTime) {
+    return;
+  }
+
   const { error } = await admin
     .from("chat_participants")
     .update({
       last_read_at: new Date().toISOString()
     })
-    .eq("conversation_id", conversationId)
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .is("deleted_at", null);
+    .eq("id", participant.id);
 
   if (error) {
     throw new Error(error.message || "No se pudo marcar el chat como leído.");
