@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260527-member-delete-persisted-inactive";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260527-member-delete-persisted-inactive";
+} from "./cloudRepository.js?v=20260527-cloud-team-no-local-responsibles";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260527-cloud-team-no-local-responsibles";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();

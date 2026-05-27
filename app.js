@@ -26,7 +26,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-member-delete-persisted-inactive";
+} from "./db.js?v=20260527-cloud-team-no-local-responsibles";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -45,8 +45,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-member-delete-persisted-inactive";
-import { initAccountModal } from "./accountModal.js?v=20260527-member-delete-persisted-inactive";
+} from "./models.js?v=20260527-cloud-team-no-local-responsibles";
+import { initAccountModal } from "./accountModal.js?v=20260527-cloud-team-no-local-responsibles";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -54,7 +54,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-member-delete-persisted-inactive";
+} from "./auth.js?v=20260527-cloud-team-no-local-responsibles";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -62,8 +62,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-member-delete-persisted-inactive";
-import { openTaskModal } from "./modal.js?v=20260527-member-delete-persisted-inactive";
+} from "./memberApi.js?v=20260527-cloud-team-no-local-responsibles";
+import { openTaskModal } from "./modal.js?v=20260527-cloud-team-no-local-responsibles";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -71,8 +71,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-member-delete-persisted-inactive";
-import { renderBoard } from "./ui.js?v=20260527-member-delete-persisted-inactive";
+} from "./syncEngine.js?v=20260527-cloud-team-no-local-responsibles";
+import { renderBoard } from "./ui.js?v=20260527-cloud-team-no-local-responsibles";
 
 const state = {
   chartCards: [],
@@ -847,17 +847,6 @@ function createTeamModalBody(message = "", revealedKey = null) {
       title: getTeamModalTitle()
     })
   );
-
-  if (isOwnerAccount()) {
-    body.append(
-      createTeamListSection({
-        emptyLabel: "Sin responsables locales",
-        members: localResponsibles,
-        revealedKey,
-        title: "Responsables locales"
-      })
-    );
-  }
 
   const validation = document.createElement("div");
   validation.className = `project-menu-message${message ? " is-visible" : ""}`;

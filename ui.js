@@ -13,7 +13,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-member-delete-persisted-inactive";
+} from "./models.js?v=20260527-cloud-team-no-local-responsibles";
 
 const AXIS_LABELS = {
   frozen: "C",

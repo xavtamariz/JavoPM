@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-member-delete-persisted-inactive";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-cloud-team-no-local-responsibles";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({

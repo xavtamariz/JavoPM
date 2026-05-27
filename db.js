@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260527-member-delete-persisted-inactive";
+} from "./models.js?v=20260527-cloud-team-no-local-responsibles";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 6;

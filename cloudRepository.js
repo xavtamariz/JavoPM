@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260527-member-delete-persisted-inactive";
+} from "./models.js?v=20260527-cloud-team-no-local-responsibles";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",

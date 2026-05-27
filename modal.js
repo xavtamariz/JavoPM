@@ -6,8 +6,8 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260527-member-delete-persisted-inactive";
-import { renderChecklists } from "./checklist.js?v=20260527-member-delete-persisted-inactive";
+} from "./models.js?v=20260527-cloud-team-no-local-responsibles";
+import { renderChecklists } from "./checklist.js?v=20260527-cloud-team-no-local-responsibles";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");
