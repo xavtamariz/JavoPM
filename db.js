@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260527-member-access";
+} from "./models.js?v=20260527-owner-profile";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 6;
@@ -155,6 +155,11 @@ export async function createTeamMember(teamMember) {
   const normalizedTeamMember = normalizeTeamMember(teamMember, existingTeamMembers.length);
   await putValue(db, STORES.teamMembers, normalizedTeamMember);
   return normalizedTeamMember;
+}
+
+export async function deleteTeamMember(id) {
+  const db = await initDB();
+  await deleteValue(db, STORES.teamMembers, id);
 }
 
 export async function saveTeamMembers(teamMembers) {

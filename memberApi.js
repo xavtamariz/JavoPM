@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-member-access";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-owner-profile";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({
@@ -27,6 +27,22 @@ export async function resetCloudTeamMemberKey({ clientId, teamMemberId }) {
     clientId,
     teamMemberId
   });
+}
+
+export async function updateCloudOwnerProfile({ displayName, nickname }) {
+  const supabase = await getSupabaseClient();
+  const { data, error } = await supabase.functions.invoke("owner-profile", {
+    body: {
+      displayName,
+      nickname
+    }
+  });
+
+  if (error || data?.error) {
+    throw new Error(data?.error || error?.message || "No se pudo actualizar la cuenta maestra.");
+  }
+
+  return data;
 }
 
 export async function completeMemberPassword({ confirmPassword, password }) {

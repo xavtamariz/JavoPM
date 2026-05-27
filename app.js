@@ -5,6 +5,7 @@ import {
   createTaskEvent,
   clearPendingMutations,
   deleteTask,
+  deleteTeamMember,
   exportBoardSnapshot,
   getChartCards,
   getColumns,
@@ -25,7 +26,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-member-access";
+} from "./db.js?v=20260527-owner-profile";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -44,8 +45,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-member-access";
-import { initAccountModal } from "./accountModal.js?v=20260527-member-access";
+} from "./models.js?v=20260527-owner-profile";
+import { initAccountModal } from "./accountModal.js?v=20260527-owner-profile";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -53,14 +54,15 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-member-access";
+} from "./auth.js?v=20260527-owner-profile";
 import {
   completeMemberPassword,
   createCloudTeamMember,
   resetCloudTeamMemberKey,
+  updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-member-access";
-import { openTaskModal } from "./modal.js?v=20260527-member-access";
+} from "./memberApi.js?v=20260527-owner-profile";
+import { openTaskModal } from "./modal.js?v=20260527-owner-profile";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -68,8 +70,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-member-access";
-import { renderBoard } from "./ui.js?v=20260527-member-access";
+} from "./syncEngine.js?v=20260527-owner-profile";
+import { renderBoard } from "./ui.js?v=20260527-owner-profile";
 
 const state = {
   chartCards: [],
@@ -102,6 +104,7 @@ let projectModalKeydownHandler;
 let sideMenuKeydownHandler;
 let teamModalKeydownHandler;
 let expandedTeamMemberId = "";
+let isOwnerProfileExpanded = false;
 
 async function startApp() {
   try {
@@ -269,7 +272,7 @@ function render() {
     chartCards: state.chartCards,
     columns: state.columns,
     taskEvents: state.taskEvents,
-    teamMembers: state.teamMembers,
+    teamMembers: getAssignableTeamMembers(),
     tasks: state.tasks,
     onAddTask: handleAddTask,
     onOpenTask: handleOpenTask,
@@ -454,6 +457,7 @@ async function startAuthenticatedSync(result) {
     teamMemberId: result.teamMemberId || "",
     userId: result.user?.id || ""
   };
+  await cleanupOwnerLocalResponsible();
   updateAccountButton();
   await startCloudSyncSession({
     boardId: result.cloud.boardId,
@@ -819,24 +823,32 @@ function createTeamModalBody(message = "", revealedKey = null) {
   body.className = "project-modal-body team-modal-body";
   body.dataset.teamModalBody = "true";
 
-  const listTitle = document.createElement("p");
-  listTitle.className = "project-list-title";
-  listTitle.textContent = getTeamModalTitle();
+  if (isOwnerAccount()) {
+    body.append(createOwnerProfileSection());
+  }
 
-  const list = document.createElement("ul");
-  list.className = "project-list team-list";
+  const accessMembers = state.teamMembers.filter((teamMember) => teamMember.status !== "local");
+  const localResponsibles = state.teamMembers.filter((teamMember) => teamMember.status === "local");
+  const visibleMembers = isOwnerAccount() || isMemberAccount() ? accessMembers : localResponsibles;
 
-  if (state.teamMembers.length === 0) {
-    const emptyItem = document.createElement("li");
-    emptyItem.className = "project-list-item is-empty";
-    emptyItem.textContent = isOwnerAccount()
-      ? "Sin miembros todavía"
-      : "Sin responsables todavía";
-    list.append(emptyItem);
-  } else {
-    state.teamMembers.forEach((teamMember) => {
-      list.append(createTeamMemberListItem(teamMember, revealedKey));
-    });
+  body.append(
+    createTeamListSection({
+      emptyLabel: isOwnerAccount() ? "Sin miembros con acceso todavía" : "Sin integrantes todavía",
+      members: visibleMembers,
+      revealedKey,
+      title: getTeamModalTitle()
+    })
+  );
+
+  if (isOwnerAccount()) {
+    body.append(
+      createTeamListSection({
+        emptyLabel: "Sin responsables locales",
+        members: localResponsibles,
+        revealedKey,
+        title: "Responsables locales"
+      })
+    );
   }
 
   const validation = document.createElement("div");
@@ -847,7 +859,7 @@ function createTeamModalBody(message = "", revealedKey = null) {
     const note = document.createElement("p");
     note.className = "team-mode-note";
     note.textContent = "Puedes ver el equipo, pero solo la cuenta maestra puede administrarlo.";
-    body.append(listTitle, list, note, validation);
+    body.append(note, validation);
     return body;
   }
 
@@ -885,8 +897,123 @@ function createTeamModalBody(message = "", revealedKey = null) {
   createButton.textContent = isOwnerAccount() ? "Crear acceso" : "Crear";
 
   form.append(createButton);
-  body.append(listTitle, list, form, validation);
+  body.append(form, validation);
   return body;
+}
+
+function createTeamListSection({ emptyLabel, members, revealedKey, title }) {
+  const section = document.createElement("section");
+  section.className = "team-list-section";
+
+  const listTitle = document.createElement("p");
+  listTitle.className = "project-list-title";
+  listTitle.textContent = title;
+
+  const list = document.createElement("ul");
+  list.className = "project-list team-list";
+
+  if (members.length === 0) {
+    const emptyItem = document.createElement("li");
+    emptyItem.className = "project-list-item is-empty";
+    emptyItem.textContent = emptyLabel;
+    list.append(emptyItem);
+  } else {
+    members.forEach((teamMember) => {
+      list.append(createTeamMemberListItem(teamMember, revealedKey));
+    });
+  }
+
+  section.append(listTitle, list);
+  return section;
+}
+
+function createOwnerProfileSection() {
+  const section = document.createElement("section");
+  section.className = "team-list-section owner-profile-section";
+
+  const title = document.createElement("p");
+  title.className = "project-list-title";
+  title.textContent = "Cuenta maestra";
+
+  const card = document.createElement("div");
+  card.className = "project-list-item team-list-item owner-profile-card";
+
+  const summary = document.createElement("div");
+  summary.className = "team-member-summary";
+
+  const copy = document.createElement("div");
+  copy.className = "team-member-copy";
+
+  const name = document.createElement("strong");
+  name.textContent = getOwnerDisplayName();
+
+  const meta = document.createElement("span");
+  meta.textContent = getOwnerMeta();
+
+  const badge = document.createElement("span");
+  badge.className = "owner-profile-badge";
+  badge.textContent = "Cuenta maestra";
+
+  copy.append(name, meta);
+
+  const controls = document.createElement("div");
+  controls.className = "team-member-actions";
+
+  const editButton = document.createElement("button");
+  editButton.className = "small-button team-member-edit-button";
+  editButton.type = "button";
+  editButton.textContent = isOwnerProfileExpanded ? "Cerrar" : "Editar";
+  editButton.addEventListener("click", () => {
+    isOwnerProfileExpanded = !isOwnerProfileExpanded;
+    expandedTeamMemberId = "";
+    renderTeamModalBody();
+  });
+
+  controls.append(badge, editButton);
+  summary.append(copy, controls);
+  card.append(summary);
+
+  if (isOwnerProfileExpanded) {
+    card.append(createOwnerProfileEditPanel());
+  }
+
+  section.append(title, card);
+  return section;
+}
+
+function createOwnerProfileEditPanel() {
+  const form = document.createElement("form");
+  form.className = "team-member-edit-panel owner-profile-edit-panel";
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    await handleUpdateOwnerProfile({
+      displayName: formData.get("displayName"),
+      nickname: formData.get("nickname")
+    });
+  });
+
+  const nameInput = document.createElement("input");
+  nameInput.name = "displayName";
+  nameInput.type = "text";
+  nameInput.value = getOwnerDisplayName();
+  nameInput.placeholder = "Nombre visible";
+
+  const nicknameInput = document.createElement("input");
+  nicknameInput.name = "nickname";
+  nicknameInput.type = "text";
+  nicknameInput.value = state.account?.nickname || "";
+  nicknameInput.placeholder = "nickname";
+  nicknameInput.autocapitalize = "none";
+  nicknameInput.spellcheck = false;
+
+  const saveButton = document.createElement("button");
+  saveButton.className = "save-task-button";
+  saveButton.type = "submit";
+  saveButton.textContent = "Guardar";
+
+  form.append(nameInput, nicknameInput, saveButton);
+  return form;
 }
 
 function createTeamMemberListItem(teamMember, revealedKey) {
@@ -915,9 +1042,19 @@ function createTeamMemberListItem(teamMember, revealedKey) {
     editButton.textContent = expandedTeamMemberId === teamMember.id ? "Cerrar" : "Editar";
     editButton.addEventListener("click", () => {
       expandedTeamMemberId = expandedTeamMemberId === teamMember.id ? "" : teamMember.id;
+      isOwnerProfileExpanded = false;
       renderTeamModalBody();
     });
     summary.append(editButton);
+  }
+
+  if (!isMemberAccount() && teamMember.status === "local") {
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "small-button team-member-delete-button";
+    deleteButton.type = "button";
+    deleteButton.textContent = "Eliminar";
+    deleteButton.addEventListener("click", () => handleDeleteLocalTeamMember(teamMember));
+    summary.append(deleteButton);
   }
 
   item.append(summary);
@@ -1001,6 +1138,167 @@ function renderTeamModalBody(message = "", revealedKey = null) {
   requestAnimationFrame(() => {
     nextBody.querySelector("[data-team-create-input]")?.focus({ preventScroll: true });
   });
+}
+
+async function handleUpdateOwnerProfile({ displayName, nickname }) {
+  const normalizedName = normalizeTeamMemberName(displayName);
+  const normalizedNickname = normalizeNickname(nickname);
+  const previousOwnerName = getOwnerDisplayName();
+
+  if (!normalizedName) {
+    renderTeamModalBody("Escribe el nombre visible de la cuenta maestra.");
+    return;
+  }
+
+  if (!isValidMemberNickname(normalizedNickname)) {
+    renderTeamModalBody("El nickname debe ir en minúsculas, sin espacios, mínimo 3 caracteres.");
+    return;
+  }
+
+  if (teamMemberNicknameExists(normalizedNickname)) {
+    renderTeamModalBody("Ese nickname ya existe en tu equipo.");
+    return;
+  }
+
+  try {
+    const result = await updateCloudOwnerProfile({
+      displayName: normalizedName,
+      nickname: normalizedNickname
+    });
+    const nextDisplayName = result.account?.displayName || normalizedName;
+    state.account = {
+      ...state.account,
+      displayName: nextDisplayName,
+      nickname: result.account?.nickname || normalizedNickname
+    };
+    await updateTasksResponsibleName(previousOwnerName, nextDisplayName);
+    isOwnerProfileExpanded = false;
+    updateAccountButton();
+    renderTeamModalBody("Cuenta maestra actualizada.");
+  } catch (error) {
+    renderTeamModalBody(error.message || "No se pudo actualizar la cuenta maestra.");
+  }
+}
+
+async function updateTasksResponsibleName(previousName, nextName) {
+  const previousResponsible = normalizeTeamMemberName(previousName);
+  const nextResponsible = normalizeTeamMemberName(nextName);
+
+  if (
+    !previousResponsible ||
+    !nextResponsible ||
+    previousResponsible.toLocaleLowerCase("es-MX") === nextResponsible.toLocaleLowerCase("es-MX")
+  ) {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const previousKey = previousResponsible.toLocaleLowerCase("es-MX");
+  const changedTasks = [];
+
+  for (const task of state.tasks) {
+    if (task.responsible.toLocaleLowerCase("es-MX") !== previousKey) {
+      continue;
+    }
+
+    const nextTask = {
+      ...task,
+      responsible: nextResponsible,
+      updatedAt: now
+    };
+    const savedTask = await updateTask(nextTask);
+    changedTasks.push({ previousTask: task, savedTask });
+  }
+
+  if (changedTasks.length === 0) {
+    return;
+  }
+
+  state.tasks = sortByOrder(
+    state.tasks.map((task) => changedTasks.find((item) => item.savedTask.id === task.id)?.savedTask || task)
+  );
+
+  for (const { previousTask, savedTask } of changedTasks) {
+    await recordCloudMutation({
+      critical: true,
+      entity: savedTask,
+      entityId: savedTask.id,
+      entityType: "task",
+      operation: "update",
+      patch: getTaskPatch(previousTask, savedTask)
+    });
+    await recordTaskFieldEvents(previousTask, savedTask);
+  }
+}
+
+async function handleDeleteLocalTeamMember(teamMember) {
+  if (!teamMember || teamMember.status !== "local") {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const responsibleKey = teamMember.name.toLocaleLowerCase("es-MX");
+  const reassignedTasks = [];
+
+  await deleteTeamMember(teamMember.id);
+  state.teamMembers = sortByOrder(
+    state.teamMembers
+      .filter((currentTeamMember) => currentTeamMember.id !== teamMember.id)
+      .map((currentTeamMember, index) => ({
+        ...currentTeamMember,
+        order: index
+      }))
+  );
+  await saveTeamMembers(state.teamMembers);
+
+  for (const task of state.tasks) {
+    if (task.responsible.toLocaleLowerCase("es-MX") !== responsibleKey) {
+      continue;
+    }
+
+    const nextTask = {
+      ...task,
+      responsible: DEFAULT_RESPONSIBLE_NAME,
+      updatedAt: now
+    };
+    const savedTask = await updateTask(nextTask);
+    reassignedTasks.push({ previousTask: task, savedTask });
+  }
+
+  if (reassignedTasks.length > 0) {
+    state.tasks = sortByOrder(
+      state.tasks.map((task) => reassignedTasks.find((item) => item.savedTask.id === task.id)?.savedTask || task)
+    );
+  }
+
+  await recordCloudMutation({
+    critical: true,
+    entity: {
+      ...teamMember,
+      deletedAt: now
+    },
+    entityId: teamMember.id,
+    entityType: "teamMember",
+    operation: "delete",
+    patch: {
+      deletedAt: now
+    }
+  });
+
+  for (const { previousTask, savedTask } of reassignedTasks) {
+    await recordCloudMutation({
+      critical: true,
+      entity: savedTask,
+      entityId: savedTask.id,
+      entityType: "task",
+      operation: "update",
+      patch: getTaskPatch(previousTask, savedTask)
+    });
+    await recordTaskFieldEvents(previousTask, savedTask);
+  }
+
+  renderTeamModalBody("Responsable local eliminado.");
+  render();
 }
 
 async function handleCreateTeamMember(value, nicknameValue = "") {
@@ -1200,6 +1498,96 @@ function getTeamMemberMeta(teamMember) {
   return teamMember.nickname ? `@${teamMember.nickname} · ${statusLabel}` : statusLabel;
 }
 
+function getOwnerDisplayName() {
+  return state.account?.displayName || state.account?.email || "Cuenta maestra";
+}
+
+function getOwnerMeta() {
+  const nickname = state.account?.nickname ? `@${state.account.nickname}` : "Sin nickname";
+  const email = state.account?.email || "";
+  return email ? `${nickname} · ${email}` : nickname;
+}
+
+function getAssignableTeamMembers() {
+  const teamMembers = [...state.teamMembers];
+
+  if (!state.account?.userId) {
+    return teamMembers;
+  }
+
+  const ownerName = normalizeTeamMemberName(getOwnerDisplayName());
+  if (!ownerName) {
+    return teamMembers;
+  }
+
+  const ownerKey = ownerName.toLocaleLowerCase("es-MX");
+  const hasOwner = teamMembers.some(
+    (teamMember) =>
+      teamMember.name.toLocaleLowerCase("es-MX") === ownerKey &&
+      teamMember.userId === state.account.userId
+  );
+
+  if (hasOwner) {
+    return teamMembers;
+  }
+
+  return [
+    {
+      createdAt: new Date().toISOString(),
+      id: `owner_${state.account.userId}`,
+      lastLoginAt: "",
+      name: ownerName,
+      nickname: state.account.nickname || "",
+      order: -1,
+      status: "owner",
+      updatedAt: new Date().toISOString(),
+      userId: state.account.userId
+    },
+    ...teamMembers
+  ];
+}
+
+async function cleanupOwnerLocalResponsible() {
+  const ownerName = normalizeTeamMemberName(getOwnerDisplayName());
+  if (!ownerName) {
+    return;
+  }
+
+  const ownerKey = ownerName.toLocaleLowerCase("es-MX");
+  const duplicates = state.teamMembers.filter(
+    (teamMember) =>
+      teamMember.status === "local" &&
+      teamMember.name.toLocaleLowerCase("es-MX") === ownerKey
+  );
+
+  if (duplicates.length === 0) {
+    return;
+  }
+
+  for (const duplicate of duplicates) {
+    await deleteTeamMember(duplicate.id);
+  }
+
+  state.teamMembers = sortByOrder(
+    state.teamMembers
+      .filter((teamMember) => !duplicates.some((duplicate) => duplicate.id === teamMember.id))
+      .map((teamMember, index) => ({
+        ...teamMember,
+        order: index
+      }))
+  );
+  await saveTeamMembers(state.teamMembers);
+}
+
+function isCurrentAccountResponsibleName(name) {
+  if (!state.account?.userId) {
+    return false;
+  }
+
+  const ownerName = normalizeTeamMemberName(getOwnerDisplayName());
+  return Boolean(ownerName) && ownerName.toLocaleLowerCase("es-MX") === name.toLocaleLowerCase("es-MX");
+}
+
 function isOwnerAccount() {
   return state.account?.role === "owner";
 }
@@ -1340,7 +1728,7 @@ function handleOpenTask(taskId) {
   openTaskModal({
     task,
     projects: state.projects,
-    teamMembers: state.teamMembers,
+    teamMembers: getAssignableTeamMembers(),
     onDelete: handleDeleteTask,
     onSave: handleSaveTask,
     onClose: () => render()
@@ -1623,7 +2011,12 @@ async function syncTeamMembersWithTasks(teamMembers, tasks) {
     const teamMemberName = normalizeTeamMemberName(name);
     const key = teamMemberName.toLocaleLowerCase("es-MX");
 
-    if (!teamMemberName || isDefaultResponsible(teamMemberName) || seen.has(key)) {
+    if (
+      !teamMemberName ||
+      isDefaultResponsible(teamMemberName) ||
+      isCurrentAccountResponsibleName(teamMemberName) ||
+      seen.has(key)
+    ) {
       return;
     }
 
