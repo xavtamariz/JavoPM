@@ -26,7 +26,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-modal-footer-swap";
+} from "./db.js?v=20260527-member-password-setup";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -45,8 +45,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-modal-footer-swap";
-import { initAccountModal } from "./accountModal.js?v=20260527-modal-footer-swap";
+} from "./models.js?v=20260527-member-password-setup";
+import { initAccountModal } from "./accountModal.js?v=20260527-member-password-setup";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -54,15 +54,15 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-modal-footer-swap";
+} from "./auth.js?v=20260527-member-password-setup";
 import {
   completeMemberPassword,
   createCloudTeamMember,
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-modal-footer-swap";
-import { openTaskModal } from "./modal.js?v=20260527-modal-footer-swap";
+} from "./memberApi.js?v=20260527-member-password-setup";
+import { openTaskModal } from "./modal.js?v=20260527-member-password-setup";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -70,8 +70,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-modal-footer-swap";
-import { renderBoard } from "./ui.js?v=20260527-modal-footer-swap";
+} from "./syncEngine.js?v=20260527-member-password-setup";
+import { renderBoard } from "./ui.js?v=20260527-member-password-setup";
 
 const state = {
   chartCards: [],

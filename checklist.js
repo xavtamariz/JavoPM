@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-modal-footer-swap";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-member-password-setup";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

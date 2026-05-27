@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-modal-footer-swap";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-member-password-setup";
 
 let clientPromise;
 

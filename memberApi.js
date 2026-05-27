@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-modal-footer-swap";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-member-password-setup";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({

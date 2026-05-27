@@ -115,23 +115,6 @@ export function initAccountModal({
     body.className = "account-modal-body";
     const accountState = getAccountState?.();
 
-    if (accountState?.email || accountState?.nickname) {
-      const sessionPanel = document.createElement("div");
-      sessionPanel.className = "account-session-panel";
-
-      const label = document.createElement("p");
-      label.className = "account-session-label";
-      label.textContent = "Sesión activa";
-
-      const email = document.createElement("p");
-      email.className = "account-session-email";
-      email.textContent = accountState.email || accountState.nickname;
-
-      sessionPanel.append(label, email);
-      body.append(sessionPanel);
-      return body;
-    }
-
     if (needsPasswordSetup) {
       const setupIntro = document.createElement("p");
       setupIntro.className = "account-message is-visible";
@@ -155,6 +138,23 @@ export function initAccountModal({
       notice.textContent = message;
 
       body.append(setupIntro, fields, notice);
+      return body;
+    }
+
+    if (accountState?.email || accountState?.nickname) {
+      const sessionPanel = document.createElement("div");
+      sessionPanel.className = "account-session-panel";
+
+      const label = document.createElement("p");
+      label.className = "account-session-label";
+      label.textContent = "Sesión activa";
+
+      const email = document.createElement("p");
+      email.className = "account-session-email";
+      email.textContent = accountState.email || accountState.nickname;
+
+      sessionPanel.append(label, email);
+      body.append(sessionPanel);
       return body;
     }
 
@@ -233,10 +233,10 @@ export function initAccountModal({
     primaryButton.className = "save-task-button account-primary-button";
     primaryButton.type = "submit";
     primaryButton.disabled = !isConfigured();
-    primaryButton.textContent = getAccountState?.()?.email
-      ? "Cerrar sesión"
-      : needsPasswordSetup
-        ? "Guardar contraseña"
+    primaryButton.textContent = needsPasswordSetup
+      ? "Guardar contraseña"
+      : getAccountState?.()?.email
+        ? "Cerrar sesión"
         : mode === "create" ? "Crear cuenta" : mode === "member" ? "Entrar como miembro" : "Iniciar sesión";
 
     footer.append(cancelButton, primaryButton);
@@ -295,22 +295,6 @@ export function initAccountModal({
       return;
     }
 
-    const accountState = getAccountState?.();
-    if (accountState?.email) {
-      const form = event.currentTarget;
-      setBusy(form, true);
-      try {
-        await onLogout?.();
-        close();
-      } catch (error) {
-        message = error.message || "No se pudo cerrar sesión.";
-        render();
-      } finally {
-        setBusy(form, false);
-      }
-      return;
-    }
-
     const form = event.currentTarget;
     const formData = new FormData(form);
     if (needsPasswordSetup) {
@@ -322,6 +306,21 @@ export function initAccountModal({
         close();
       } catch (error) {
         message = error.message || "No se pudo guardar la contraseña.";
+        render();
+      } finally {
+        setBusy(form, false);
+      }
+      return;
+    }
+
+    const accountState = getAccountState?.();
+    if (accountState?.email) {
+      setBusy(form, true);
+      try {
+        await onLogout?.();
+        close();
+      } catch (error) {
+        message = error.message || "No se pudo cerrar sesión.";
         render();
       } finally {
         setBusy(form, false);

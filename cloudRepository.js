@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260527-modal-footer-swap";
+} from "./models.js?v=20260527-member-password-setup";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
