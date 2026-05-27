@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-mobile-team-edit-contained";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-theme-toggle-side-menu";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

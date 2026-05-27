@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260527-mobile-team-edit-contained";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260527-mobile-team-edit-contained";
+} from "./cloudRepository.js?v=20260527-theme-toggle-side-menu";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260527-theme-toggle-side-menu";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();

@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-mobile-team-edit-contained";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-theme-toggle-side-menu";
 
 let clientPromise;
 

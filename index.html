@@ -22,7 +22,7 @@
         supabaseUrl: "https://scoacquwvbchdsldxaep.supabase.co"
       };
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260527-mobile-team-edit-contained" />
+    <link rel="stylesheet" href="./styles.css?v=20260527-theme-toggle-side-menu" />
   </head>
   <body>
     <div class="app-shell">
@@ -63,16 +63,6 @@
               <span class="team-menu-label">Equipo</span>
             </button>
             <button
-              class="theme-toggle"
-              type="button"
-              data-theme-toggle
-              aria-label="Cambiar a tema oscuro"
-              aria-pressed="false"
-            >
-              <span class="theme-dot" aria-hidden="true"></span>
-              <span data-theme-label>Claro</span>
-            </button>
-            <button
               class="side-menu-toggle"
               type="button"
               data-side-menu-toggle
@@ -102,6 +92,16 @@
         </div>
         <div class="side-menu-body">
           <div class="side-menu-section">
+            <button
+              class="theme-toggle"
+              type="button"
+              data-theme-toggle
+              aria-label="Cambiar a tema oscuro"
+              aria-pressed="false"
+            >
+              <span class="theme-dot" aria-hidden="true"></span>
+              <span data-theme-label>Tema claro</span>
+            </button>
             <div class="header-status" data-sync-status data-sync-state="local" aria-live="polite">
               <span class="status-dot" aria-hidden="true"></span>
               <span data-sync-label>Guardado local</span>
@@ -121,6 +121,6 @@
 
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260527-mobile-team-edit-contained"></script>
+    <script type="module" src="./app.js?v=20260527-theme-toggle-side-menu"></script>
   </body>
 </html>

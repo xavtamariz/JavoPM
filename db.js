@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260527-mobile-team-edit-contained";
+} from "./models.js?v=20260527-theme-toggle-side-menu";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 6;

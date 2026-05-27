@@ -26,7 +26,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-mobile-team-edit-contained";
+} from "./db.js?v=20260527-theme-toggle-side-menu";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -45,8 +45,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-mobile-team-edit-contained";
-import { initAccountModal } from "./accountModal.js?v=20260527-mobile-team-edit-contained";
+} from "./models.js?v=20260527-theme-toggle-side-menu";
+import { initAccountModal } from "./accountModal.js?v=20260527-theme-toggle-side-menu";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -54,7 +54,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-mobile-team-edit-contained";
+} from "./auth.js?v=20260527-theme-toggle-side-menu";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -62,8 +62,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-mobile-team-edit-contained";
-import { openTaskModal } from "./modal.js?v=20260527-mobile-team-edit-contained";
+} from "./memberApi.js?v=20260527-theme-toggle-side-menu";
+import { openTaskModal } from "./modal.js?v=20260527-theme-toggle-side-menu";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -71,8 +71,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-mobile-team-edit-contained";
-import { renderBoard } from "./ui.js?v=20260527-mobile-team-edit-contained";
+} from "./syncEngine.js?v=20260527-theme-toggle-side-menu";
+import { renderBoard } from "./ui.js?v=20260527-theme-toggle-side-menu";
 
 const state = {
   chartCards: [],
@@ -204,7 +204,7 @@ function applyTheme(theme, options = {}) {
   document.documentElement.dataset.theme = nextTheme;
 
   if (themeLabel) {
-    themeLabel.textContent = nextTheme === "dark" ? "Oscuro" : "Claro";
+    themeLabel.textContent = nextTheme === "dark" ? "Tema oscuro" : "Tema claro";
   }
 
   if (themeToggle) {

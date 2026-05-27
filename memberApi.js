@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-mobile-team-edit-contained";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-theme-toggle-side-menu";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({
