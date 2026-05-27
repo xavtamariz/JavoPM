@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const participantUserIds = Array.isArray(payload.participantUserIds)
-        ? payload.participantUserIds.map((item) => String(item)).filter(Boolean)
+        ? payload.participantUserIds.map((item: unknown) => String(item)).filter(Boolean)
         : [];
       const conversation = await createGroupConversation({
         admin,
