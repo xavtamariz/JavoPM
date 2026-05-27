@@ -13,6 +13,9 @@
   --accent-soft: #e3f3f0;
   --danger: #b9473a;
   --danger-soft: #f7e5e2;
+  --notification-bg: #c43f33;
+  --notification-border: #f0b6ae;
+  --notification-fg: #ffffff;
   --save-border: #b7ddd6;
   --save-hover: #d5ede8;
   --bug: #b9473a;
@@ -73,6 +76,9 @@
   --accent-soft: #15342e;
   --danger: #ff8a7b;
   --danger-soft: #351b18;
+  --notification-bg: #ff6f61;
+  --notification-border: rgba(255, 138, 123, 0.55);
+  --notification-fg: #190806;
   --save-border: rgba(95, 192, 174, 0.46);
   --save-hover: #1d443c;
   --bug: #ff8a7b;
@@ -265,6 +271,24 @@ h1 {
   min-width: 0;
   overflow: visible;
   text-overflow: clip;
+}
+
+.chat-menu-unread-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--notification-border);
+  border-radius: 999px;
+  background: var(--notification-bg);
+  color: var(--notification-fg);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--control-bg);
 }
 
 .theme-toggle {

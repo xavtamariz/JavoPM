@@ -120,6 +120,7 @@ const state = {
 const boardElement = document.querySelector("#board");
 const accountMenuToggle = document.querySelector("[data-account-menu-toggle]");
 const chatMenuToggle = document.querySelector("[data-chat-menu-toggle]");
+const chatMenuUnread = document.querySelector("[data-chat-menu-unread]");
 const projectMenuToggle = document.querySelector("[data-project-menu-toggle]");
 const teamMenuToggle = document.querySelector("[data-team-menu-toggle]");
 const themeToggle = document.querySelector("[data-theme-toggle]");
@@ -620,9 +621,29 @@ function updateChatButton() {
   }
 
   const enabled = Boolean(state.account?.userId && state.chat.isEnabled);
+  const unreadCount = enabled ? buildChatViewModel().totalUnread : 0;
+  const showUnread = Boolean(enabled && !state.chat.isOpen && unreadCount > 0);
+
   chatMenuToggle.hidden = !enabled;
   chatMenuToggle.dataset.open = String(Boolean(enabled && state.chat.isOpen));
+  chatMenuToggle.dataset.unread = String(showUnread);
   chatMenuToggle.setAttribute("aria-expanded", String(Boolean(enabled && state.chat.isOpen)));
+  chatMenuToggle.setAttribute(
+    "aria-label",
+    showUnread ? `Chat, ${unreadCount} mensajes pendientes` : "Chat"
+  );
+
+  if (chatMenuUnread) {
+    chatMenuUnread.hidden = !showUnread;
+    chatMenuUnread.textContent = showUnread ? formatUnreadBadgeCount(unreadCount) : "";
+  }
+}
+
+function formatUnreadBadgeCount(count) {
+  if (count > 99) {
+    return "99+";
+  }
+  return String(count);
 }
 
 async function startChatSession({ boardId, workspaceId }) {
