@@ -4,14 +4,14 @@ import {
   getPendingMutations,
   saveCloudMeta,
   updatePendingMutation
-} from "./db.js?v=20260527-cloud-chat-v190";
+} from "./db.js?v=20260527-chat-draft-fix";
 import {
   BOARD_SCOPED_TABLES,
   allocateCloudFolioNumber,
   fetchBoardSnapshot,
   pushMutationToCloud
-} from "./cloudRepository.js?v=20260527-cloud-chat-v190";
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-cloud-chat-v190";
+} from "./cloudRepository.js?v=20260527-chat-draft-fix";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-chat-draft-fix";
 
 const REMOTE_TABLES = BOARD_SCOPED_TABLES.filter((tableName) => tableName !== "client_mutations");
 

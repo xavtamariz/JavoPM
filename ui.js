@@ -14,7 +14,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-cloud-chat-v190";
+} from "./models.js?v=20260527-chat-draft-fix";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -58,6 +58,7 @@ export function renderBoard({
   onMoveCard,
   onSendChatMessage,
   onShowChatGroupForm,
+  onUpdateChatDraft,
   onUpdateChartCard
 }) {
   boardElement.innerHTML = "";
@@ -74,7 +75,8 @@ export function renderBoard({
         onCreateChatGroup,
         onOpenChatConversation,
         onSendChatMessage,
-        onShowChatGroupForm
+        onShowChatGroupForm,
+        onUpdateChatDraft
       })
     );
   }
@@ -232,7 +234,8 @@ function createChatColumn({
   onCreateChatGroup,
   onOpenChatConversation,
   onSendChatMessage,
-  onShowChatGroupForm
+  onShowChatGroupForm,
+  onUpdateChatDraft
 }) {
   const section = document.createElement("section");
   section.className = "column chat-column";
@@ -260,7 +263,7 @@ function createChatColumn({
   body.className = "chat-column-body";
 
   if (chat.view === "conversation") {
-    body.append(createChatConversationView({ chat, onBackChatList, onSendChatMessage }));
+    body.append(createChatConversationView({ chat, onBackChatList, onSendChatMessage, onUpdateChatDraft }));
   } else {
     body.append(createChatListView({ chat, onCreateChatGroup, onOpenChatConversation, onShowChatGroupForm }));
   }
@@ -402,7 +405,7 @@ function createChatGroupForm({ chat, onCreateChatGroup, onShowChatGroupForm }) {
   return form;
 }
 
-function createChatConversationView({ chat, onBackChatList, onSendChatMessage }) {
+function createChatConversationView({ chat, onBackChatList, onSendChatMessage, onUpdateChatDraft }) {
   const wrapper = document.createElement("div");
   wrapper.className = "chat-conversation-view";
 
@@ -451,7 +454,7 @@ function createChatConversationView({ chat, onBackChatList, onSendChatMessage })
     });
   }
 
-  wrapper.append(messageList, createChatComposer({ chat, onSendChatMessage }));
+  wrapper.append(messageList, createChatComposer({ chat, onSendChatMessage, onUpdateChatDraft }));
   return wrapper;
 }
 
@@ -510,25 +513,32 @@ function createChatMessageBubble({ chat, message }) {
   return row;
 }
 
-function createChatComposer({ chat, onSendChatMessage }) {
+function createChatComposer({ chat, onSendChatMessage, onUpdateChatDraft }) {
   const form = document.createElement("form");
   form.className = "chat-composer";
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const textarea = form.querySelector("textarea");
     const fileInput = form.querySelector('input[type="file"]');
-    onSendChatMessage({
+    const wasSent = await onSendChatMessage({
       body: textarea.value,
       files: fileInput.files
     });
-    textarea.value = "";
-    fileInput.value = "";
+    if (wasSent !== false) {
+      textarea.value = "";
+      fileInput.value = "";
+      onUpdateChatDraft?.("");
+    }
   });
 
   const textarea = document.createElement("textarea");
   textarea.placeholder = navigator.onLine ? "Escribe un mensaje" : "Sin conexión";
   textarea.rows = 2;
+  textarea.value = chat.draftBody || "";
   textarea.disabled = !navigator.onLine || chat.isLoading;
+  textarea.addEventListener("input", () => {
+    onUpdateChatDraft?.(textarea.value);
+  });
   textarea.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();

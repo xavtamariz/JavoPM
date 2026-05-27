@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260527-cloud-chat-v190";
+} from "./models.js?v=20260527-chat-draft-fix";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",

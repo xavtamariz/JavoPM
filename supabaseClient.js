@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-cloud-chat-v190";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-chat-draft-fix";
 
 let clientPromise;
 

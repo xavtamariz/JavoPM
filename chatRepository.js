@@ -1,5 +1,5 @@
-import { createId } from "./models.js?v=20260527-cloud-chat-v190";
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-cloud-chat-v190";
+import { createId } from "./models.js?v=20260527-chat-draft-fix";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-chat-draft-fix";
 
 const CHAT_IMAGE_BUCKET = "chat-images";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;

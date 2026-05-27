@@ -29,7 +29,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-cloud-chat-v190";
+} from "./db.js?v=20260527-chat-draft-fix";
 import {
   bootstrapChat,
   createChatGroup,
@@ -38,7 +38,7 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260527-cloud-chat-v190";
+} from "./chatRepository.js?v=20260527-chat-draft-fix";
 import {
   CHART_CARD_TYPE,
   DEFAULT_PROJECT_NAME,
@@ -57,8 +57,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-cloud-chat-v190";
-import { initAccountModal } from "./accountModal.js?v=20260527-cloud-chat-v190";
+} from "./models.js?v=20260527-chat-draft-fix";
+import { initAccountModal } from "./accountModal.js?v=20260527-chat-draft-fix";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -66,7 +66,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-cloud-chat-v190";
+} from "./auth.js?v=20260527-chat-draft-fix";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -74,8 +74,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-cloud-chat-v190";
-import { openTaskModal } from "./modal.js?v=20260527-cloud-chat-v190";
+} from "./memberApi.js?v=20260527-chat-draft-fix";
+import { openTaskModal } from "./modal.js?v=20260527-chat-draft-fix";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -83,8 +83,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-cloud-chat-v190";
-import { renderBoard } from "./ui.js?v=20260527-cloud-chat-v190";
+} from "./syncEngine.js?v=20260527-chat-draft-fix";
+import { renderBoard } from "./ui.js?v=20260527-chat-draft-fix";
 
 const state = {
   chartCards: [],
@@ -97,6 +97,7 @@ const state = {
   tasks: [],
   chat: {
     activeConversationId: "",
+    drafts: {},
     error: "",
     groupDraftOpen: false,
     isEnabled: false,
@@ -319,6 +320,7 @@ function render() {
     onMoveCard: handleMoveCard,
     onSendChatMessage: handleSendChatMessage,
     onShowChatGroupForm: handleShowChatGroupForm,
+    onUpdateChatDraft: handleUpdateChatDraft,
     onUpdateChartCard: handleUpdateChartCard
   });
 }
@@ -627,6 +629,7 @@ async function startChatSession({ boardId, workspaceId }) {
     ...state.chat,
     activeConversationId: "",
     boardId,
+    drafts: state.chat.drafts || {},
     error: "",
     groupDraftOpen: false,
     isEnabled: true,
@@ -658,6 +661,7 @@ async function stopChatSession() {
   await clearChatSnapshot();
   state.chat = {
     activeConversationId: "",
+    drafts: {},
     error: "",
     groupDraftOpen: false,
     isEnabled: false,
@@ -721,8 +725,7 @@ async function applyChatSnapshot(snapshot = {}) {
   };
   await importChatSnapshot(state.chat.snapshot);
 
-  const activeConversation = getActiveChatConversation();
-  if (state.chat.view === "conversation" && activeConversation?.isParticipant) {
+  if (state.chat.view === "conversation" && activeChatHasUnread()) {
     scheduleMarkActiveChatRead();
   }
 }
@@ -770,6 +773,7 @@ function buildChatViewModel() {
     isOpen: state.chat.isOpen,
     items,
     participants,
+    draftBody: activeConversation ? state.chat.drafts?.[activeConversation.id] || "" : "",
     totalUnread: items.reduce((sum, item) => sum + (item.unreadCount || 0), 0),
     view: state.chat.view
   };
@@ -889,6 +893,33 @@ function getActiveChatConversation() {
   ) || null;
 }
 
+function activeChatHasUnread() {
+  const conversation = getActiveChatConversation();
+  if (!conversation?.isParticipant) {
+    return false;
+  }
+
+  const counts = getUnreadCounts({
+    currentUserId: state.account?.userId || state.chat.snapshot.currentUserId || "",
+    messages: Array.isArray(state.chat.snapshot.messages) ? state.chat.snapshot.messages : [],
+    participants: Array.isArray(state.chat.snapshot.participants) ? state.chat.snapshot.participants : []
+  });
+
+  return (counts.get(conversation.id) || 0) > 0;
+}
+
+function handleUpdateChatDraft(body) {
+  const conversation = getActiveChatConversation();
+  if (!conversation) {
+    return;
+  }
+
+  state.chat.drafts = {
+    ...(state.chat.drafts || {}),
+    [conversation.id]: String(body || "")
+  };
+}
+
 async function handleOpenChatConversation(item) {
   if (!state.chat.isEnabled) {
     return;
@@ -967,7 +998,7 @@ async function handleCreateChatGroup({ includeCurrentUser, participantUserIds, t
 async function handleSendChatMessage({ body, files }) {
   const conversation = getActiveChatConversation();
   if (!conversation) {
-    return;
+    return false;
   }
 
   try {
@@ -983,10 +1014,16 @@ async function handleSendChatMessage({ body, files }) {
       files,
       workspaceId: state.chat.workspaceId
     });
+    state.chat.drafts = {
+      ...(state.chat.drafts || {}),
+      [conversation.id]: ""
+    };
     await refreshChatSnapshot();
     scheduleMarkActiveChatRead();
+    return true;
   } catch (error) {
     state.chat.error = error.message || "No se pudo enviar el mensaje.";
+    return false;
   } finally {
     state.chat.isLoading = false;
     render();
@@ -995,7 +1032,7 @@ async function handleSendChatMessage({ body, files }) {
 
 function scheduleMarkActiveChatRead() {
   const conversation = getActiveChatConversation();
-  if (!conversation?.isParticipant) {
+  if (!conversation?.isParticipant || !activeChatHasUnread()) {
     return;
   }
 

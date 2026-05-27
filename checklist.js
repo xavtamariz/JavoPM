@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-cloud-chat-v190";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-chat-draft-fix";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");
