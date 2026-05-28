@@ -29,7 +29,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-local-board-delete";
+} from "./db.js?v=20260527-stage-all-team";
 import {
   bootstrapChat,
   createChatGroup,
@@ -38,7 +38,7 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260527-local-board-delete";
+} from "./chatRepository.js?v=20260527-stage-all-team";
 import {
   CHART_CARD_TYPE,
   DEFAULT_RESPONSIBLE_NAME,
@@ -58,8 +58,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-local-board-delete";
-import { initAccountModal } from "./accountModal.js?v=20260527-local-board-delete";
+} from "./models.js?v=20260527-stage-all-team";
+import { initAccountModal } from "./accountModal.js?v=20260527-stage-all-team";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -67,7 +67,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-local-board-delete";
+} from "./auth.js?v=20260527-stage-all-team";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -75,8 +75,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-local-board-delete";
-import { openTaskModal } from "./modal.js?v=20260527-local-board-delete";
+} from "./memberApi.js?v=20260527-stage-all-team";
+import { openTaskModal } from "./modal.js?v=20260527-stage-all-team";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -84,8 +84,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-local-board-delete";
-import { renderBoard } from "./ui.js?v=20260527-local-board-delete";
+} from "./syncEngine.js?v=20260527-stage-all-team";
+import { renderBoard } from "./ui.js?v=20260527-stage-all-team";
 
 const state = {
   chartCards: [],

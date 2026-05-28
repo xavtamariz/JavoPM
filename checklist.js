@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-local-board-delete";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-stage-all-team";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

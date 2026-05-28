@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260527-local-board-delete";
+} from "./models.js?v=20260527-stage-all-team";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",

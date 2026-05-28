@@ -14,7 +14,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-local-board-delete";
+} from "./models.js?v=20260527-stage-all-team";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -934,8 +934,7 @@ function getStageChartData({ chartCard, columns, tasks, taskEvents, teamMembers 
 }
 
 function getStageTeamMember(chartCard, teamMembers) {
-  const teamValues = teamMembers.map((teamMember) => getTeamMemberChartValue(teamMember)).filter(Boolean);
-  const selectedTeamMember = chartCard.settings?.teamMember;
+  const selectedTeamMember = chartCard.settings?.teamMember || DEFAULT_CHART_TEAM;
 
   if (
     selectedTeamMember &&
@@ -945,7 +944,7 @@ function getStageTeamMember(chartCard, teamMembers) {
     return getTeamMemberChartValue(findTeamMemberByResponsibleName(selectedTeamMember, teamMembers));
   }
 
-  return teamValues[0] || DEFAULT_CHART_TEAM;
+  return DEFAULT_CHART_TEAM;
 }
 
 function getLeaderboardData({ chartCard, tasks, taskEvents, teamMembers }) {
@@ -1403,27 +1402,22 @@ function createStageTeamControl(chartCard, teamMembers, selectedTeamMember, onUp
   const select = document.createElement("select");
   select.setAttribute("aria-label", "Integrante del equipo para tareas por etapa");
 
-  const teamValues = teamMembers.map((teamMember) => getTeamMemberChartValue(teamMember)).filter(Boolean);
+  const allOption = document.createElement("option");
+  allOption.value = DEFAULT_CHART_TEAM;
+  allOption.textContent = "Todos";
+  select.append(allOption);
 
-  if (teamValues.length === 0) {
-    const emptyOption = document.createElement("option");
-    emptyOption.value = DEFAULT_CHART_TEAM;
-    emptyOption.textContent = "Sin integrantes";
-    select.append(emptyOption);
-    select.disabled = true;
-  } else {
-    teamMembers.forEach((teamMember) => {
-      const teamMemberValue = getTeamMemberChartValue(teamMember);
-      if (!teamMemberValue) {
-        return;
-      }
-      const option = document.createElement("option");
-      option.value = teamMemberValue;
-      option.textContent = getResponsibleDisplayName(teamMemberValue, teamMembers);
-      select.append(option);
-    });
-    select.value = selectedTeamMember;
-  }
+  teamMembers.forEach((teamMember) => {
+    const teamMemberValue = getTeamMemberChartValue(teamMember);
+    if (!teamMemberValue) {
+      return;
+    }
+    const option = document.createElement("option");
+    option.value = teamMemberValue;
+    option.textContent = getResponsibleDisplayName(teamMemberValue, teamMembers);
+    select.append(option);
+  });
+  select.value = selectedTeamMember || DEFAULT_CHART_TEAM;
 
   select.addEventListener("change", () => {
     onUpdateChartCard({

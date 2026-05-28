@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-local-board-delete";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-stage-all-team";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({
