@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-board-filters";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260527-project-cloud-rename";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-board-filters";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260527-project-cloud-rename";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({

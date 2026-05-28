@@ -12,7 +12,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260527-board-filters";
+} from "./models.js?v=20260527-project-cloud-rename";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
@@ -436,7 +436,7 @@ async function upsertEntity({ context, mutation, supabase }) {
       supabase,
       "projects",
       projectToRow(normalizeProject(mutation.entity), context),
-      UPSERT_CONFLICTS.projects
+      mutation.operation === "update" ? "id" : UPSERT_CONFLICTS.projects
     );
     return;
   }

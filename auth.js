@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260527-board-filters";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260527-board-filters";
+} from "./cloudRepository.js?v=20260527-project-cloud-rename";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260527-project-cloud-rename";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();

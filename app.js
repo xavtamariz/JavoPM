@@ -29,7 +29,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-board-filters";
+} from "./db.js?v=20260527-project-cloud-rename";
 import {
   bootstrapChat,
   createChatGroup,
@@ -38,7 +38,7 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260527-board-filters";
+} from "./chatRepository.js?v=20260527-project-cloud-rename";
 import {
   CHART_CARD_TYPE,
   DEFAULT_RESPONSIBLE_NAME,
@@ -58,8 +58,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-board-filters";
-import { initAccountModal } from "./accountModal.js?v=20260527-board-filters";
+} from "./models.js?v=20260527-project-cloud-rename";
+import { initAccountModal } from "./accountModal.js?v=20260527-project-cloud-rename";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -67,7 +67,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-board-filters";
+} from "./auth.js?v=20260527-project-cloud-rename";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -75,8 +75,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-board-filters";
-import { openTaskModal } from "./modal.js?v=20260527-board-filters";
+} from "./memberApi.js?v=20260527-project-cloud-rename";
+import { openTaskModal } from "./modal.js?v=20260527-project-cloud-rename";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -84,8 +84,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-board-filters";
-import { renderBoard } from "./ui.js?v=20260527-board-filters";
+} from "./syncEngine.js?v=20260527-project-cloud-rename";
+import { renderBoard } from "./ui.js?v=20260527-project-cloud-rename";
 
 const state = {
   chartCards: [],
