@@ -29,7 +29,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-project-edit-delete";
+} from "./db.js?v=20260527-board-filters";
 import {
   bootstrapChat,
   createChatGroup,
@@ -38,7 +38,7 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260527-project-edit-delete";
+} from "./chatRepository.js?v=20260527-board-filters";
 import {
   CHART_CARD_TYPE,
   DEFAULT_RESPONSIBLE_NAME,
@@ -58,8 +58,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-project-edit-delete";
-import { initAccountModal } from "./accountModal.js?v=20260527-project-edit-delete";
+} from "./models.js?v=20260527-board-filters";
+import { initAccountModal } from "./accountModal.js?v=20260527-board-filters";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -67,7 +67,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-project-edit-delete";
+} from "./auth.js?v=20260527-board-filters";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -75,8 +75,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-project-edit-delete";
-import { openTaskModal } from "./modal.js?v=20260527-project-edit-delete";
+} from "./memberApi.js?v=20260527-board-filters";
+import { openTaskModal } from "./modal.js?v=20260527-board-filters";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -84,14 +84,18 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-project-edit-delete";
-import { renderBoard } from "./ui.js?v=20260527-project-edit-delete";
+} from "./syncEngine.js?v=20260527-board-filters";
+import { renderBoard } from "./ui.js?v=20260527-board-filters";
 
 const state = {
   chartCards: [],
   columns: [],
   account: null,
   ownerProfile: null,
+  filters: {
+    project: "all",
+    responsible: "all"
+  },
   projects: [],
   teamMembers: [],
   taskEvents: [],
@@ -123,6 +127,7 @@ const chatMenuToggle = document.querySelector("[data-chat-menu-toggle]");
 const chatMenuUnread = document.querySelector("[data-chat-menu-unread]");
 const projectMenuToggle = document.querySelector("[data-project-menu-toggle]");
 const teamMenuToggle = document.querySelector("[data-team-menu-toggle]");
+const filterMenuToggle = document.querySelector("[data-filter-menu-toggle]");
 const themeToggle = document.querySelector("[data-theme-toggle]");
 const themeLabel = document.querySelector("[data-theme-label]");
 const sideMenuToggle = document.querySelector("[data-side-menu-toggle]");
@@ -138,6 +143,7 @@ const THEME_STORAGE_KEY = "javopm-theme";
 let clientId;
 let projectModalKeydownHandler;
 let editingProjectId = "";
+let filterModalKeydownHandler;
 let sideMenuKeydownHandler;
 let teamModalKeydownHandler;
 let expandedTeamMemberId = "";
@@ -161,6 +167,7 @@ async function startApp() {
     initChatMenu();
     initProjectMenu();
     initTeamMenu();
+    initFilterMenu();
     await tryRestoreOwnerSession();
     render();
   } catch (error) {
@@ -190,6 +197,7 @@ function openSideMenu() {
 
   closeProjectModal({ clearRoot: false });
   closeTeamModal({ clearRoot: false });
+  closeFilterModal({ clearRoot: false });
   sideMenuOverlay.hidden = false;
   sideMenuToggle.setAttribute("aria-expanded", "true");
   sideMenuKeydownHandler = (event) => {
@@ -307,6 +315,8 @@ async function reloadBoardState() {
 }
 
 function render() {
+  normalizeBoardFilters();
+  updateFilterButton();
   renderBoard({
     boardElement,
     chartCards: state.chartCards,
@@ -315,6 +325,7 @@ function render() {
     taskEvents: state.taskEvents,
     teamMembers: getAssignableTeamMembers(),
     tasks: state.tasks,
+    visibleTasks: getVisibleTasks(),
     onAddTask: handleAddTask,
     onBackChatList: handleBackChatList,
     onCreateChatGroup: handleCreateChatGroup,
@@ -344,6 +355,14 @@ function initTeamMenu() {
   teamMenuToggle.addEventListener("click", openTeamModal);
 }
 
+function initFilterMenu() {
+  if (!filterMenuToggle) {
+    return;
+  }
+
+  filterMenuToggle.addEventListener("click", openFilterModal);
+}
+
 function initChatMenu() {
   if (!chatMenuToggle) {
     return;
@@ -371,6 +390,7 @@ function initAccountMenu() {
     beforeOpen: () => {
       closeProjectModal({ clearRoot: false });
       closeTeamModal({ clearRoot: false });
+      closeFilterModal({ clearRoot: false });
       closeSideMenu();
     },
     button: accountMenuToggle,
@@ -1203,6 +1223,7 @@ function openProjectModal() {
 
   closeProjectModal({ clearRoot: false });
   closeTeamModal({ clearRoot: false });
+  closeFilterModal({ clearRoot: false });
   root.innerHTML = "";
 
   const overlay = document.createElement("div");
@@ -1624,6 +1645,341 @@ async function handleDeleteProject(projectId) {
   }
 }
 
+function openFilterModal() {
+  const root = document.querySelector("#modal-root");
+  if (!root) {
+    return;
+  }
+
+  closeProjectModal({ clearRoot: false });
+  closeTeamModal({ clearRoot: false });
+  closeFilterModal({ clearRoot: false });
+  root.innerHTML = "";
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) {
+      closeFilterModal();
+    }
+  });
+
+  const modal = document.createElement("section");
+  modal.className = "modal project-modal filter-modal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "filter-modal-title");
+
+  const shell = document.createElement("div");
+  shell.className = "modal-form";
+  shell.append(createFilterModalTopbar(), createFilterModalBody());
+
+  modal.append(shell);
+  overlay.append(modal);
+  root.append(overlay);
+
+  filterMenuToggle?.setAttribute("aria-expanded", "true");
+  filterModalKeydownHandler = (event) => {
+    if (event.key === "Escape") {
+      closeFilterModal();
+    }
+  };
+  document.addEventListener("keydown", filterModalKeydownHandler);
+
+  requestAnimationFrame(() => {
+    overlay.querySelector("[data-filter-project-select]")?.focus({ preventScroll: true });
+  });
+}
+
+function closeFilterModal(options = {}) {
+  const { clearRoot = true } = options;
+
+  if (filterModalKeydownHandler) {
+    document.removeEventListener("keydown", filterModalKeydownHandler);
+    filterModalKeydownHandler = null;
+  }
+
+  filterMenuToggle?.setAttribute("aria-expanded", "false");
+
+  if (clearRoot) {
+    const root = document.querySelector("#modal-root");
+    if (root) {
+      root.innerHTML = "";
+    }
+  }
+}
+
+function createFilterModalTopbar() {
+  const topbar = document.createElement("div");
+  topbar.className = "modal-topbar";
+
+  const title = document.createElement("h2");
+  title.id = "filter-modal-title";
+  title.className = "modal-title";
+  title.textContent = "Filtros";
+
+  const closeButton = document.createElement("button");
+  closeButton.className = "close-button";
+  closeButton.type = "button";
+  closeButton.textContent = "×";
+  closeButton.setAttribute("aria-label", "Cerrar modal de filtros");
+  closeButton.addEventListener("click", closeFilterModal);
+
+  topbar.append(title, closeButton);
+  return topbar;
+}
+
+function createFilterModalBody() {
+  const body = document.createElement("div");
+  body.className = "filter-modal-body";
+
+  const projectField = createFilterSelectField({
+    id: "filter-project",
+    label: "Proyecto",
+    options: getProjectFilterOptions(),
+    selectDatasetKey: "filterProjectSelect",
+    value: getValidFilterValue(state.filters.project, getProjectFilterOptions()),
+    onChange: (value) => {
+      state.filters = {
+        ...state.filters,
+        project: value
+      };
+      render();
+    }
+  });
+
+  const responsibleField = createFilterSelectField({
+    id: "filter-responsible",
+    label: "Responsable",
+    options: getResponsibleFilterOptions(),
+    selectDatasetKey: "filterResponsibleSelect",
+    value: getValidFilterValue(state.filters.responsible, getResponsibleFilterOptions()),
+    onChange: (value) => {
+      state.filters = {
+        ...state.filters,
+        responsible: value
+      };
+      render();
+    }
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "filter-actions";
+
+  const clearButton = document.createElement("button");
+  clearButton.className = "project-secondary-button";
+  clearButton.type = "button";
+  clearButton.textContent = "Limpiar";
+  clearButton.addEventListener("click", () => {
+    clearBoardFilters();
+    closeFilterModal();
+  });
+
+  const closeButton = document.createElement("button");
+  closeButton.className = "project-create-button filter-done-button";
+  closeButton.type = "button";
+  closeButton.textContent = "Listo";
+  closeButton.addEventListener("click", closeFilterModal);
+
+  actions.append(clearButton, closeButton);
+  body.append(projectField, responsibleField, actions);
+  return body;
+}
+
+function createFilterSelectField({ id, label, onChange, options, selectDatasetKey, value }) {
+  const field = document.createElement("label");
+  field.className = "filter-field";
+  field.htmlFor = id;
+
+  const text = document.createElement("span");
+  text.textContent = label;
+
+  const select = document.createElement("select");
+  select.id = id;
+  select.dataset[selectDatasetKey] = "true";
+
+  options.forEach((optionData) => {
+    const option = document.createElement("option");
+    option.value = optionData.value;
+    option.textContent = optionData.label;
+    select.append(option);
+  });
+
+  select.value = value;
+  select.addEventListener("change", () => onChange(select.value));
+
+  field.append(text, select);
+  return field;
+}
+
+function getProjectFilterOptions() {
+  const options = [{ label: "Todos los proyectos", value: "all" }];
+  const seen = new Set(["all"]);
+
+  const addOption = (name) => {
+    const projectName = normalizeProjectName(name);
+    const key = projectName.toLocaleLowerCase("es-MX");
+    if (!projectName || seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    options.push({
+      label: projectName,
+      value: projectName
+    });
+  };
+
+  state.projects.forEach((project) => addOption(project.name));
+  state.tasks.forEach((task) => addOption(task.project));
+
+  return options;
+}
+
+function getResponsibleFilterOptions() {
+  const options = [{ label: "Todos los responsables", value: "all" }];
+  const seen = new Set(["all"]);
+
+  const addOption = (label, value) => {
+    const normalizedValue = normalizeTeamMemberName(value);
+    const key = normalizedValue.toLocaleLowerCase("es-MX");
+    if (!normalizedValue || seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    options.push({
+      label,
+      value: normalizedValue
+    });
+  };
+
+  addOption(DEFAULT_RESPONSIBLE_NAME, DEFAULT_RESPONSIBLE_NAME);
+  getAssignableTeamMembers().forEach((teamMember) => {
+    addOption(
+      getResponsibleFilterLabel(teamMember),
+      getResponsibleFilterValue(teamMember)
+    );
+  });
+  state.tasks.forEach((task) => addOption(getTaskResponsibleFilterLabel(task.responsible), task.responsible));
+
+  return options;
+}
+
+function getResponsibleFilterValue(teamMember) {
+  if (teamMember?.status !== "local" && teamMember?.nickname) {
+    return teamMember.nickname;
+  }
+
+  return normalizeTeamMemberName(teamMember?.name);
+}
+
+function getResponsibleFilterLabel(teamMember) {
+  if (teamMember?.status !== "local" && teamMember?.nickname) {
+    return `@${teamMember.nickname}`;
+  }
+
+  return normalizeTeamMemberName(teamMember?.name);
+}
+
+function getTaskResponsibleFilterLabel(responsibleName) {
+  const teamMember = findAssignableTeamMemberByResponsibleName(responsibleName);
+  return teamMember ? getResponsibleFilterLabel(teamMember) : normalizeTeamMemberName(responsibleName);
+}
+
+function getValidFilterValue(value, options) {
+  return options.some((option) => option.value === value) ? value : "all";
+}
+
+function clearBoardFilters() {
+  state.filters = {
+    project: "all",
+    responsible: "all"
+  };
+  render();
+}
+
+function normalizeBoardFilters() {
+  state.filters = {
+    project: getValidFilterValue(state.filters.project, getProjectFilterOptions()),
+    responsible: getValidFilterValue(state.filters.responsible, getResponsibleFilterOptions())
+  };
+}
+
+function updateFilterButton() {
+  if (!filterMenuToggle) {
+    return;
+  }
+
+  const activeCount = getActiveFilterCount();
+  filterMenuToggle.dataset.active = activeCount > 0 ? "true" : "false";
+  filterMenuToggle.setAttribute(
+    "aria-label",
+    activeCount > 0 ? `Filtros activos: ${activeCount}` : "Abrir filtros"
+  );
+}
+
+function getActiveFilterCount() {
+  return Number(state.filters.project !== "all") + Number(state.filters.responsible !== "all");
+}
+
+function getVisibleTasks() {
+  return state.tasks.filter((task) => matchesProjectFilter(task) && matchesResponsibleFilter(task));
+}
+
+function matchesProjectFilter(task) {
+  if (state.filters.project === "all") {
+    return true;
+  }
+
+  return isSameProjectName(task.project, state.filters.project);
+}
+
+function matchesResponsibleFilter(task) {
+  if (state.filters.responsible === "all") {
+    return true;
+  }
+
+  const selectedKeys = getResponsibleFilterKeys(state.filters.responsible);
+  const taskKeys = getResponsibleFilterKeys(task.responsible);
+  return [...selectedKeys].some((key) => taskKeys.has(key));
+}
+
+function getResponsibleFilterKeys(value) {
+  const keys = new Set();
+  const normalized = normalizeTeamMemberName(value).toLocaleLowerCase("es-MX");
+  if (normalized) {
+    keys.add(normalized);
+  }
+
+  const teamMember = findAssignableTeamMemberByResponsibleName(value);
+  if (teamMember) {
+    const name = normalizeTeamMemberName(teamMember.name).toLocaleLowerCase("es-MX");
+    const nickname = normalizeNickname(teamMember.nickname);
+    if (name) {
+      keys.add(name);
+    }
+    if (nickname) {
+      keys.add(nickname);
+    }
+  }
+
+  return keys;
+}
+
+function findAssignableTeamMemberByResponsibleName(responsibleName) {
+  const responsibleKey = normalizeTeamMemberName(responsibleName).toLocaleLowerCase("es-MX");
+  if (!responsibleKey || responsibleKey === DEFAULT_RESPONSIBLE_NAME.toLocaleLowerCase("es-MX")) {
+    return null;
+  }
+
+  return getAssignableTeamMembers().find((teamMember) => {
+    const name = normalizeTeamMemberName(teamMember.name).toLocaleLowerCase("es-MX");
+    const nickname = normalizeNickname(teamMember.nickname);
+    return name === responsibleKey || nickname === responsibleKey;
+  }) || null;
+}
+
 function openTeamModal() {
   const root = document.querySelector("#modal-root");
   if (!root) {
@@ -1632,6 +1988,7 @@ function openTeamModal() {
 
   closeProjectModal({ clearRoot: false });
   closeTeamModal({ clearRoot: false });
+  closeFilterModal({ clearRoot: false });
   root.innerHTML = "";
 
   const overlay = document.createElement("div");

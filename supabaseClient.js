@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-project-edit-delete";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-board-filters";
 
 let clientPromise;
 

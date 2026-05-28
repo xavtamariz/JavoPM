@@ -14,7 +14,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-project-edit-delete";
+} from "./models.js?v=20260527-board-filters";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -46,6 +46,7 @@ export function renderBoard({
   boardElement,
   columns,
   tasks,
+  visibleTasks = tasks,
   chartCards = [],
   chat = {},
   teamMembers = [],
@@ -65,7 +66,7 @@ export function renderBoard({
   const visibleColumnCount = columns.length + (chat.isOpen ? 1 : 0);
   boardElement.style.gridTemplateColumns = `repeat(${visibleColumnCount}, var(--column-width))`;
 
-  const workflowTaskTotal = tasks.filter((task) => task.columnId !== METRICS_COLUMN_ID).length;
+  const workflowTaskTotal = visibleTasks.filter((task) => task.columnId !== METRICS_COLUMN_ID).length;
 
   if (chat.isOpen) {
     boardElement.append(
@@ -82,8 +83,9 @@ export function renderBoard({
   }
 
   columns.forEach((column) => {
-    const cards = getColumnCards(column.id, tasks, chartCards);
-    const taskCount = tasks.filter((task) => task.columnId === column.id).length;
+    const tasksForColumn = column.id === METRICS_COLUMN_ID ? tasks : visibleTasks;
+    const cards = getColumnCards(column.id, tasksForColumn, chartCards);
+    const taskCount = tasksForColumn.filter((task) => task.columnId === column.id).length;
     boardElement.append(
       createColumn({
         cards,

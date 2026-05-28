@@ -22,7 +22,7 @@
         supabaseUrl: "https://scoacquwvbchdsldxaep.supabase.co"
       };
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260527-project-edit-delete" />
+    <link rel="stylesheet" href="./styles.css?v=20260527-board-filters" />
   </head>
   <body>
     <div class="app-shell">
@@ -76,6 +76,15 @@
               aria-haspopup="dialog"
             >
               <span class="team-menu-label">Equipo</span>
+            </button>
+            <button
+              class="filter-menu-button"
+              type="button"
+              data-filter-menu-toggle
+              aria-expanded="false"
+              aria-haspopup="dialog"
+            >
+              <span class="filter-menu-label">Filtros</span>
             </button>
             <button
               class="side-menu-toggle"
@@ -136,6 +145,6 @@
 
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260527-project-edit-delete"></script>
+    <script type="module" src="./app.js?v=20260527-board-filters"></script>
   </body>
 </html>

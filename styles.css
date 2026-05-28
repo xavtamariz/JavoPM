@@ -231,6 +231,7 @@ h1 {
 .chat-menu-button,
 .project-menu-button,
 .team-menu-button,
+.filter-menu-button,
 .side-menu-toggle,
 .theme-toggle {
   display: inline-flex;
@@ -254,6 +255,7 @@ h1 {
 .chat-menu-button,
 .project-menu-button,
 .team-menu-button,
+.filter-menu-button,
 .side-menu-toggle {
   min-width: 0;
   cursor: pointer;
@@ -267,7 +269,8 @@ h1 {
 .account-menu-label,
 .chat-menu-label,
 .project-menu-label,
-.team-menu-label {
+.team-menu-label,
+.filter-menu-label {
   min-width: 0;
   overflow: visible;
   text-overflow: clip;
@@ -310,6 +313,8 @@ h1 {
 .project-menu-button:focus-visible,
 .team-menu-button:hover,
 .team-menu-button:focus-visible,
+.filter-menu-button:hover,
+.filter-menu-button:focus-visible,
 .side-menu-toggle:hover,
 .side-menu-toggle:focus-visible,
 .theme-toggle:hover,
@@ -324,6 +329,7 @@ h1 {
 .chat-menu-button:focus-visible,
 .project-menu-button:focus-visible,
 .team-menu-button:focus-visible,
+.filter-menu-button:focus-visible,
 .side-menu-toggle:focus-visible,
 .theme-toggle:focus-visible {
   outline: none;
@@ -334,6 +340,7 @@ h1 {
 .chat-menu-button:active,
 .project-menu-button:active,
 .team-menu-button:active,
+.filter-menu-button:active,
 .side-menu-toggle:active,
 .theme-toggle:active {
   transform: translateY(0) scale(0.99);
@@ -346,6 +353,12 @@ h1 {
 }
 
 .account-menu-button[data-authenticated="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.filter-menu-button[data-active="true"] {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent);
@@ -1375,6 +1388,51 @@ h1 {
   position: relative;
   overflow: hidden;
   cursor: pointer;
+}
+
+.filter-modal-body {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.filter-field {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.filter-field select {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 760;
+  outline: none;
+  padding: 0 10px;
+  text-transform: none;
+}
+
+.filter-field select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.filter-done-button {
+  min-width: 84px;
 }
 
 .chat-image-picker input {
@@ -2583,6 +2641,7 @@ h1 {
   .chat-menu-button,
   .project-menu-button,
   .team-menu-button,
+  .filter-menu-button,
   .side-menu-toggle,
   .theme-toggle {
     min-height: 32px;
@@ -2598,7 +2657,8 @@ h1 {
   .account-menu-button,
   .chat-menu-button,
   .project-menu-button,
-  .team-menu-button {
+  .team-menu-button,
+  .filter-menu-button {
     max-width: none;
   }
 
@@ -2609,7 +2669,8 @@ h1 {
   .account-menu-label,
   .chat-menu-label,
   .project-menu-label,
-  .team-menu-label {
+  .team-menu-label,
+  .filter-menu-label {
     overflow: visible;
     text-overflow: clip;
   }
@@ -2625,6 +2686,7 @@ h1 {
   .chat-menu-button,
   .project-menu-button,
   .team-menu-button,
+  .filter-menu-button,
   .side-menu-toggle,
   .theme-toggle {
     min-height: 30px;
@@ -2640,7 +2702,8 @@ h1 {
   .account-menu-button,
   .chat-menu-button,
   .project-menu-button,
-  .team-menu-button {
+  .team-menu-button,
+  .filter-menu-button {
     max-width: none;
   }
 
