@@ -13,7 +13,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260527-project-cloud-rename";
+} from "./models.js?v=20260527-local-board-delete";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 8;

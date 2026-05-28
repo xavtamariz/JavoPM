@@ -29,7 +29,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-project-cloud-rename";
+} from "./db.js?v=20260527-local-board-delete";
 import {
   bootstrapChat,
   createChatGroup,
@@ -38,7 +38,7 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260527-project-cloud-rename";
+} from "./chatRepository.js?v=20260527-local-board-delete";
 import {
   CHART_CARD_TYPE,
   DEFAULT_RESPONSIBLE_NAME,
@@ -58,8 +58,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-project-cloud-rename";
-import { initAccountModal } from "./accountModal.js?v=20260527-project-cloud-rename";
+} from "./models.js?v=20260527-local-board-delete";
+import { initAccountModal } from "./accountModal.js?v=20260527-local-board-delete";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -67,7 +67,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-project-cloud-rename";
+} from "./auth.js?v=20260527-local-board-delete";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -75,8 +75,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-project-cloud-rename";
-import { openTaskModal } from "./modal.js?v=20260527-project-cloud-rename";
+} from "./memberApi.js?v=20260527-local-board-delete";
+import { openTaskModal } from "./modal.js?v=20260527-local-board-delete";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -84,8 +84,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-project-cloud-rename";
-import { renderBoard } from "./ui.js?v=20260527-project-cloud-rename";
+} from "./syncEngine.js?v=20260527-local-board-delete";
+import { renderBoard } from "./ui.js?v=20260527-local-board-delete";
 
 const state = {
   chartCards: [],
@@ -137,6 +137,8 @@ const sideAccount = document.querySelector("[data-side-account]");
 const sideAccountEmail = document.querySelector("[data-side-account-email]");
 const sideAccountLogout = document.querySelector("[data-side-account-logout]");
 const sideAccountMessage = document.querySelector("[data-side-account-message]");
+const localBoardActions = document.querySelector("[data-local-board-actions]");
+const localBoardDelete = document.querySelector("[data-local-board-delete]");
 const syncStatus = document.querySelector("[data-sync-status]");
 const syncLabel = document.querySelector("[data-sync-label]");
 const THEME_STORAGE_KEY = "javopm-theme";
@@ -169,6 +171,7 @@ async function startApp() {
     initTeamMenu();
     initFilterMenu();
     await tryRestoreOwnerSession();
+    updateAccountButton();
     render();
   } catch (error) {
     renderBootError(error);
@@ -188,6 +191,7 @@ function initSideMenu() {
     }
   });
   sideAccountLogout?.addEventListener("click", handleSideMenuLogout);
+  localBoardDelete?.addEventListener("click", handleDeleteLocalBoard);
 }
 
 function openSideMenu() {
@@ -597,6 +601,39 @@ async function handleSideMenuLogout() {
   }
 }
 
+async function handleDeleteLocalBoard() {
+  if (!localBoardDelete || state.account?.userId) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "¿Eliminar todo el tablero local de este navegador? Esta acción no se puede deshacer."
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  localBoardDelete.disabled = true;
+
+  try {
+    closeProjectModal({ clearRoot: false });
+    closeTeamModal({ clearRoot: false });
+    closeFilterModal({ clearRoot: false });
+    await resetLocalBoardAfterLogout();
+    await reloadBoardState();
+    state.filters = {
+      project: "all",
+      responsible: "all"
+    };
+    setSyncStatus("local");
+    closeSideMenu();
+    render();
+  } finally {
+    localBoardDelete.disabled = false;
+  }
+}
+
 function updateAccountButton() {
   const label = accountMenuToggle?.querySelector(".account-menu-label");
   const isAuthenticated = Boolean(state.account?.userId);
@@ -611,6 +648,10 @@ function updateAccountButton() {
       isAuthenticated ? `Cuenta activa: ${accountLabel}` : "Cuenta"
     );
     accountMenuToggle.setAttribute("aria-expanded", "false");
+  }
+
+  if (localBoardActions) {
+    localBoardActions.hidden = isAuthenticated;
   }
 
   if (!sideAccount || !sideAccountEmail) {

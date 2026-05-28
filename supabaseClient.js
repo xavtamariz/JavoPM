@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-project-cloud-rename";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260527-local-board-delete";
 
 let clientPromise;
 

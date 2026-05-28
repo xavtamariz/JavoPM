@@ -14,7 +14,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260527-project-cloud-rename";
+} from "./models.js?v=20260527-local-board-delete";
 
 const AXIS_LABELS = {
   frozen: "C",

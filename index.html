@@ -22,7 +22,7 @@
         supabaseUrl: "https://scoacquwvbchdsldxaep.supabase.co"
       };
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260527-project-cloud-rename" />
+    <link rel="stylesheet" href="./styles.css?v=20260527-local-board-delete" />
   </head>
   <body>
     <div class="app-shell">
@@ -132,6 +132,9 @@
             </div>
           </div>
         </div>
+        <div class="side-menu-local-actions" data-local-board-actions hidden>
+          <button class="side-local-delete" type="button" data-local-board-delete>Eliminar Tablero</button>
+        </div>
         <div class="side-menu-account" data-side-account hidden>
           <div class="side-account-copy">
             <span class="side-account-label">Cuenta</span>
@@ -145,6 +148,6 @@
 
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260527-project-cloud-rename"></script>
+    <script type="module" src="./app.js?v=20260527-local-board-delete"></script>
   </body>
 </html>
