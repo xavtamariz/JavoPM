@@ -14,7 +14,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260529-crm-header-align";
+} from "./models.js?v=20260529-crm-rfc-address";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
@@ -417,6 +417,7 @@ function rowsToLocalSnapshot(rows) {
       title: row.title
     })),
     crmProspects: (rows.crmProspects || []).map((row) => ({
+      address: row.address || "",
       checklists: sortByOrder((crmChecklistsByProspect.get(row.id) || []).map((checklistRow) => ({
         id: checklistRow.id,
         items: sortByOrder((crmItemsByChecklist.get(checklistRow.id) || []).map((itemRow) => ({
@@ -447,6 +448,7 @@ function rowsToLocalSnapshot(rows) {
       mobilePhone: row.mobile_phone || "",
       order: row.order_index || 0,
       phone: row.phone || "",
+      rfc: row.rfc || "",
       status: row.status || DEFAULT_CRM_STATUS,
       updatedAt: row.updated_at
     })),
@@ -721,6 +723,7 @@ function chartCardToRow(chartCard, { boardId, clientId }) {
 
 function crmProspectToRow(prospect, { boardId, clientId }) {
   return withBoardFields({
+    address: prospect.address || "",
     comments: prospect.comments || "",
     company_name: prospect.companyName,
     contact_name: prospect.contactName || "",
@@ -730,6 +733,7 @@ function crmProspectToRow(prospect, { boardId, clientId }) {
     mobile_phone: prospect.mobilePhone || "",
     order_index: prospect.order,
     phone: prospect.phone || "",
+    rfc: prospect.rfc || "",
     sort_key: getSortKey(prospect.order),
     status: prospect.status || DEFAULT_CRM_STATUS
   }, { boardId, clientId, createdAt: prospect.createdAt, updatedAt: prospect.updatedAt });

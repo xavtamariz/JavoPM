@@ -34,7 +34,7 @@ import {
   updateChartCard,
   updateCRMProspect,
   updateTask
-} from "./db.js?v=20260529-crm-header-align";
+} from "./db.js?v=20260529-crm-rfc-address";
 import {
   bootstrapChat,
   createChatGroup,
@@ -43,7 +43,7 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260529-crm-header-align";
+} from "./chatRepository.js?v=20260529-crm-rfc-address";
 import {
   CHART_CARD_TYPE,
   DEFAULT_RESPONSIBLE_NAME,
@@ -65,8 +65,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260529-crm-header-align";
-import { initAccountModal } from "./accountModal.js?v=20260529-crm-header-align";
+} from "./models.js?v=20260529-crm-rfc-address";
+import { initAccountModal } from "./accountModal.js?v=20260529-crm-rfc-address";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -74,7 +74,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260529-crm-header-align";
+} from "./auth.js?v=20260529-crm-rfc-address";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -82,8 +82,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260529-crm-header-align";
-import { openTaskModal } from "./modal.js?v=20260529-crm-header-align";
+} from "./memberApi.js?v=20260529-crm-rfc-address";
+import { openTaskModal } from "./modal.js?v=20260529-crm-rfc-address";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -91,10 +91,10 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260529-crm-header-align";
-import { renderBoard } from "./ui.js?v=20260529-crm-header-align";
-import { renderCRM } from "./crm.js?v=20260529-crm-header-align";
-import { openCRMProspectModal } from "./crmModal.js?v=20260529-crm-header-align";
+} from "./syncEngine.js?v=20260529-crm-rfc-address";
+import { renderBoard } from "./ui.js?v=20260529-crm-rfc-address";
+import { renderCRM } from "./crm.js?v=20260529-crm-rfc-address";
+import { openCRMProspectModal } from "./crmModal.js?v=20260529-crm-rfc-address";
 
 const state = {
   activeSection: "board",

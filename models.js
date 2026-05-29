@@ -149,11 +149,13 @@ export function createCRMInteraction({
 export function createCRMProspectModel({
   companyName = "Nuevo prospecto",
   contactName = "",
+  address = "",
   email = "",
   extension = "",
   mobilePhone = "",
   order = 0,
   phone = "",
+  rfc = "",
   status = DEFAULT_CRM_STATUS
 } = {}) {
   const now = new Date().toISOString();
@@ -166,6 +168,8 @@ export function createCRMProspectModel({
     email: sanitizeText(email),
     phone: sanitizeText(phone),
     extension: sanitizeText(extension),
+    rfc: sanitizeText(rfc),
+    address: sanitizeText(address),
     comments: "",
     status: CRM_STATUSES.includes(status) ? status : DEFAULT_CRM_STATUS,
     interactions: [],
@@ -326,6 +330,8 @@ export function normalizeCRMProspect(prospect = {}, prospectIndex = 0) {
     email: sanitizeText(prospect.email),
     phone: sanitizeText(prospect.phone),
     extension: sanitizeText(prospect.extension),
+    rfc: sanitizeText(prospect.rfc),
+    address: sanitizeText(prospect.address),
     comments: typeof prospect.comments === "string" ? prospect.comments : "",
     status: CRM_STATUSES.includes(prospect.status) ? prospect.status : DEFAULT_CRM_STATUS,
     interactions: normalizeCRMInteractions(prospect.interactions),

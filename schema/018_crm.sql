@@ -10,6 +10,8 @@ create table if not exists public.crm_prospects (
   email text not null default '',
   phone text not null default '',
   extension text not null default '',
+  rfc text not null default '',
+  address text not null default '',
   comments text not null default '',
   status text not null default 'Nuevo' check (
     status in ('Nuevo', 'Contactado', 'Calificado', 'Propuesta', 'Seguimiento', 'Cerrado', 'Descartado')

@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260529-crm-header-align";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260529-crm-rfc-address";
 
 let clientPromise;
 

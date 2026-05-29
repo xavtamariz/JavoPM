@@ -2614,6 +2614,14 @@ body[data-section="crm"] .side-menu .team-menu-button {
   grid-column: 1 / -1;
 }
 
+.crm-address-field {
+  grid-column: span 2;
+}
+
+.crm-address-field textarea {
+  min-height: 86px;
+}
+
 .crm-interactions-section {
   display: grid;
   gap: 12px;
@@ -2850,6 +2858,10 @@ body[data-section="crm"] .side-menu .team-menu-button {
   .crm-field-grid,
   .crm-interaction-form {
     grid-template-columns: 1fr;
+  }
+
+  .crm-address-field {
+    grid-column: 1 / -1;
   }
 
   .crm-prospect-row {

@@ -1,5 +1,5 @@
-import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-header-align";
-import { createChatColumn } from "./ui.js?v=20260529-crm-header-align";
+import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-rfc-address";
+import { createChatColumn } from "./ui.js?v=20260529-crm-rfc-address";
 
 export function renderCRM({
   boardElement,

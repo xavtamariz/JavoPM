@@ -1,10 +1,10 @@
-import { renderChecklists } from "./checklist.js?v=20260529-crm-header-align";
+import { renderChecklists } from "./checklist.js?v=20260529-crm-rfc-address";
 import {
   CRM_STATUSES,
   createCRMInteraction,
   normalizeCRMProspect,
   sortByOrder
-} from "./models.js?v=20260529-crm-header-align";
+} from "./models.js?v=20260529-crm-rfc-address";
 
 let crmModalKeydownHandler;
 
@@ -81,6 +81,8 @@ export function openCRMProspectModal({
       createInputField("Correo", "email", draft.email, "email"),
       createInputField("Teléfono", "phone", draft.phone, "tel"),
       createInputField("Extensión", "extension", draft.extension),
+      createInputField("RFC", "rfc", draft.rfc),
+      createTextareaField("Dirección", "address", draft.address, "crm-address-field"),
       createStatusField(),
       createTextareaField("Comentarios", "comments", draft.comments)
     );
@@ -116,9 +118,9 @@ export function openCRMProspectModal({
     return field;
   }
 
-  function createTextareaField(labelText, key, value) {
+  function createTextareaField(labelText, key, value, fieldClassName = "crm-comments-field") {
     const field = createFieldShell(labelText);
-    field.classList.add("crm-comments-field");
+    field.classList.add(fieldClassName);
     const textarea = document.createElement("textarea");
     textarea.value = value || "";
     textarea.addEventListener("input", () => {
