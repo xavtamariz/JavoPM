@@ -146,6 +146,29 @@ export function createCRMInteraction({
   };
 }
 
+export function createCRMContact({
+  extension = "",
+  fullName = "",
+  mobilePhone = "",
+  order = 0,
+  phone = "",
+  position = ""
+} = {}) {
+  const now = new Date().toISOString();
+
+  return {
+    id: createId("crm_contact"),
+    extension: sanitizeText(extension),
+    fullName: normalizeTeamMemberName(fullName),
+    mobilePhone: sanitizeText(mobilePhone),
+    phone: sanitizeText(phone),
+    position: normalizeTeamMemberName(position),
+    createdAt: now,
+    updatedAt: now,
+    order
+  };
+}
+
 export function createCRMProspectModel({
   companyName = "Nuevo prospecto",
   contactName = "",
@@ -171,6 +194,7 @@ export function createCRMProspectModel({
     rfc: sanitizeText(rfc),
     address: sanitizeText(address),
     comments: "",
+    contacts: [],
     status: CRM_STATUSES.includes(status) ? status : DEFAULT_CRM_STATUS,
     interactions: [],
     checklists: [createDefaultChecklist()],
@@ -333,12 +357,29 @@ export function normalizeCRMProspect(prospect = {}, prospectIndex = 0) {
     rfc: sanitizeText(prospect.rfc),
     address: sanitizeText(prospect.address),
     comments: typeof prospect.comments === "string" ? prospect.comments : "",
+    contacts: normalizeCRMContacts(prospect.contacts),
     status: CRM_STATUSES.includes(prospect.status) ? prospect.status : DEFAULT_CRM_STATUS,
     interactions: normalizeCRMInteractions(prospect.interactions),
     checklists: normalizeChecklists(prospect.checklists),
     createdAt: prospect.createdAt || now,
     updatedAt: prospect.updatedAt || now,
     order: Number.isFinite(Number(prospect.order)) ? Number(prospect.order) : prospectIndex
+  };
+}
+
+export function normalizeCRMContact(contact = {}, contactIndex = 0) {
+  const now = new Date().toISOString();
+
+  return {
+    id: contact.id || createId("crm_contact"),
+    extension: sanitizeText(contact.extension),
+    fullName: normalizeTeamMemberName(contact.fullName),
+    mobilePhone: sanitizeText(contact.mobilePhone),
+    phone: sanitizeText(contact.phone),
+    position: normalizeTeamMemberName(contact.position),
+    createdAt: contact.createdAt || now,
+    updatedAt: contact.updatedAt || now,
+    order: Number.isFinite(Number(contact.order)) ? Number(contact.order) : contactIndex
   };
 }
 
@@ -405,6 +446,23 @@ export function normalizeChecklists(checklists) {
       items: normalizeChecklistItems(checklist.items)
     }))
     .sort((a, b) => a.order - b.order);
+}
+
+export function normalizeCRMContacts(contacts) {
+  if (!Array.isArray(contacts)) {
+    return [];
+  }
+
+  return contacts
+    .map(normalizeCRMContact)
+    .filter((contact) =>
+      contact.fullName ||
+      contact.position ||
+      contact.mobilePhone ||
+      contact.phone ||
+      contact.extension
+    )
+    .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
 }
 
 export function normalizeCRMInteractions(interactions) {

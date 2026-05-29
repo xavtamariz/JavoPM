@@ -14,7 +14,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260529-crm-rfc-address";
+} from "./models.js?v=20260529-crm-contacts";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
@@ -26,6 +26,7 @@ export const BOARD_SCOPED_TABLES = [
   "chart_cards",
   "task_events",
   "crm_prospects",
+  "crm_prospect_contacts",
   "crm_prospect_interactions",
   "crm_prospect_checklists",
   "crm_prospect_checklist_items",
@@ -182,6 +183,7 @@ export async function fetchBoardSnapshot({ boardId, supabase }) {
     chartCards,
     taskEvents,
     crmProspects,
+    crmProspectContacts,
     crmProspectInteractions,
     crmProspectChecklists,
     crmProspectChecklistItems
@@ -195,6 +197,7 @@ export async function fetchBoardSnapshot({ boardId, supabase }) {
     fetchBoardRows(supabase, "chart_cards", boardId),
     fetchBoardRows(supabase, "task_events", boardId),
     fetchBoardRows(supabase, "crm_prospects", boardId),
+    fetchBoardRows(supabase, "crm_prospect_contacts", boardId),
     fetchBoardRows(supabase, "crm_prospect_interactions", boardId),
     fetchBoardRows(supabase, "crm_prospect_checklists", boardId),
     fetchBoardRows(supabase, "crm_prospect_checklist_items", boardId)
@@ -207,6 +210,7 @@ export async function fetchBoardSnapshot({ boardId, supabase }) {
     columns,
     crmProspectChecklistItems,
     crmProspectChecklists,
+    crmProspectContacts,
     crmProspectInteractions,
     crmProspects,
     projects,
@@ -229,6 +233,7 @@ export async function importSnapshotRows({ boardId, clientId, snapshot, supabase
   await upsertRows(supabase, "chart_cards", rows.chartCards);
   await upsertRows(supabase, "task_events", rows.taskEvents);
   await upsertRows(supabase, "crm_prospects", rows.crmProspects);
+  await upsertRows(supabase, "crm_prospect_contacts", rows.crmProspectContacts);
   await upsertRows(supabase, "crm_prospect_interactions", rows.crmProspectInteractions);
   await upsertRows(supabase, "crm_prospect_checklists", rows.crmProspectChecklists);
   await upsertRows(supabase, "crm_prospect_checklist_items", rows.crmProspectChecklistItems);
@@ -332,6 +337,16 @@ function localSnapshotToRows({ boardId, clientId, snapshot = {} }) {
         })
       )
     ),
+    crmProspectContacts: (snapshot.crmProspects || []).flatMap((prospect) =>
+      normalizeCRMProspect(prospect).contacts.map((contact, index) =>
+        crmProspectContactToRow(contact, {
+          boardId,
+          clientId,
+          order: index,
+          prospectId: prospect.id
+        })
+      )
+    ),
     crmProspectInteractions: (snapshot.crmProspects || []).flatMap((prospect) =>
       normalizeCRMProspect(prospect).interactions.map((interaction, index) =>
         crmProspectInteractionToRow(interaction, {
@@ -366,6 +381,7 @@ function rowsToLocalSnapshot(rows) {
   const checklistsByTask = groupBy(rows.checklists, "task_id");
   const crmItemsByChecklist = groupBy(rows.crmProspectChecklistItems || [], "checklist_id");
   const crmChecklistsByProspect = groupBy(rows.crmProspectChecklists || [], "prospect_id");
+  const crmContactsByProspect = groupBy(rows.crmProspectContacts || [], "prospect_id");
   const crmInteractionsByProspect = groupBy(rows.crmProspectInteractions || [], "prospect_id");
   const tasks = rows.tasks.map((row) => {
     const taskChecklists = sortByOrder((checklistsByTask.get(row.id) || []).map((checklistRow) => ({
@@ -432,6 +448,17 @@ function rowsToLocalSnapshot(rows) {
       comments: row.comments || "",
       companyName: row.company_name || "Nuevo prospecto",
       contactName: row.contact_name || "",
+      contacts: sortByOrder((crmContactsByProspect.get(row.id) || []).map((contactRow) => ({
+        createdAt: contactRow.created_at,
+        extension: contactRow.extension || "",
+        fullName: contactRow.full_name || "",
+        id: contactRow.id,
+        mobilePhone: contactRow.mobile_phone || "",
+        order: contactRow.order_index || 0,
+        phone: contactRow.phone || "",
+        position: contactRow.position || "",
+        updatedAt: contactRow.updated_at
+      }))),
       createdAt: row.created_at,
       email: row.email || "",
       extension: row.extension || "",
@@ -561,6 +588,24 @@ async function upsertEntity({ context, mutation, supabase }) {
     await upsertOne(supabase, "crm_prospects", crmProspectToRow(prospect, context));
     await upsertRows(
       supabase,
+      "crm_prospect_contacts",
+      prospect.contacts.map((contact, index) =>
+        crmProspectContactToRow(contact, {
+          ...context,
+          order: index,
+          prospectId: prospect.id
+        })
+      )
+    );
+    await softDeleteMissingCRMChildren({
+      childIds: prospect.contacts.map((contact) => contact.id),
+      context,
+      prospectId: prospect.id,
+      supabase,
+      tableName: "crm_prospect_contacts"
+    });
+    await upsertRows(
+      supabase,
       "crm_prospect_interactions",
       prospect.interactions.map((interaction, index) =>
         crmProspectInteractionToRow(interaction, {
@@ -631,6 +676,44 @@ async function softDeleteEntity({ context, mutation, supabase }) {
     .eq("id", mutation.entityId);
 
   throwIfError(error);
+}
+
+async function softDeleteMissingCRMChildren({
+  childIds = [],
+  context,
+  prospectId,
+  supabase,
+  tableName
+}) {
+  const { data, error } = await supabase
+    .from(tableName)
+    .select("id")
+    .eq("board_id", context.boardId)
+    .eq("prospect_id", prospectId)
+    .is("deleted_at", null);
+
+  throwIfError(error);
+
+  const activeIds = new Set(childIds);
+  const idsToDelete = (data || [])
+    .map((row) => row.id)
+    .filter((id) => !activeIds.has(id));
+
+  if (!idsToDelete.length) {
+    return;
+  }
+
+  const { error: deleteError } = await supabase
+    .from(tableName)
+    .update({
+      client_id: context.clientId,
+      deleted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq("board_id", context.boardId)
+    .in("id", idsToDelete);
+
+  throwIfError(deleteError);
 }
 
 function columnToRow(column, { boardId, clientId }) {
@@ -737,6 +820,21 @@ function crmProspectToRow(prospect, { boardId, clientId }) {
     sort_key: getSortKey(prospect.order),
     status: prospect.status || DEFAULT_CRM_STATUS
   }, { boardId, clientId, createdAt: prospect.createdAt, updatedAt: prospect.updatedAt });
+}
+
+function crmProspectContactToRow(contact, { boardId, clientId, order, prospectId }) {
+  const orderIndex = Number.isFinite(Number(contact.order)) ? Number(contact.order) : order || 0;
+  return withBoardFields({
+    extension: contact.extension || "",
+    full_name: contact.fullName || "",
+    id: contact.id,
+    mobile_phone: contact.mobilePhone || "",
+    order_index: orderIndex,
+    phone: contact.phone || "",
+    position: contact.position || "",
+    prospect_id: prospectId,
+    sort_key: getSortKey(orderIndex)
+  }, { boardId, clientId, createdAt: contact.createdAt, updatedAt: contact.updatedAt });
 }
 
 function crmProspectInteractionToRow(interaction, { boardId, clientId, order, prospectId }) {

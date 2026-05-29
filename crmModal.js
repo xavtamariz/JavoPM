@@ -1,10 +1,11 @@
-import { renderChecklists } from "./checklist.js?v=20260529-crm-rfc-address";
+import { renderChecklists } from "./checklist.js?v=20260529-crm-contacts";
 import {
   CRM_STATUSES,
+  createCRMContact,
   createCRMInteraction,
   normalizeCRMProspect,
   sortByOrder
-} from "./models.js?v=20260529-crm-rfc-address";
+} from "./models.js?v=20260529-crm-contacts";
 
 let crmModalKeydownHandler;
 
@@ -83,11 +84,16 @@ export function openCRMProspectModal({
       createInputField("Extensión", "extension", draft.extension),
       createInputField("RFC", "rfc", draft.rfc),
       createTextareaField("Dirección", "address", draft.address, "crm-address-field"),
-      createStatusField(),
-      createTextareaField("Comentarios", "comments", draft.comments)
+      createStatusField()
     );
 
-    body.append(fields, createInteractionsSection(), createChecklistSection());
+    body.append(
+      fields,
+      createContactsSection(),
+      createTextareaField("Comentarios", "comments", draft.comments),
+      createInteractionsSection(),
+      createChecklistSection()
+    );
 
     if (message) {
       const feedback = document.createElement("p");
@@ -161,6 +167,114 @@ export function openCRMProspectModal({
     const label = document.createElement("span");
     label.textContent = labelText;
     field.append(label);
+    return field;
+  }
+
+  function createContactsSection() {
+    const section = document.createElement("section");
+    section.className = "crm-contacts-section";
+
+    const header = document.createElement("div");
+    header.className = "crm-section-header";
+
+    const title = document.createElement("h3");
+    title.className = "section-title";
+    title.textContent = "Contactos";
+
+    const addButton = document.createElement("button");
+    addButton.className = "small-button";
+    addButton.type = "button";
+    addButton.innerHTML = '<span class="plus-mark" aria-hidden="true"></span>Agregar contacto';
+    addButton.addEventListener("click", () => {
+      draft = {
+        ...draft,
+        contacts: [
+          ...draft.contacts,
+          createCRMContact({ order: draft.contacts.length })
+        ],
+        updatedAt: new Date().toISOString()
+      };
+      renderModal();
+      requestAnimationFrame(() => {
+        shell.querySelector("[data-crm-contact-input]")?.focus({ preventScroll: true });
+      });
+    });
+
+    header.append(title, addButton);
+
+    const list = document.createElement("div");
+    list.className = "crm-contact-list";
+
+    if (draft.contacts.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "crm-interaction-empty";
+      empty.textContent = "Sin contactos todavía.";
+      list.append(empty);
+    }
+
+    draft.contacts.forEach((contact, index) => {
+      list.append(createContactItem(contact, index));
+    });
+
+    section.append(header, list);
+    return section;
+  }
+
+  function createContactItem(contact, contactIndex) {
+    const item = document.createElement("article");
+    item.className = "crm-contact-item";
+
+    const fields = document.createElement("div");
+    fields.className = "crm-contact-grid";
+    fields.append(
+      createContactInput("Nombre completo", contactIndex, "fullName", contact.fullName),
+      createContactInput("Puesto", contactIndex, "position", contact.position),
+      createContactInput("Celular", contactIndex, "mobilePhone", contact.mobilePhone, "tel"),
+      createContactInput("Teléfono", contactIndex, "phone", contact.phone, "tel"),
+      createContactInput("Extensión", contactIndex, "extension", contact.extension)
+    );
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "danger-button crm-contact-delete-button";
+    deleteButton.type = "button";
+    deleteButton.textContent = "Eliminar";
+    deleteButton.addEventListener("click", () => {
+      draft = {
+        ...draft,
+        contacts: draft.contacts
+          .filter((itemContact) => itemContact.id !== contact.id)
+          .map((itemContact, index) => ({ ...itemContact, order: index })),
+        updatedAt: new Date().toISOString()
+      };
+      renderModal();
+    });
+
+    item.append(fields, deleteButton);
+    return item;
+  }
+
+  function createContactInput(labelText, contactIndex, key, value, type = "text") {
+    const field = createFieldShell(labelText);
+    const input = document.createElement("input");
+    input.type = type;
+    input.value = value || "";
+    input.dataset.crmContactInput = "true";
+    input.addEventListener("input", () => {
+      draft = {
+        ...draft,
+        contacts: draft.contacts.map((contact, index) =>
+          index === contactIndex
+            ? {
+              ...contact,
+              [key]: input.value,
+              updatedAt: new Date().toISOString()
+            }
+            : contact
+        ),
+        updatedAt: new Date().toISOString()
+      };
+    });
+    field.append(input);
     return field;
   }
 

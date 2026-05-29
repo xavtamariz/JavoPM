@@ -32,6 +32,30 @@ create index if not exists crm_prospects_board_status_idx
   on public.crm_prospects (board_id, status)
   where deleted_at is null;
 
+create table if not exists public.crm_prospect_contacts (
+  id text primary key,
+  board_id text not null references public.boards(id) on delete cascade,
+  prospect_id text not null references public.crm_prospects(id) on delete cascade,
+  full_name text not null default '',
+  position text not null default '',
+  mobile_phone text not null default '',
+  phone text not null default '',
+  extension text not null default '',
+  order_index integer not null default 0,
+  sort_key text not null default '000000',
+  client_id text,
+  version integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+create index if not exists crm_prospect_contacts_prospect_order_idx
+  on public.crm_prospect_contacts (prospect_id, order_index, created_at);
+
+create index if not exists crm_prospect_contacts_board_idx
+  on public.crm_prospect_contacts (board_id);
+
 create table if not exists public.crm_prospect_interactions (
   id text primary key,
   board_id text not null references public.boards(id) on delete cascade,
@@ -102,6 +126,7 @@ declare
 begin
   foreach table_name in array array[
     'crm_prospects',
+    'crm_prospect_contacts',
     'crm_prospect_interactions',
     'crm_prospect_checklists',
     'crm_prospect_checklist_items'
@@ -117,17 +142,26 @@ end;
 $$;
 
 alter table public.crm_prospects enable row level security;
+alter table public.crm_prospect_contacts enable row level security;
 alter table public.crm_prospect_interactions enable row level security;
 alter table public.crm_prospect_checklists enable row level security;
 alter table public.crm_prospect_checklist_items enable row level security;
 
 drop policy if exists "crm prospects manage by board members" on public.crm_prospects;
+drop policy if exists "crm prospect contacts manage by board members" on public.crm_prospect_contacts;
 drop policy if exists "crm prospect interactions manage by board members" on public.crm_prospect_interactions;
 drop policy if exists "crm prospect checklists manage by board members" on public.crm_prospect_checklists;
 drop policy if exists "crm prospect checklist items manage by board members" on public.crm_prospect_checklist_items;
 
 create policy "crm prospects manage by board members"
 on public.crm_prospects
+for all
+to authenticated
+using (private.is_board_member(board_id))
+with check (private.is_board_member(board_id));
+
+create policy "crm prospect contacts manage by board members"
+on public.crm_prospect_contacts
 for all
 to authenticated
 using (private.is_board_member(board_id))
@@ -155,6 +189,7 @@ using (private.is_board_member(board_id))
 with check (private.is_board_member(board_id));
 
 grant select, insert, update, delete on public.crm_prospects to authenticated;
+grant select, insert, update, delete on public.crm_prospect_contacts to authenticated;
 grant select, insert, update, delete on public.crm_prospect_interactions to authenticated;
 grant select, insert, update, delete on public.crm_prospect_checklists to authenticated;
 grant select, insert, update, delete on public.crm_prospect_checklist_items to authenticated;
@@ -165,6 +200,7 @@ declare
 begin
   foreach table_name in array array[
     'crm_prospects',
+    'crm_prospect_contacts',
     'crm_prospect_interactions',
     'crm_prospect_checklists',
     'crm_prospect_checklist_items'

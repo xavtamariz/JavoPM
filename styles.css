@@ -2622,9 +2622,48 @@ body[data-section="crm"] .side-menu .team-menu-button {
   min-height: 86px;
 }
 
+.crm-contacts-section,
 .crm-interactions-section {
   display: grid;
   gap: 12px;
+}
+
+.crm-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.crm-contact-list {
+  display: grid;
+  gap: 10px;
+}
+
+.crm-contact-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--checklist-bg);
+}
+
+.crm-contact-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.25fr)
+    minmax(0, 1fr)
+    minmax(0, 0.9fr)
+    minmax(0, 0.9fr)
+    minmax(0, 0.7fr);
+  gap: 10px;
+}
+
+.crm-contact-delete-button {
+  min-width: 76px;
 }
 
 .crm-interaction-form {
@@ -2856,7 +2895,9 @@ body[data-section="crm"] .side-menu .team-menu-button {
   }
 
   .crm-field-grid,
-  .crm-interaction-form {
+  .crm-interaction-form,
+  .crm-contact-item,
+  .crm-contact-grid {
     grid-template-columns: 1fr;
   }
 

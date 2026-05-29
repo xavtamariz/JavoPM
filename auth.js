@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260529-crm-rfc-address";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260529-crm-rfc-address";
+} from "./cloudRepository.js?v=20260529-crm-contacts";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260529-crm-contacts";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();
