@@ -1159,7 +1159,12 @@ body[data-section="crm"] .side-menu .team-menu-button {
 
 .crm-prospect-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  grid-template-columns:
+    minmax(150px, 1.1fr)
+    minmax(130px, 0.9fr)
+    minmax(120px, 0.72fr)
+    minmax(160px, 1fr)
+    auto;
   gap: 12px;
   align-items: center;
   width: 100%;
@@ -1189,7 +1194,9 @@ body[data-section="crm"] .side-menu .team-menu-button {
 }
 
 .crm-prospect-company,
-.crm-prospect-contact {
+.crm-prospect-contact,
+.crm-prospect-phone,
+.crm-prospect-email {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1201,7 +1208,9 @@ body[data-section="crm"] .side-menu .team-menu-button {
   font-weight: 820;
 }
 
-.crm-prospect-contact {
+.crm-prospect-contact,
+.crm-prospect-phone,
+.crm-prospect-email {
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 700;

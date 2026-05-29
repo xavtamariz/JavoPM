@@ -1,5 +1,5 @@
-import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-prospect-gutters";
-import { createChatColumn } from "./ui.js?v=20260529-crm-prospect-gutters";
+import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-prospect-contact-details";
+import { createChatColumn } from "./ui.js?v=20260529-crm-prospect-contact-details";
 
 export function renderCRM({
   boardElement,
@@ -89,11 +89,19 @@ function createProspectRow(prospect, onOpenProspect) {
   contact.className = "crm-prospect-contact";
   contact.textContent = prospect.contactName || "Sin contacto";
 
+  const mobilePhone = document.createElement("div");
+  mobilePhone.className = "crm-prospect-phone";
+  mobilePhone.textContent = prospect.mobilePhone || "Sin celular";
+
+  const email = document.createElement("div");
+  email.className = "crm-prospect-email";
+  email.textContent = prospect.email || "Sin correo";
+
   const status = document.createElement("span");
   status.className = "crm-status-pill";
   status.dataset.status = CRM_STATUSES.includes(prospect.status) ? prospect.status : DEFAULT_CRM_STATUS;
   status.textContent = status.dataset.status;
 
-  row.append(company, contact, status);
+  row.append(company, contact, mobilePhone, email, status);
   return row;
 }

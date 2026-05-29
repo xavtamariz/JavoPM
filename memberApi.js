@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260529-crm-prospect-gutters";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260529-crm-prospect-contact-details";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({

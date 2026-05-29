@@ -34,7 +34,7 @@ import {
   updateChartCard,
   updateCRMProspect,
   updateTask
-} from "./db.js?v=20260529-crm-prospect-gutters";
+} from "./db.js?v=20260529-crm-prospect-contact-details";
 import {
   bootstrapChat,
   createChatGroup,
@@ -43,7 +43,7 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260529-crm-prospect-gutters";
+} from "./chatRepository.js?v=20260529-crm-prospect-contact-details";
 import {
   CHART_CARD_TYPE,
   DEFAULT_RESPONSIBLE_NAME,
@@ -65,8 +65,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260529-crm-prospect-gutters";
-import { initAccountModal } from "./accountModal.js?v=20260529-crm-prospect-gutters";
+} from "./models.js?v=20260529-crm-prospect-contact-details";
+import { initAccountModal } from "./accountModal.js?v=20260529-crm-prospect-contact-details";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -74,7 +74,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260529-crm-prospect-gutters";
+} from "./auth.js?v=20260529-crm-prospect-contact-details";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -82,8 +82,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260529-crm-prospect-gutters";
-import { openTaskModal } from "./modal.js?v=20260529-crm-prospect-gutters";
+} from "./memberApi.js?v=20260529-crm-prospect-contact-details";
+import { openTaskModal } from "./modal.js?v=20260529-crm-prospect-contact-details";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -91,10 +91,10 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260529-crm-prospect-gutters";
-import { renderBoard } from "./ui.js?v=20260529-crm-prospect-gutters";
-import { renderCRM } from "./crm.js?v=20260529-crm-prospect-gutters";
-import { openCRMProspectModal } from "./crmModal.js?v=20260529-crm-prospect-gutters";
+} from "./syncEngine.js?v=20260529-crm-prospect-contact-details";
+import { renderBoard } from "./ui.js?v=20260529-crm-prospect-contact-details";
+import { renderCRM } from "./crm.js?v=20260529-crm-prospect-contact-details";
+import { openCRMProspectModal } from "./crmModal.js?v=20260529-crm-prospect-contact-details";
 
 const state = {
   activeSection: "board",

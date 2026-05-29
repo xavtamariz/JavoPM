@@ -14,7 +14,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260529-crm-prospect-gutters";
+} from "./models.js?v=20260529-crm-prospect-contact-details";
 
 const AXIS_LABELS = {
   frozen: "C",

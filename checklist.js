@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260529-crm-prospect-gutters";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260529-crm-prospect-contact-details";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");
