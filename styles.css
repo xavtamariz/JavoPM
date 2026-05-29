@@ -503,6 +503,12 @@ h1 {
   min-height: 38px;
 }
 
+.side-menu .team-menu-button {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 38px;
+}
+
 .side-menu-account {
   display: grid;
   gap: 12px;

@@ -29,7 +29,7 @@ import {
   saveTaskOrder,
   updateChartCard,
   updateTask
-} from "./db.js?v=20260527-stage-all-team";
+} from "./db.js?v=20260528-team-side-menu";
 import {
   bootstrapChat,
   createChatGroup,
@@ -38,7 +38,7 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260527-stage-all-team";
+} from "./chatRepository.js?v=20260528-team-side-menu";
 import {
   CHART_CARD_TYPE,
   DEFAULT_RESPONSIBLE_NAME,
@@ -58,8 +58,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260527-stage-all-team";
-import { initAccountModal } from "./accountModal.js?v=20260527-stage-all-team";
+} from "./models.js?v=20260528-team-side-menu";
+import { initAccountModal } from "./accountModal.js?v=20260528-team-side-menu";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -67,7 +67,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260527-stage-all-team";
+} from "./auth.js?v=20260528-team-side-menu";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -75,8 +75,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260527-stage-all-team";
-import { openTaskModal } from "./modal.js?v=20260527-stage-all-team";
+} from "./memberApi.js?v=20260528-team-side-menu";
+import { openTaskModal } from "./modal.js?v=20260528-team-side-menu";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -84,8 +84,8 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260527-stage-all-team";
-import { renderBoard } from "./ui.js?v=20260527-stage-all-team";
+} from "./syncEngine.js?v=20260528-team-side-menu";
+import { renderBoard } from "./ui.js?v=20260528-team-side-menu";
 
 const state = {
   chartCards: [],
@@ -1265,6 +1265,7 @@ function openProjectModal() {
   closeProjectModal({ clearRoot: false });
   closeTeamModal({ clearRoot: false });
   closeFilterModal({ clearRoot: false });
+  closeSideMenu();
   root.innerHTML = "";
 
   const overlay = document.createElement("div");
@@ -1695,6 +1696,7 @@ function openFilterModal() {
   closeProjectModal({ clearRoot: false });
   closeTeamModal({ clearRoot: false });
   closeFilterModal({ clearRoot: false });
+  closeSideMenu();
   root.innerHTML = "";
 
   const overlay = document.createElement("div");
@@ -2030,6 +2032,7 @@ function openTeamModal() {
   closeProjectModal({ clearRoot: false });
   closeTeamModal({ clearRoot: false });
   closeFilterModal({ clearRoot: false });
+  closeSideMenu();
   root.innerHTML = "";
 
   const overlay = document.createElement("div");

@@ -7,8 +7,8 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260527-stage-all-team";
-import { renderChecklists } from "./checklist.js?v=20260527-stage-all-team";
+} from "./models.js?v=20260528-team-side-menu";
+import { renderChecklists } from "./checklist.js?v=20260528-team-side-menu";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");

@@ -1,5 +1,5 @@
-import { createId } from "./models.js?v=20260527-stage-all-team";
-import { getSupabaseClient } from "./supabaseClient.js?v=20260527-stage-all-team";
+import { createId } from "./models.js?v=20260528-team-side-menu";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260528-team-side-menu";
 
 const CHAT_IMAGE_BUCKET = "chat-images";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
