@@ -1,4 +1,4 @@
-import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260528-crm-section";
+import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-footer";
 
 export function renderCRM({
   boardElement,
@@ -20,38 +20,37 @@ export function renderCRM({
   subtitle.textContent = "Prospectos";
   copy.append(title, subtitle);
 
+  header.append(copy);
+  section.append(header);
+
+  const content = document.createElement("div");
+  content.className = "crm-view-content";
+
+  if (prospects.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "crm-empty-state";
+    empty.textContent = "Sin prospectos";
+    content.append(empty);
+  } else {
+    const list = document.createElement("div");
+    list.className = "crm-prospect-list";
+    list.setAttribute("role", "list");
+
+    sortByOrder(prospects).forEach((prospect) => {
+      list.append(createProspectRow(prospect, onOpenProspect));
+    });
+
+    content.append(list);
+  }
+
   const addButton = document.createElement("button");
   addButton.className = "add-task-button crm-add-prospect-button";
   addButton.type = "button";
   addButton.innerHTML = '<span class="plus-mark" aria-hidden="true"></span>Agregar prospecto';
   addButton.addEventListener("click", onAddProspect);
 
-  header.append(copy);
-  if (prospects.length > 0) {
-    header.append(addButton);
-  }
-  section.append(header);
-
-  if (prospects.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "crm-empty-state";
-    const emptyAction = addButton.cloneNode(true);
-    emptyAction.addEventListener("click", onAddProspect);
-    empty.append(emptyAction);
-    section.append(empty);
-    boardElement.append(section);
-    return;
-  }
-
-  const list = document.createElement("div");
-  list.className = "crm-prospect-list";
-  list.setAttribute("role", "list");
-
-  sortByOrder(prospects).forEach((prospect) => {
-    list.append(createProspectRow(prospect, onOpenProspect));
-  });
-
-  section.append(list);
+  content.append(addButton);
+  section.append(content);
   boardElement.append(section);
 }
 

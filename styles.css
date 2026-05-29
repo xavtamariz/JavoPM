@@ -1097,11 +1097,10 @@ body[data-section="crm"] .side-menu .team-menu-button {
 }
 
 .crm-view {
-  display: grid;
-  gap: 14px;
+  display: flex;
   width: 100%;
   min-height: calc(100dvh - 84px);
-  align-content: start;
+  flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--column-bg);
@@ -1133,23 +1132,34 @@ body[data-section="crm"] .side-menu .team-menu-button {
   text-transform: uppercase;
 }
 
-.crm-add-prospect-button {
-  flex: 0 0 auto;
-  width: auto;
-  min-width: 190px;
+.crm-view-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  padding: 16px;
 }
 
 .crm-empty-state {
   display: grid;
-  min-height: min(420px, calc(100dvh - 200px));
+  min-height: 74px;
   place-items: center;
-  padding: 18px;
+  margin-bottom: 10px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 720;
 }
 
 .crm-prospect-list {
   display: grid;
   gap: 10px;
-  padding: 16px;
+  margin-bottom: 10px;
+}
+
+.crm-add-prospect-button {
+  margin-top: auto;
 }
 
 .crm-prospect-row {

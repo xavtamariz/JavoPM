@@ -34,7 +34,7 @@ import {
   updateChartCard,
   updateCRMProspect,
   updateTask
-} from "./db.js?v=20260528-crm-section";
+} from "./db.js?v=20260529-crm-footer";
 import {
   bootstrapChat,
   createChatGroup,
@@ -43,7 +43,7 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260528-crm-section";
+} from "./chatRepository.js?v=20260529-crm-footer";
 import {
   CHART_CARD_TYPE,
   DEFAULT_RESPONSIBLE_NAME,
@@ -65,8 +65,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260528-crm-section";
-import { initAccountModal } from "./accountModal.js?v=20260528-crm-section";
+} from "./models.js?v=20260529-crm-footer";
+import { initAccountModal } from "./accountModal.js?v=20260529-crm-footer";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -74,7 +74,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260528-crm-section";
+} from "./auth.js?v=20260529-crm-footer";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -82,8 +82,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260528-crm-section";
-import { openTaskModal } from "./modal.js?v=20260528-crm-section";
+} from "./memberApi.js?v=20260529-crm-footer";
+import { openTaskModal } from "./modal.js?v=20260529-crm-footer";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -91,10 +91,10 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260528-crm-section";
-import { renderBoard } from "./ui.js?v=20260528-crm-section";
-import { renderCRM } from "./crm.js?v=20260528-crm-section";
-import { openCRMProspectModal } from "./crmModal.js?v=20260528-crm-section";
+} from "./syncEngine.js?v=20260529-crm-footer";
+import { renderBoard } from "./ui.js?v=20260529-crm-footer";
+import { renderCRM } from "./crm.js?v=20260529-crm-footer";
+import { openCRMProspectModal } from "./crmModal.js?v=20260529-crm-footer";
 
 const state = {
   activeSection: "board",

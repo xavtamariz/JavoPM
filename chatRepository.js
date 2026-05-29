@@ -1,5 +1,5 @@
-import { createId } from "./models.js?v=20260528-crm-section";
-import { getSupabaseClient } from "./supabaseClient.js?v=20260528-crm-section";
+import { createId } from "./models.js?v=20260529-crm-footer";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260529-crm-footer";
 
 const CHAT_IMAGE_BUCKET = "chat-images";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
