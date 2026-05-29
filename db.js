@@ -14,7 +14,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260529-crm-chat-column";
+} from "./models.js?v=20260529-crm-toggle-neutral";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 9;

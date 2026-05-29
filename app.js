@@ -34,7 +34,7 @@ import {
   updateChartCard,
   updateCRMProspect,
   updateTask
-} from "./db.js?v=20260529-crm-chat-column";
+} from "./db.js?v=20260529-crm-toggle-neutral";
 import {
   bootstrapChat,
   createChatGroup,
@@ -43,7 +43,7 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260529-crm-chat-column";
+} from "./chatRepository.js?v=20260529-crm-toggle-neutral";
 import {
   CHART_CARD_TYPE,
   DEFAULT_RESPONSIBLE_NAME,
@@ -65,8 +65,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260529-crm-chat-column";
-import { initAccountModal } from "./accountModal.js?v=20260529-crm-chat-column";
+} from "./models.js?v=20260529-crm-toggle-neutral";
+import { initAccountModal } from "./accountModal.js?v=20260529-crm-toggle-neutral";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -74,7 +74,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260529-crm-chat-column";
+} from "./auth.js?v=20260529-crm-toggle-neutral";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -82,8 +82,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260529-crm-chat-column";
-import { openTaskModal } from "./modal.js?v=20260529-crm-chat-column";
+} from "./memberApi.js?v=20260529-crm-toggle-neutral";
+import { openTaskModal } from "./modal.js?v=20260529-crm-toggle-neutral";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -91,10 +91,10 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260529-crm-chat-column";
-import { renderBoard } from "./ui.js?v=20260529-crm-chat-column";
-import { renderCRM } from "./crm.js?v=20260529-crm-chat-column";
-import { openCRMProspectModal } from "./crmModal.js?v=20260529-crm-chat-column";
+} from "./syncEngine.js?v=20260529-crm-toggle-neutral";
+import { renderBoard } from "./ui.js?v=20260529-crm-toggle-neutral";
+import { renderCRM } from "./crm.js?v=20260529-crm-toggle-neutral";
+import { openCRMProspectModal } from "./crmModal.js?v=20260529-crm-toggle-neutral";
 
 const state = {
   activeSection: "board",

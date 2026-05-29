@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260529-crm-chat-column";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260529-crm-toggle-neutral";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({
