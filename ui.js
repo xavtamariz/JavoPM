@@ -14,7 +14,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260529-crm-position-fields";
+} from "./models.js?v=20260529-crm-primary-contact-label";
 
 const AXIS_LABELS = {
   frozen: "C",

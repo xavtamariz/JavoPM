@@ -1,11 +1,11 @@
-import { renderChecklists } from "./checklist.js?v=20260529-crm-position-fields";
+import { renderChecklists } from "./checklist.js?v=20260529-crm-primary-contact-label";
 import {
   CRM_STATUSES,
   createCRMContact,
   createCRMInteraction,
   normalizeCRMProspect,
   sortByOrder
-} from "./models.js?v=20260529-crm-position-fields";
+} from "./models.js?v=20260529-crm-primary-contact-label";
 
 let crmModalKeydownHandler;
 
@@ -77,7 +77,7 @@ export function openCRMProspectModal({
     fields.className = "crm-field-grid";
     fields.append(
       createInputField("Empresa / persona física o moral", "companyName", draft.companyName),
-      createInputField("Nombre completo", "contactName", draft.contactName),
+      createInputField("Nombre completo (Contacto principal)", "contactName", draft.contactName),
       createInputField("Puesto", "position", draft.position),
       createInputField("Correo", "email", draft.email, "email"),
       createInputField("Celular", "mobilePhone", draft.mobilePhone, "tel"),

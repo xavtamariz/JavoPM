@@ -14,7 +14,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260529-crm-position-fields";
+} from "./models.js?v=20260529-crm-primary-contact-label";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 9;

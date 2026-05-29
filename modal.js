@@ -7,8 +7,8 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260529-crm-position-fields";
-import { renderChecklists } from "./checklist.js?v=20260529-crm-position-fields";
+} from "./models.js?v=20260529-crm-primary-contact-label";
+import { renderChecklists } from "./checklist.js?v=20260529-crm-primary-contact-label";
 
 export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
   const root = document.querySelector("#modal-root");

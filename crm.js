@@ -1,5 +1,5 @@
-import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-position-fields";
-import { createChatColumn } from "./ui.js?v=20260529-crm-position-fields";
+import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-primary-contact-label";
+import { createChatColumn } from "./ui.js?v=20260529-crm-primary-contact-label";
 
 export function renderCRM({
   boardElement,
