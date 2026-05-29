@@ -1,5 +1,5 @@
-import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-prospect-contact-details";
-import { createChatColumn } from "./ui.js?v=20260529-crm-prospect-contact-details";
+import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-header-stats";
+import { createChatColumn } from "./ui.js?v=20260529-crm-header-stats";
 
 export function renderCRM({
   boardElement,
@@ -40,7 +40,28 @@ export function renderCRM({
   const title = document.createElement("h2");
   title.textContent = "Prospectos - Clientes";
 
-  header.append(title);
+  const stats = getCRMStats(prospects);
+  const indicators = document.createElement("div");
+  indicators.className = "column-indicators crm-view-indicators";
+
+  const activeCount = createCRMIndicator({
+    ariaLabel: `${stats.activeCount} prospectos activos`,
+    className: "column-count crm-prospect-active-count",
+    text: String(stats.activeCount)
+  });
+  const closedCount = createCRMIndicator({
+    ariaLabel: `${stats.closedCount} prospectos cerrados`,
+    className: "column-percent crm-prospect-closed-count",
+    text: String(stats.closedCount)
+  });
+  const conversionRate = createCRMIndicator({
+    ariaLabel: `${stats.conversionRate}% de conversión contra prospectos activos`,
+    className: "column-percent crm-prospect-conversion-rate",
+    text: `${stats.conversionRate}%`
+  });
+
+  indicators.append(activeCount, closedCount, conversionRate);
+  header.append(title, indicators);
   section.append(header);
 
   const content = document.createElement("div");
@@ -72,6 +93,24 @@ export function renderCRM({
   content.append(addButton);
   section.append(content);
   boardElement.append(section);
+}
+
+function getCRMStats(prospects) {
+  const activeCount = prospects.filter((prospect) => {
+    return prospect.status !== "Cerrado" && prospect.status !== "Descartado";
+  }).length;
+  const closedCount = prospects.filter((prospect) => prospect.status === "Cerrado").length;
+  const conversionRate = activeCount > 0 ? Math.round((closedCount / activeCount) * 100) : 0;
+
+  return { activeCount, closedCount, conversionRate };
+}
+
+function createCRMIndicator({ ariaLabel, className, text }) {
+  const indicator = document.createElement("span");
+  indicator.className = className;
+  indicator.textContent = text;
+  indicator.setAttribute("aria-label", ariaLabel);
+  return indicator;
 }
 
 function createProspectRow(prospect, onOpenProspect) {

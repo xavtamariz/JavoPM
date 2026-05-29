@@ -11,6 +11,8 @@
   --line-strong: #c7d0da;
   --accent: #1f7a6f;
   --accent-soft: #e3f3f0;
+  --info: #2563eb;
+  --info-soft: #eaf1ff;
   --danger: #b9473a;
   --danger-soft: #f7e5e2;
   --notification-bg: #c43f33;
@@ -74,6 +76,8 @@
   --line-strong: #465360;
   --accent: #5fc0ae;
   --accent-soft: #15342e;
+  --info: #60a5fa;
+  --info-soft: #10233d;
   --danger: #ff8a7b;
   --danger-soft: #351b18;
   --notification-bg: #ff6f61;
@@ -1125,6 +1129,25 @@ body[data-section="crm"] .side-menu .team-menu-button {
   color: var(--ink);
   font-size: 15px;
   font-weight: 780;
+}
+
+.crm-view-indicators {
+  margin-left: auto;
+}
+
+.column-count.crm-prospect-active-count {
+  background: var(--surface-2);
+  color: var(--ink-soft);
+}
+
+.column-percent.crm-prospect-closed-count {
+  background: var(--accent-soft);
+  color: var(--task);
+}
+
+.column-percent.crm-prospect-conversion-rate {
+  background: var(--info-soft);
+  color: var(--info);
 }
 
 .crm-view-content {
