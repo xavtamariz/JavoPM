@@ -34,7 +34,7 @@ import {
   updateChartCard,
   updateCRMProspect,
   updateTask
-} from "./db.js?v=20260529-section-aware-filters";
+} from "./db.js?v=20260529-section-preference";
 import {
   bootstrapChat,
   createChatGroup,
@@ -43,7 +43,8 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260529-section-aware-filters";
+} from "./chatRepository.js?v=20260529-section-preference";
+import { saveProfileUIPreference } from "./cloudRepository.js?v=20260529-section-preference";
 import {
   CHART_CARD_TYPE,
   CRM_STATUSES,
@@ -66,8 +67,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260529-section-aware-filters";
-import { initAccountModal } from "./accountModal.js?v=20260529-section-aware-filters";
+} from "./models.js?v=20260529-section-preference";
+import { initAccountModal } from "./accountModal.js?v=20260529-section-preference";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -75,7 +76,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260529-section-aware-filters";
+} from "./auth.js?v=20260529-section-preference";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -83,8 +84,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260529-section-aware-filters";
-import { openTaskModal } from "./modal.js?v=20260529-section-aware-filters";
+} from "./memberApi.js?v=20260529-section-preference";
+import { openTaskModal } from "./modal.js?v=20260529-section-preference";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -92,13 +93,19 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260529-section-aware-filters";
-import { renderBoard } from "./ui.js?v=20260529-section-aware-filters";
-import { renderCRM } from "./crm.js?v=20260529-section-aware-filters";
-import { openCRMProspectModal } from "./crmModal.js?v=20260529-section-aware-filters";
+} from "./syncEngine.js?v=20260529-section-preference";
+import { renderBoard } from "./ui.js?v=20260529-section-preference";
+import { renderCRM } from "./crm.js?v=20260529-section-preference";
+import { openCRMProspectModal } from "./crmModal.js?v=20260529-section-preference";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260529-section-preference";
+
+const SECTION_BOARD = "board";
+const SECTION_CRM = "crm";
+const SECTION_PREFERENCE_KEY = "lastSection";
+const SECTION_PREFERENCE_META_PREFIX = "sectionPreference";
 
 const state = {
-  activeSection: "board",
+  activeSection: SECTION_BOARD,
   chartCards: [],
   columns: [],
   crmProspects: [],
@@ -342,7 +349,7 @@ function render() {
   normalizeBoardFilters();
   updateFilterButton();
 
-  if (state.activeSection === "crm") {
+  if (state.activeSection === SECTION_CRM) {
     boardElement.className = `crm-board${state.chat.isOpen ? " is-chat-open" : ""}`;
     renderCRM({
       boardElement,
@@ -384,14 +391,14 @@ function render() {
 }
 
 function updateSectionState() {
-  const section = state.activeSection === "crm" ? "crm" : "board";
+  const section = normalizeSection(state.activeSection);
   document.body.dataset.section = section;
 
   if (crmSectionToggle) {
-    crmSectionToggle.textContent = section === "crm" ? "Tablero" : "CRM";
+    crmSectionToggle.textContent = section === SECTION_CRM ? "Tablero" : "CRM";
     crmSectionToggle.setAttribute(
       "aria-label",
-      section === "crm" ? "Volver al tablero" : "Abrir CRM"
+      section === SECTION_CRM ? "Volver al tablero" : "Abrir CRM"
     );
   }
 
@@ -430,11 +437,13 @@ function initCRMSectionToggle() {
   }
 
   crmSectionToggle.addEventListener("click", () => {
-    state.activeSection = state.activeSection === "crm" ? "board" : "crm";
+    const nextSection = state.activeSection === SECTION_CRM ? SECTION_BOARD : SECTION_CRM;
+    state.activeSection = nextSection;
     closeProjectModal({ clearRoot: false });
     closeTeamModal({ clearRoot: false });
     closeFilterModal({ clearRoot: false });
     closeSideMenu();
+    persistActiveSectionPreference(nextSection);
     render();
   });
 }
@@ -492,6 +501,96 @@ async function getOrCreateClientId() {
     : `client_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   await setMetaValue("clientId", nextClientId);
   return nextClientId;
+}
+
+function normalizeSection(section) {
+  return section === SECTION_CRM ? SECTION_CRM : SECTION_BOARD;
+}
+
+function getStoredSectionPreference(preferences = {}) {
+  if (!preferences || typeof preferences !== "object") {
+    return null;
+  }
+
+  const section = preferences[SECTION_PREFERENCE_KEY];
+  if (section === SECTION_BOARD || section === SECTION_CRM) {
+    return section;
+  }
+
+  return null;
+}
+
+function getSectionPreferenceMetaKey(userId) {
+  return `${SECTION_PREFERENCE_META_PREFIX}:${userId}`;
+}
+
+async function getLocalSectionPreference(userId) {
+  if (!userId) {
+    return null;
+  }
+
+  const section = await getMetaValue(getSectionPreferenceMetaKey(userId));
+  return section === SECTION_BOARD || section === SECTION_CRM ? section : null;
+}
+
+async function saveLocalSectionPreference(section, userId = state.account?.userId) {
+  if (!userId) {
+    return;
+  }
+
+  await setMetaValue(getSectionPreferenceMetaKey(userId), normalizeSection(section));
+}
+
+async function applyAuthenticatedSectionPreference(result) {
+  const userId = result?.user?.id;
+  if (!userId) {
+    return;
+  }
+
+  const cloudSection = getStoredSectionPreference(result.uiPreferences);
+  const localSection = await getLocalSectionPreference(userId);
+  const nextSection = cloudSection || localSection || normalizeSection(state.activeSection);
+
+  state.activeSection = nextSection;
+  await saveLocalSectionPreference(nextSection, userId);
+
+  if (!cloudSection) {
+    await saveCloudSectionPreference(nextSection).catch((error) => {
+      console.warn("No se pudo guardar la sección inicial.", error);
+    });
+  }
+}
+
+function persistActiveSectionPreference(section) {
+  const nextSection = normalizeSection(section);
+  const userId = state.account?.userId;
+
+  if (!userId) {
+    return;
+  }
+
+  saveLocalSectionPreference(nextSection, userId).catch((error) => {
+    console.warn("No se pudo guardar la sección local.", error);
+  });
+  saveCloudSectionPreference(nextSection).catch((error) => {
+    console.warn("No se pudo guardar la sección en la nube.", error);
+  });
+}
+
+async function saveCloudSectionPreference(section) {
+  if (!state.account?.userId || !canUseAccounts()) {
+    return null;
+  }
+
+  const supabase = await getSupabaseClient();
+  const preferences = await saveProfileUIPreference({
+    key: SECTION_PREFERENCE_KEY,
+    supabase,
+    value: normalizeSection(section)
+  });
+
+  state.account.uiPreferences = preferences;
+  return preferences;
 }
 
 async function tryRestoreOwnerSession() {
@@ -620,9 +719,11 @@ async function startAuthenticatedSync(result) {
     passwordSetupRequired: Boolean(result.passwordSetupRequired),
     role: result.role || (accountType === "member" ? "member" : "owner"),
     teamMemberId: result.teamMemberId || "",
+    uiPreferences: result.uiPreferences || {},
     userId: result.user?.id || ""
   };
   state.ownerProfile = getAuthenticatedOwnerProfile(result);
+  await applyAuthenticatedSectionPreference(result);
   await cleanupOwnerLocalResponsible();
   updateAccountButton();
   await startCloudSyncSession({
@@ -699,7 +800,7 @@ async function handleDeleteLocalBoard() {
       project: "all",
       responsible: "all"
     };
-    state.activeSection = "board";
+    state.activeSection = SECTION_BOARD;
     setSyncStatus("local");
     closeSideMenu();
     render();

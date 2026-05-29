@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260529-section-aware-filters";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260529-section-aware-filters";
+} from "./cloudRepository.js?v=20260529-section-preference";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260529-section-preference";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();
@@ -56,6 +56,7 @@ export async function createOwnerAccount({ clientId, confirmPassword, email, pas
     session: data.session,
     status: "authenticated",
     teamMemberId: "",
+    uiPreferences: {},
     user: data.user
   };
 }
@@ -133,6 +134,7 @@ export async function loginOwnerAccount({
     session: data.session,
     status: "authenticated",
     teamMemberId: cloud.profile?.team_member_id || "",
+    uiPreferences: cloud.profile?.ui_preferences || {},
     user: data.user
   };
 }
@@ -187,6 +189,7 @@ export async function loginMemberAccount({
     session: sessionData.session,
     status: "authenticated",
     teamMemberId: data.account?.teamMemberId || cloud.profile?.team_member_id || "",
+    uiPreferences: cloud.profile?.ui_preferences || {},
     user: sessionData.session.user
   };
 }
@@ -262,6 +265,7 @@ export async function restoreOwnerSession({
     session: data.session,
     status: "authenticated",
     teamMemberId: cloud.profile?.team_member_id || "",
+    uiPreferences: cloud.profile?.ui_preferences || {},
     user: data.session.user
   };
 }

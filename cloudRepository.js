@@ -14,7 +14,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260529-section-aware-filters";
+} from "./models.js?v=20260529-section-preference";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
@@ -145,12 +145,22 @@ export async function pullOwnerBoardSnapshot({ supabase, userId }) {
 async function fetchProfile({ supabase, userId }) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("account_type, display_name, email, nickname, password_setup_required, team_member_id, workspace_id")
+    .select("account_type, display_name, email, nickname, password_setup_required, team_member_id, ui_preferences, workspace_id")
     .eq("user_id", userId)
     .maybeSingle();
 
   throwIfError(error);
   return data || null;
+}
+
+export async function saveProfileUIPreference({ key, supabase, value }) {
+  const { data, error } = await supabase.rpc("update_profile_ui_preference", {
+    p_key: key,
+    p_value: String(value || "")
+  });
+
+  throwIfError(error);
+  return data || {};
 }
 
 async function fetchBoardOwnerProfile({ boardId, supabase }) {
