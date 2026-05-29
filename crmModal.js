@@ -1,11 +1,11 @@
-import { renderChecklists } from "./checklist.js?v=20260529-section-aware-filters";
+import { renderChecklists } from "./checklist.js?v=20260529-guests";
 import {
   CRM_STATUSES,
   createCRMContact,
   createCRMInteraction,
   normalizeCRMProspect,
   sortByOrder
-} from "./models.js?v=20260529-section-aware-filters";
+} from "./models.js?v=20260529-guests";
 
 let crmModalKeydownHandler;
 

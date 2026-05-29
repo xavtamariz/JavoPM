@@ -14,7 +14,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260529-section-preference";
+} from "./models.js?v=20260529-guests";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
@@ -142,7 +142,7 @@ export async function pullOwnerBoardSnapshot({ supabase, userId }) {
   };
 }
 
-async function fetchProfile({ supabase, userId }) {
+export async function fetchProfile({ supabase, userId }) {
   const { data, error } = await supabase
     .from("profiles")
     .select("account_type, display_name, email, nickname, password_setup_required, team_member_id, ui_preferences, workspace_id")
@@ -151,6 +151,40 @@ async function fetchProfile({ supabase, userId }) {
 
   throwIfError(error);
   return data || null;
+}
+
+export async function pullGuestBoardSnapshot({ supabase }) {
+  const { data, error } = await supabase.functions.invoke("guest-snapshot", {
+    body: {}
+  });
+
+  if (error || data?.error) {
+    throw new Error(data?.error || error?.message || "No se pudo cargar el tablero de invitado.");
+  }
+
+  if (!data?.cloud?.snapshot || !data?.cloud?.boardId) {
+    throw new Error("No recibimos un snapshot válido para el invitado.");
+  }
+
+  return {
+    account: data.account || null,
+    boardId: data.cloud.boardId,
+    guest: data.guest || null,
+    membershipRole: "guest",
+    ownerProfile: null,
+    profile: {
+      account_type: "guest",
+      display_name: data.account?.displayName || data.guest?.name || "",
+      email: "",
+      nickname: data.account?.nickname || data.guest?.nickname || "",
+      password_setup_required: false,
+      team_member_id: "",
+      ui_preferences: {},
+      workspace_id: data.cloud.workspaceId
+    },
+    snapshot: data.cloud.snapshot,
+    workspaceId: data.cloud.workspaceId
+  };
 }
 
 export async function saveProfileUIPreference({ key, supabase, value }) {

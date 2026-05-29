@@ -1,9 +1,11 @@
 import {
   createOwnerWorkspaceFromSnapshot,
+  fetchProfile,
   importSnapshotRows,
+  pullGuestBoardSnapshot,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260529-section-preference";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260529-section-preference";
+} from "./cloudRepository.js?v=20260529-guests";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260529-guests";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();
@@ -194,6 +196,57 @@ export async function loginMemberAccount({
   };
 }
 
+export async function loginGuestAccount({
+  nickname,
+  password
+}) {
+  const normalizedNickname = validateNicknameAndPassword({ nickname, password });
+  const supabase = await getSupabaseClient();
+  const { data, error } = await supabase.functions.invoke("guest-auth", {
+    body: {
+      nickname: normalizedNickname,
+      password
+    }
+  });
+
+  if (error || data?.error) {
+    throw new Error(data?.error || error?.message || "No se pudo iniciar como invitado.");
+  }
+
+  const sessionPayload = data?.session;
+  if (!sessionPayload?.access_token || !sessionPayload?.refresh_token) {
+    throw new Error("No recibimos una sesión válida para el invitado.");
+  }
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+    access_token: sessionPayload.access_token,
+    refresh_token: sessionPayload.refresh_token
+  });
+
+  if (sessionError || !sessionData?.session?.user) {
+    throw new Error(sessionError?.message || "No se pudo guardar la sesión del invitado.");
+  }
+
+  const cloud = await pullGuestBoardSnapshot({ supabase });
+
+  return {
+    accountType: "guest",
+    cloud,
+    completedPendingImport: false,
+    displayName: data.account?.displayName || cloud.profile?.display_name || normalizedNickname,
+    email: "",
+    guestId: data.account?.guestId || cloud.guest?.id || "",
+    nickname: data.account?.nickname || cloud.profile?.nickname || normalizedNickname,
+    passwordSetupRequired: false,
+    role: "guest",
+    session: sessionData.session,
+    status: "authenticated",
+    teamMemberId: "",
+    uiPreferences: {},
+    user: sessionData.session.user
+  };
+}
+
 export async function restoreOwnerSession({
   clientId,
   pendingImport = null
@@ -207,6 +260,31 @@ export async function restoreOwnerSession({
 
   if (error || !data?.session?.user) {
     return null;
+  }
+
+  const profile = await fetchProfile({
+    supabase,
+    userId: data.session.user.id
+  });
+
+  if (profile?.account_type === "guest") {
+    const cloud = await pullGuestBoardSnapshot({ supabase });
+    return {
+      accountType: "guest",
+      cloud,
+      completedPendingImport: false,
+      displayName: cloud.profile?.display_name || profile.display_name || profile.nickname || "Invitado",
+      email: "",
+      guestId: cloud.guest?.id || "",
+      nickname: cloud.profile?.nickname || profile.nickname || "",
+      passwordSetupRequired: false,
+      role: "guest",
+      session: data.session,
+      status: "authenticated",
+      teamMemberId: "",
+      uiPreferences: {},
+      user: data.session.user
+    };
   }
 
   let cloud;

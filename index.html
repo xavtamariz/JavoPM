@@ -22,7 +22,7 @@
         supabaseUrl: "https://scoacquwvbchdsldxaep.supabase.co"
       };
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260529-team-menu-crm" />
+    <link rel="stylesheet" href="./styles.css?v=20260529-guests" />
   </head>
   <body>
     <div class="app-shell">
@@ -129,6 +129,16 @@
             >
               <span class="team-menu-label">Equipo</span>
             </button>
+            <button
+              class="guest-menu-button"
+              type="button"
+              data-guest-menu-toggle
+              aria-expanded="false"
+              aria-haspopup="dialog"
+              hidden
+            >
+              <span class="guest-menu-label">Invitados</span>
+            </button>
             <div class="header-status" data-sync-status data-sync-state="local" aria-live="polite">
               <span class="status-dot" aria-hidden="true"></span>
               <span data-sync-label>Guardado local</span>
@@ -151,6 +161,6 @@
 
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260529-section-preference"></script>
+    <script type="module" src="./app.js?v=20260529-guests"></script>
   </body>
 </html>

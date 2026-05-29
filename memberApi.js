@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260529-section-aware-filters";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260529-guests";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({
@@ -45,6 +45,52 @@ export async function deleteCloudTeamMember({ clientId, teamMemberId }) {
   return data;
 }
 
+export async function listCloudGuests({ boardId }) {
+  return invokeOwnerGuests({
+    action: "list",
+    boardId
+  });
+}
+
+export async function createCloudGuest({ boardId, clientId, name, nickname, projectIds }) {
+  return invokeOwnerGuests({
+    action: "create",
+    boardId,
+    clientId,
+    name,
+    nickname,
+    projectIds
+  });
+}
+
+export async function updateCloudGuest({ clientId, guestId, name, nickname, projectIds, status }) {
+  return invokeOwnerGuests({
+    action: "update",
+    clientId,
+    guestId,
+    name,
+    nickname,
+    projectIds,
+    status
+  });
+}
+
+export async function resetCloudGuestKey({ clientId, guestId }) {
+  return invokeOwnerGuests({
+    action: "resetKey",
+    clientId,
+    guestId
+  });
+}
+
+export async function deleteCloudGuest({ clientId, guestId }) {
+  return invokeOwnerGuests({
+    action: "delete",
+    clientId,
+    guestId
+  });
+}
+
 export async function updateCloudOwnerProfile({ displayName, nickname }) {
   const supabase = await getSupabaseClient();
   const { data, error } = await supabase.functions.invoke("owner-profile", {
@@ -83,6 +129,17 @@ async function invokeOwnerMembers(body) {
 
   if (error || data?.error) {
     throw new Error(data?.error || await getFunctionErrorMessage(error, "No se pudo administrar el integrante."));
+  }
+
+  return data;
+}
+
+async function invokeOwnerGuests(body) {
+  const supabase = await getSupabaseClient();
+  const { data, error } = await supabase.functions.invoke("owner-guests", { body });
+
+  if (error || data?.error) {
+    throw new Error(data?.error || await getFunctionErrorMessage(error, "No se pudo administrar el invitado."));
   }
 
   return data;

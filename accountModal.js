@@ -6,6 +6,7 @@ export function initAccountModal({
   onCreateAccount,
   onCompleteMemberPassword,
   onLogin,
+  onLoginGuest,
   onLoginMember,
   onLogout
 }) {
@@ -163,13 +164,14 @@ export function initAccountModal({
     tabs.append(
       createModeButton("login", "Iniciar sesión"),
       createModeButton("create", "Crear cuenta"),
-      createModeButton("member", "Miembro")
+      createModeButton("member", "Miembro"),
+      createModeButton("guest", "Invitado")
     );
 
     const fields = document.createElement("div");
     fields.className = "account-fields";
 
-    if (mode === "member") {
+    if (mode === "member" || mode === "guest") {
       fields.append(
         createInputField("Nickname", "nickname", "text", preservedNickname, {
           autocomplete: "username",
@@ -177,7 +179,7 @@ export function initAccountModal({
           dataAccountNickname: "true",
           spellcheck: "false"
         }),
-        createInputField("Contraseña o clave", "password", "password", "", {
+        createInputField(mode === "guest" ? "Clave de invitado" : "Contraseña o clave", "password", "password", "", {
           autocomplete: "current-password",
           dataAccountPassword: "true"
         })
@@ -237,7 +239,7 @@ export function initAccountModal({
       ? "Guardar contraseña"
       : getAccountState?.()?.email
         ? "Cerrar sesión"
-        : mode === "create" ? "Crear cuenta" : mode === "member" ? "Entrar como miembro" : "Iniciar sesión";
+        : mode === "create" ? "Crear cuenta" : mode === "member" ? "Entrar como miembro" : mode === "guest" ? "Entrar como invitado" : "Iniciar sesión";
 
     footer.append(cancelButton, primaryButton);
     return footer;
@@ -341,6 +343,8 @@ export function initAccountModal({
         ? await onCreateAccount({ confirmPassword, email, password })
         : mode === "member"
           ? await onLoginMember({ nickname, password })
+          : mode === "guest"
+            ? await onLoginGuest({ nickname, password })
           : await onLogin({ email, password });
 
       if (result?.status === "existing_email") {

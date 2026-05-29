@@ -7,10 +7,19 @@ import {
   normalizeTeamMemberName,
   normalizeTask,
   updateFolioProjectName
-} from "./models.js?v=20260529-section-aware-filters";
-import { renderChecklists } from "./checklist.js?v=20260529-section-aware-filters";
+} from "./models.js?v=20260529-guests";
+import { renderChecklists } from "./checklist.js?v=20260529-guests";
 
-export function openTaskModal({ task, projects = [], teamMembers = [], onSave, onDelete, onClose }) {
+export function openTaskModal({
+  task,
+  projects = [],
+  teamMembers = [],
+  hideSensitiveFields = false,
+  onSave,
+  onDelete,
+  onClose,
+  readOnly = false
+}) {
   const root = document.querySelector("#modal-root");
   root.innerHTML = "";
 
@@ -39,11 +48,14 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
   function render() {
     cleanupTransientListeners();
     form.innerHTML = "";
-    form.append(createTopBar(), createHeader(), createBody(), createFooter());
-    requestAnimationFrame(() => {
-      const firstInput = form.querySelector("[data-autofocus]");
-      firstInput?.focus({ preventScroll: true });
-    });
+    form.append(createTopBar(), createHeader(), createBody());
+    if (!readOnly) {
+      form.append(createFooter());
+      requestAnimationFrame(() => {
+        const firstInput = form.querySelector("[data-autofocus]");
+        firstInput?.focus({ preventScroll: true });
+      });
+    }
   }
 
   function createTopBar() {
@@ -81,14 +93,19 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
 
     const right = document.createElement("div");
     right.className = "modal-right-row";
-    right.append(
-      createField("Fecha inicio", "startDate", "date", workingTask.startDate),
-      createField("Fecha fin", "endDate", "date", workingTask.endDate),
-      createField("Puntos", "points", "number", workingTask.points, { min: "0", step: "1" }),
-      createResponsibleField()
-    );
+    if (!hideSensitiveFields) {
+      right.append(
+        createField("Fecha inicio", "startDate", "date", workingTask.startDate),
+        createField("Fecha fin", "endDate", "date", workingTask.endDate),
+        createField("Puntos", "points", "number", workingTask.points, { min: "0", step: "1" }),
+        createResponsibleField()
+      );
+    }
 
-    header.append(left, right);
+    header.append(left);
+    if (!hideSensitiveFields) {
+      header.append(right);
+    }
     return header;
   }
 
@@ -135,6 +152,9 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
         saveNowAndRender();
       },
       updateChecklist(checklistId, changes) {
+        if (readOnly) {
+          return;
+        }
         updateWorkingTask({
           checklists: workingTask.checklists.map((checklist) =>
             checklist.id === checklistId ? { ...checklist, ...changes } : checklist
@@ -190,6 +210,9 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     }
 
     body.append(validation, descriptions, renderChecklists(workingTask, checklistCallbacks));
+    if (readOnly) {
+      body.replaceChildren(validation, descriptions, renderReadOnlyChecklists(workingTask));
+    }
     return body;
   }
 
@@ -204,6 +227,7 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     const select = document.createElement("select");
     select.id = "task-type";
     select.value = workingTask.type;
+    select.disabled = readOnly;
 
     ALLOWED_TYPES.forEach((type) => {
       const option = document.createElement("option");
@@ -212,7 +236,9 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
       select.append(option);
     });
 
-    select.addEventListener("change", () => updateWorkingTask({ type: select.value }));
+    if (!readOnly) {
+      select.addEventListener("change", () => updateWorkingTask({ type: select.value }));
+    }
     wrapper.append(label, select);
     return wrapper;
   }
@@ -227,6 +253,7 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
 
     const select = document.createElement("select");
     select.id = "task-project";
+    select.disabled = readOnly;
 
     const projectNames = getProjectNames();
 
@@ -238,18 +265,20 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     });
 
     select.value = workingTask.project;
-    select.addEventListener("change", () => {
-      const project = select.value;
-      const folio = updateFolioProjectName(workingTask.folio, project);
-      updateWorkingTask({
-        project,
-        folio
+    if (!readOnly) {
+      select.addEventListener("change", () => {
+        const project = select.value;
+        const folio = updateFolioProjectName(workingTask.folio, project);
+        updateWorkingTask({
+          project,
+          folio
+        });
+        const folioInput = form.querySelector("#task-folio");
+        if (folioInput) {
+          folioInput.value = folio;
+        }
       });
-      const folioInput = form.querySelector("#task-folio");
-      if (folioInput) {
-        folioInput.value = folio;
-      }
-    });
+    }
 
     wrapper.append(label, select);
     return wrapper;
@@ -265,6 +294,7 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
 
     const select = document.createElement("select");
     select.id = "task-responsible";
+    select.disabled = readOnly;
 
     getTeamMemberOptions().forEach((teamMember) => {
       const option = document.createElement("option");
@@ -275,12 +305,14 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
 
     const normalizedResponsible = getResponsibleSelectValue(workingTask.responsible);
     select.value = normalizedResponsible;
-    if (normalizedResponsible !== workingTask.responsible) {
+    if (!readOnly && normalizedResponsible !== workingTask.responsible) {
       updateWorkingTask({ responsible: normalizedResponsible });
     }
-    select.addEventListener("change", () => {
-      updateWorkingTask({ responsible: select.value });
-    });
+    if (!readOnly) {
+      select.addEventListener("change", () => {
+        updateWorkingTask({ responsible: select.value });
+      });
+    }
 
     wrapper.append(label, select);
     return wrapper;
@@ -299,6 +331,8 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     input.id = inputId;
     input.type = type;
     input.value = value ?? "";
+    input.disabled = readOnly || Boolean(options.disabled);
+    input.readOnly = readOnly || Boolean(options.readonly);
     if (options.autofocus) {
       input.dataset.autofocus = "true";
     }
@@ -310,9 +344,11 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
       input.setAttribute(attribute, attributeValue);
     });
 
-    input.addEventListener("input", () => {
-      updateWorkingTask({ [key]: type === "number" ? Number(input.value) : input.value });
-    });
+    if (!readOnly && !input.readOnly && !input.disabled) {
+      input.addEventListener("input", () => {
+        updateWorkingTask({ [key]: type === "number" ? Number(input.value) : input.value });
+      });
+    }
 
     wrapper.append(label, input);
     return wrapper;
@@ -332,12 +368,15 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     textarea.rows = 1;
     textarea.value = workingTask.shortDescription;
     textarea.dataset.autofocus = "true";
+    textarea.readOnly = readOnly;
 
     const resize = () => resizeAutoTextarea(textarea);
-    textarea.addEventListener("input", () => {
-      updateWorkingTask({ shortDescription: textarea.value });
-      resize();
-    });
+    if (!readOnly) {
+      textarea.addEventListener("input", () => {
+        updateWorkingTask({ shortDescription: textarea.value });
+        resize();
+      });
+    }
 
     if ("ResizeObserver" in window) {
       const observer = new ResizeObserver(resize);
@@ -371,28 +410,36 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
     textarea.id = "task-longDescription";
     textarea.value = workingTask.longDescription;
     textarea.placeholder = "Escribe notas, contexto, criterios de aceptación o enlaces relevantes.";
-    textarea.addEventListener("input", () => {
-      updateWorkingTask({ longDescription: textarea.value });
-    });
-
-    [
-      { label: "B", before: "**", after: "**", title: "Negrita" },
-      { label: "I", before: "_", after: "_", title: "Cursiva" },
-      { label: "Lista", before: "- ", after: "", title: "Lista" }
-    ].forEach((action) => {
-      const button = document.createElement("button");
-      button.className = "toolbar-button";
-      button.type = "button";
-      button.textContent = action.label;
-      button.title = action.title;
-      button.addEventListener("click", () => {
-        insertTextStyle(textarea, action.before, action.after);
+    textarea.readOnly = readOnly;
+    if (!readOnly) {
+      textarea.addEventListener("input", () => {
         updateWorkingTask({ longDescription: textarea.value });
       });
-      toolbar.append(button);
-    });
+    }
 
-    shell.append(toolbar, textarea);
+    if (!readOnly) {
+      [
+        { label: "B", before: "**", after: "**", title: "Negrita" },
+        { label: "I", before: "_", after: "_", title: "Cursiva" },
+        { label: "Lista", before: "- ", after: "", title: "Lista" }
+      ].forEach((action) => {
+        const button = document.createElement("button");
+        button.className = "toolbar-button";
+        button.type = "button";
+        button.textContent = action.label;
+        button.title = action.title;
+        button.addEventListener("click", () => {
+          insertTextStyle(textarea, action.before, action.after);
+          updateWorkingTask({ longDescription: textarea.value });
+        });
+        toolbar.append(button);
+      });
+    }
+
+    if (!readOnly) {
+      shell.append(toolbar);
+    }
+    shell.append(textarea);
     wrapper.append(label, shell);
     return wrapper;
   }
@@ -412,6 +459,10 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
   }
 
   function updateWorkingTask(changes) {
+    if (readOnly) {
+      return;
+    }
+
     workingTask = {
       ...workingTask,
       ...changes,
@@ -528,6 +579,11 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
   }
 
   function saveNowAndRender() {
+    if (readOnly) {
+      render();
+      return;
+    }
+
     clearTimeout(saveTimer);
     workingTask = normalizeTask(workingTask);
     if (validate()) {
@@ -567,13 +623,18 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
 
   function close() {
     clearTimeout(saveTimer);
-    if (validate()) {
+    if (!readOnly && validate()) {
       onSave(workingTask);
     }
     destroyModal();
   }
 
   async function handleSaveAndClose() {
+    if (readOnly) {
+      destroyModal();
+      return;
+    }
+
     clearTimeout(saveTimer);
     if (!validate()) {
       return;
@@ -584,6 +645,10 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
   }
 
   async function handleDelete() {
+    if (readOnly) {
+      return;
+    }
+
     const confirmed = window.confirm("¿Eliminar esta tarea? Esta acción no se puede deshacer.");
     if (!confirmed) {
       return;
@@ -617,4 +682,70 @@ export function openTaskModal({ task, projects = [], teamMembers = [], onSave, o
   modal.append(form);
   overlay.append(modal);
   root.append(overlay);
+}
+
+function renderReadOnlyChecklists(task) {
+  const section = document.createElement("section");
+  section.className = "checklists-section readonly-checklists";
+
+  const title = document.createElement("h2");
+  title.className = "section-title";
+  title.textContent = "Checklists";
+  section.append(title);
+
+  if (!task.checklists.length) {
+    const empty = document.createElement("p");
+    empty.className = "readonly-empty";
+    empty.textContent = "Sin checklists.";
+    section.append(empty);
+    return section;
+  }
+
+  task.checklists.forEach((checklist) => {
+    const wrapper = document.createElement("article");
+    wrapper.className = "checklist readonly-checklist";
+
+    const header = document.createElement("div");
+    header.className = "checklist-header";
+
+    const titleInput = document.createElement("input");
+    titleInput.className = "checklist-title-input";
+    titleInput.value = checklist.title;
+    titleInput.readOnly = true;
+    titleInput.setAttribute("aria-label", "Título de checklist");
+    header.append(titleInput);
+
+    const items = document.createElement("div");
+    items.className = "checklist-items";
+
+    if (!checklist.items.length) {
+      const empty = document.createElement("p");
+      empty.className = "readonly-empty";
+      empty.textContent = "Sin elementos.";
+      items.append(empty);
+    }
+
+    checklist.items.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = `checklist-item${item.completed ? " is-completed" : ""}`;
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = item.completed;
+      checkbox.disabled = true;
+
+      const input = document.createElement("input");
+      input.className = "checklist-item-text";
+      input.value = item.text;
+      input.readOnly = true;
+
+      row.append(checkbox, input);
+      items.append(row);
+    });
+
+    wrapper.append(header, items);
+    section.append(wrapper);
+  });
+
+  return section;
 }

@@ -1,5 +1,5 @@
-import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-section-aware-filters";
-import { createChatColumn } from "./ui.js?v=20260529-section-aware-filters";
+import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-guests";
+import { createChatColumn } from "./ui.js?v=20260529-guests";
 
 export function renderCRM({
   boardElement,

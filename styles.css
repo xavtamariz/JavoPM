@@ -242,6 +242,7 @@ h1 {
 .crm-section-toggle,
 .project-menu-button,
 .team-menu-button,
+.guest-menu-button,
 .filter-menu-button,
 .side-menu-toggle,
 .theme-toggle {
@@ -267,6 +268,7 @@ h1 {
 .crm-section-toggle,
 .project-menu-button,
 .team-menu-button,
+.guest-menu-button,
 .filter-menu-button,
 .side-menu-toggle {
   min-width: 0;
@@ -283,6 +285,7 @@ h1 {
 .crm-section-toggle,
 .project-menu-label,
 .team-menu-label,
+.guest-menu-label,
 .filter-menu-label {
   min-width: 0;
   overflow: visible;
@@ -328,6 +331,8 @@ h1 {
 .project-menu-button:focus-visible,
 .team-menu-button:hover,
 .team-menu-button:focus-visible,
+.guest-menu-button:hover,
+.guest-menu-button:focus-visible,
 .filter-menu-button:hover,
 .filter-menu-button:focus-visible,
 .side-menu-toggle:hover,
@@ -345,6 +350,7 @@ h1 {
 .crm-section-toggle:focus-visible,
 .project-menu-button:focus-visible,
 .team-menu-button:focus-visible,
+.guest-menu-button:focus-visible,
 .filter-menu-button:focus-visible,
 .side-menu-toggle:focus-visible,
 .theme-toggle:focus-visible {
@@ -357,6 +363,7 @@ h1 {
 .crm-section-toggle:active,
 .project-menu-button:active,
 .team-menu-button:active,
+.guest-menu-button:active,
 .filter-menu-button:active,
 .side-menu-toggle:active,
 .theme-toggle:active {
@@ -386,6 +393,7 @@ body[data-section="crm"] .side-menu .project-menu-button {
 }
 
 .account-menu-button[hidden],
+.guest-menu-button[hidden],
 .side-menu-local-actions[hidden],
 .side-menu-account[hidden] {
   display: none !important;
@@ -525,7 +533,8 @@ body[data-section="crm"] .side-menu .project-menu-button {
 }
 
 .side-menu .project-menu-button,
-.side-menu .team-menu-button {
+.side-menu .team-menu-button,
+.side-menu .guest-menu-button {
   justify-content: flex-start;
   width: 100%;
   min-height: 38px;
@@ -671,7 +680,7 @@ body[data-section="crm"] .side-menu .project-menu-button {
 
 .account-mode-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1010,6 +1019,48 @@ body[data-section="crm"] .side-menu .project-menu-button {
   font-family: var(--mono);
   font-size: 15px;
   overflow-wrap: anywhere;
+}
+
+.guest-project-options {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--checklist-bg);
+}
+
+.guest-project-options-title,
+.guest-project-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.guest-project-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.guest-project-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.guest-create-form {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr);
+}
+
+.guest-create-form .guest-project-options,
+.guest-create-form .project-create-button {
+  grid-column: 1 / -1;
 }
 
 .project-create-form {
@@ -3045,6 +3096,7 @@ body[data-section="crm"] .side-menu .project-menu-button {
   .crm-section-toggle,
   .project-menu-button,
   .team-menu-button,
+  .guest-menu-button,
   .filter-menu-button,
   .side-menu-toggle,
   .theme-toggle {
@@ -3063,6 +3115,7 @@ body[data-section="crm"] .side-menu .project-menu-button {
   .crm-section-toggle,
   .project-menu-button,
   .team-menu-button,
+  .guest-menu-button,
   .filter-menu-button {
     max-width: none;
   }
@@ -3076,6 +3129,7 @@ body[data-section="crm"] .side-menu .project-menu-button {
   .crm-section-toggle,
   .project-menu-label,
   .team-menu-label,
+  .guest-menu-label,
   .filter-menu-label {
     overflow: visible;
     text-overflow: clip;
@@ -3093,6 +3147,7 @@ body[data-section="crm"] .side-menu .project-menu-button {
   .crm-section-toggle,
   .project-menu-button,
   .team-menu-button,
+  .guest-menu-button,
   .filter-menu-button,
   .side-menu-toggle,
   .theme-toggle {
@@ -3111,6 +3166,7 @@ body[data-section="crm"] .side-menu .project-menu-button {
   .crm-section-toggle,
   .project-menu-button,
   .team-menu-button,
+  .guest-menu-button,
   .filter-menu-button {
     max-width: none;
   }

@@ -14,7 +14,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260529-section-aware-filters";
+} from "./models.js?v=20260529-guests";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -49,6 +49,10 @@ export function renderBoard({
   visibleTasks = tasks,
   chartCards = [],
   chat = {},
+  disableAddTask = false,
+  disableDrag = false,
+  hideSensitiveTaskFields = false,
+  readOnly = false,
   teamMembers = [],
   taskEvents = [],
   onAddTask,
@@ -91,10 +95,14 @@ export function renderBoard({
         cards,
         column,
         columns,
+        disableAddTask,
+        disableDrag,
+        hideSensitiveTaskFields,
         onAddTask,
         onMoveCard,
         onOpenTask,
         onUpdateChartCard,
+        readOnly,
         taskCount,
         taskEvents,
         tasks,
@@ -125,6 +133,9 @@ function createColumn({
   column,
   cards,
   columns,
+  disableAddTask = false,
+  disableDrag = false,
+  hideSensitiveTaskFields = false,
   tasks,
   teamMembers,
   taskEvents,
@@ -132,6 +143,7 @@ function createColumn({
   onOpenTask,
   onMoveCard,
   onUpdateChartCard,
+  readOnly = false,
   taskCount,
   workflowTaskTotal
 }) {
@@ -169,27 +181,29 @@ function createColumn({
   const taskList = document.createElement("div");
   taskList.className = "task-list";
   taskList.dataset.columnId = column.id;
-  taskList.addEventListener(
-    "click",
-    (event) => {
-      if (!moveMode) {
-        return;
-      }
+  if (!readOnly && !disableDrag) {
+    taskList.addEventListener(
+      "click",
+      (event) => {
+        if (!moveMode) {
+          return;
+        }
 
-      event.preventDefault();
-      event.stopPropagation();
+        event.preventDefault();
+        event.stopPropagation();
 
-      const cardId = moveMode.cardId;
-      const cardType = moveMode.cardType;
-      const sourceColumnId = moveMode.sourceColumnId;
-      clearMoveMode();
+        const cardId = moveMode.cardId;
+        const cardType = moveMode.cardType;
+        const sourceColumnId = moveMode.sourceColumnId;
+        clearMoveMode();
 
-      if (sourceColumnId !== column.id) {
-        onMoveCard(cardType, cardId, column.id);
-      }
-    },
-    true
-  );
+        if (sourceColumnId !== column.id) {
+          onMoveCard(cardType, cardId, column.id);
+        }
+      },
+      true
+    );
+  }
 
   if (cards.length === 0) {
     const empty = document.createElement("div");
@@ -200,6 +214,10 @@ function createColumn({
 
   cards.forEach((card) => {
     if (card.cardType === CHART_CARD_TYPE) {
+      if (readOnly) {
+        return;
+      }
+
       taskList.append(
         createChartCard({
           chartCard: card.data,
@@ -214,10 +232,16 @@ function createColumn({
       return;
     }
 
-    taskList.append(createTaskCard(card.data, onOpenTask, onMoveCard, teamMembers));
+    taskList.append(
+      createTaskCard(card.data, onOpenTask, onMoveCard, teamMembers, {
+        disableDrag,
+        hideSensitiveTaskFields,
+        readOnly
+      })
+    );
   });
 
-  if (column.allowTaskCreation !== false) {
+  if (!disableAddTask && !readOnly && column.allowTaskCreation !== false) {
     const addButton = document.createElement("button");
     addButton.className = "add-task-button";
     addButton.type = "button";
@@ -683,7 +707,8 @@ function formatMessageTime(value) {
   });
 }
 
-function createTaskCard(task, onOpenTask, onMoveCard, teamMembers = []) {
+function createTaskCard(task, onOpenTask, onMoveCard, teamMembers = [], options = {}) {
+  const { disableDrag = false, hideSensitiveTaskFields = false, readOnly = false } = options;
   const card = document.createElement("article");
   card.className = "task-card";
   card.role = "button";
@@ -712,14 +737,16 @@ function createTaskCard(task, onOpenTask, onMoveCard, teamMembers = []) {
     }
   });
 
-  const moveHandle = createMoveHandle({
-    card,
-    cardId: task.id,
-    cardType: TASK_CARD_TYPE,
-    item: task,
-    label: "Arrastrar tarea a otra columna",
-    onMoveCard
-  });
+  const moveHandle = readOnly || disableDrag
+    ? null
+    : createMoveHandle({
+        card,
+        cardId: task.id,
+        cardType: TASK_CARD_TYPE,
+        item: task,
+        label: "Arrastrar tarea a otra columna",
+        onMoveCard
+      });
 
   const title = document.createElement("p");
   title.className = "task-title";
@@ -763,10 +790,20 @@ function createTaskCard(task, onOpenTask, onMoveCard, teamMembers = []) {
   dateRow.className = "task-date-row";
 
   metaLeft.append(type, folio);
-  meta.append(metaLeft, points);
-  dateRow.append(dateRange, responsible);
-  footer.append(meta, dateRow);
-  card.append(title, project, footer, moveHandle);
+  if (hideSensitiveTaskFields) {
+    meta.append(metaLeft);
+  } else {
+    meta.append(metaLeft, points);
+    dateRow.append(dateRange, responsible);
+  }
+  footer.append(meta);
+  if (!hideSensitiveTaskFields) {
+    footer.append(dateRow);
+  }
+  card.append(title, project, footer);
+  if (moveHandle) {
+    card.append(moveHandle);
+  }
   return card;
 }
 

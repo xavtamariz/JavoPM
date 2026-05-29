@@ -37,6 +37,11 @@ export function makeInternalMemberEmail(nickname: string) {
   return `${nickname}.${suffix}@members.javo-pm.internal`;
 }
 
+export function makeInternalGuestEmail(nickname: string) {
+  const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 14);
+  return `${nickname}.${suffix}@guests.javo-pm.internal`;
+}
+
 export function mapTeamMemberRow(row: Record<string, unknown>, ownerKey = "") {
   return {
     id: row.id,
@@ -48,6 +53,21 @@ export function mapTeamMemberRow(row: Record<string, unknown>, ownerKey = "") {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     order: Number(row.order_index || 0),
+    ownerKey
+  };
+}
+
+export function mapGuestRow(row: Record<string, unknown>, ownerKey = "", projectIds: string[] = []) {
+  return {
+    id: row.id,
+    name: row.name,
+    nickname: row.nickname || "",
+    status: row.status || "active",
+    userId: row.user_id || "",
+    lastLoginAt: row.last_login_at || "",
+    projectIds,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
     ownerKey
   };
 }

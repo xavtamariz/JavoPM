@@ -34,7 +34,7 @@ import {
   updateChartCard,
   updateCRMProspect,
   updateTask
-} from "./db.js?v=20260529-section-preference";
+} from "./db.js?v=20260529-guests";
 import {
   bootstrapChat,
   createChatGroup,
@@ -43,12 +43,16 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260529-section-preference";
-import { saveProfileUIPreference } from "./cloudRepository.js?v=20260529-section-preference";
+} from "./chatRepository.js?v=20260529-guests";
+import {
+  pullGuestBoardSnapshot,
+  saveProfileUIPreference
+} from "./cloudRepository.js?v=20260529-guests";
 import {
   CHART_CARD_TYPE,
   CRM_STATUSES,
   DEFAULT_RESPONSIBLE_NAME,
+  METRICS_COLUMN_ID,
   TASK_CARD_TYPE,
   UNASSIGNED_PROJECT_NAME,
   createId,
@@ -67,25 +71,31 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260529-section-preference";
-import { initAccountModal } from "./accountModal.js?v=20260529-section-preference";
+} from "./models.js?v=20260529-guests";
+import { initAccountModal } from "./accountModal.js?v=20260529-guests";
 import {
   canUseAccounts,
   createOwnerAccount,
+  loginGuestAccount,
   loginMemberAccount,
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260529-section-preference";
+} from "./auth.js?v=20260529-guests";
 import {
   completeMemberPassword,
+  createCloudGuest,
   createCloudTeamMember,
+  deleteCloudGuest,
   deleteCloudTeamMember,
+  listCloudGuests,
+  resetCloudGuestKey,
   resetCloudTeamMemberKey,
+  updateCloudGuest,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260529-section-preference";
-import { openTaskModal } from "./modal.js?v=20260529-section-preference";
+} from "./memberApi.js?v=20260529-guests";
+import { openTaskModal } from "./modal.js?v=20260529-guests";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -93,11 +103,11 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260529-section-preference";
-import { renderBoard } from "./ui.js?v=20260529-section-preference";
-import { renderCRM } from "./crm.js?v=20260529-section-preference";
-import { openCRMProspectModal } from "./crmModal.js?v=20260529-section-preference";
-import { getSupabaseClient } from "./supabaseClient.js?v=20260529-section-preference";
+} from "./syncEngine.js?v=20260529-guests";
+import { renderBoard } from "./ui.js?v=20260529-guests";
+import { renderCRM } from "./crm.js?v=20260529-guests";
+import { openCRMProspectModal } from "./crmModal.js?v=20260529-guests";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260529-guests";
 
 const SECTION_BOARD = "board";
 const SECTION_CRM = "crm";
@@ -117,6 +127,7 @@ const state = {
     responsible: "all"
   },
   projects: [],
+  guests: [],
   teamMembers: [],
   taskEvents: [],
   tasks: [],
@@ -148,6 +159,7 @@ const chatMenuUnread = document.querySelector("[data-chat-menu-unread]");
 const crmSectionToggle = document.querySelector("[data-crm-section-toggle]");
 const projectMenuToggle = document.querySelector("[data-project-menu-toggle]");
 const teamMenuToggle = document.querySelector("[data-team-menu-toggle]");
+const guestMenuToggle = document.querySelector("[data-guest-menu-toggle]");
 const filterMenuToggle = document.querySelector("[data-filter-menu-toggle]");
 const themeToggle = document.querySelector("[data-theme-toggle]");
 const themeLabel = document.querySelector("[data-theme-label]");
@@ -167,12 +179,16 @@ let clientId;
 let projectModalKeydownHandler;
 let editingProjectId = "";
 let filterModalKeydownHandler;
+let guestModalKeydownHandler;
 let sideMenuKeydownHandler;
 let teamModalKeydownHandler;
 let expandedTeamMemberId = "";
+let expandedGuestId = "";
 let isOwnerProfileExpanded = false;
 let chatRefreshTimer;
 let chatMarkReadTimer;
+let guestRefreshInterval;
+let guestFocusRefreshHandler;
 
 async function startApp() {
   try {
@@ -191,6 +207,7 @@ async function startApp() {
     initCRMSectionToggle();
     initProjectMenu();
     initTeamMenu();
+    initGuestMenu();
     initFilterMenu();
     await tryRestoreOwnerSession();
     updateAccountButton();
@@ -223,6 +240,7 @@ function openSideMenu() {
 
   closeProjectModal({ clearRoot: false });
   closeTeamModal({ clearRoot: false });
+  closeGuestModal({ clearRoot: false });
   closeFilterModal({ clearRoot: false });
   sideMenuOverlay.hidden = false;
   sideMenuToggle.setAttribute("aria-expanded", "true");
@@ -349,6 +367,35 @@ function render() {
   normalizeBoardFilters();
   updateFilterButton();
 
+  if (isGuestAccount()) {
+    boardElement.className = "board guest-board";
+    renderBoard({
+      boardElement,
+      chartCards: [],
+      chat: buildChatViewModel(),
+      columns: state.columns.filter((column) => column.id !== METRICS_COLUMN_ID),
+      disableAddTask: true,
+      disableDrag: true,
+      hideSensitiveTaskFields: true,
+      readOnly: true,
+      taskEvents: [],
+      teamMembers: [],
+      tasks: state.tasks,
+      visibleTasks: state.tasks,
+      onAddTask: () => {},
+      onBackChatList: () => {},
+      onCreateChatGroup: () => {},
+      onOpenChatConversation: () => {},
+      onOpenTask: handleOpenTask,
+      onMoveCard: () => {},
+      onSendChatMessage: () => {},
+      onShowChatGroupForm: () => {},
+      onUpdateChatDraft: () => {},
+      onUpdateChartCard: () => {}
+    });
+    return;
+  }
+
   if (state.activeSection === SECTION_CRM) {
     boardElement.className = `crm-board${state.chat.isOpen ? " is-chat-open" : ""}`;
     renderCRM({
@@ -391,6 +438,11 @@ function render() {
 }
 
 function updateSectionState() {
+  if (isGuestAccount()) {
+    state.activeSection = SECTION_BOARD;
+    state.chat.isOpen = false;
+  }
+
   const section = normalizeSection(state.activeSection);
   document.body.dataset.section = section;
 
@@ -423,6 +475,14 @@ function initTeamMenu() {
   teamMenuToggle.addEventListener("click", openTeamModal);
 }
 
+function initGuestMenu() {
+  if (!guestMenuToggle) {
+    return;
+  }
+
+  guestMenuToggle.addEventListener("click", openGuestModal);
+}
+
 function initFilterMenu() {
   if (!filterMenuToggle) {
     return;
@@ -437,6 +497,10 @@ function initCRMSectionToggle() {
   }
 
   crmSectionToggle.addEventListener("click", () => {
+    if (isGuestAccount()) {
+      return;
+    }
+
     const nextSection = state.activeSection === SECTION_CRM ? SECTION_BOARD : SECTION_CRM;
     state.activeSection = nextSection;
     closeProjectModal({ clearRoot: false });
@@ -484,6 +548,7 @@ function initAccountMenu() {
     onCompleteMemberPassword: handleCompleteMemberPassword,
     onCreateAccount: handleCreateOwnerAccount,
     onLogin: handleLoginOwnerAccount,
+    onLoginGuest: handleLoginGuestAccount,
     onLoginMember: handleLoginMemberAccount,
     onLogout: handleLogoutOwnerAccount
   });
@@ -542,6 +607,11 @@ async function saveLocalSectionPreference(section, userId = state.account?.userI
 }
 
 async function applyAuthenticatedSectionPreference(result) {
+  if ((result.accountType || "") === "guest") {
+    state.activeSection = SECTION_BOARD;
+    return;
+  }
+
   const userId = result?.user?.id;
   if (!userId) {
     return;
@@ -562,6 +632,10 @@ async function applyAuthenticatedSectionPreference(result) {
 }
 
 function persistActiveSectionPreference(section) {
+  if (isGuestAccount()) {
+    return;
+  }
+
   const nextSection = normalizeSection(section);
   const userId = state.account?.userId;
 
@@ -578,7 +652,7 @@ function persistActiveSectionPreference(section) {
 }
 
 async function saveCloudSectionPreference(section) {
-  if (!state.account?.userId || !canUseAccounts()) {
+  if (!state.account?.userId || !canUseAccounts() || isGuestAccount()) {
     return null;
   }
 
@@ -697,6 +771,27 @@ async function handleLoginMemberAccount({ nickname, password }) {
   return result;
 }
 
+async function handleLoginGuestAccount({ nickname, password }) {
+  const backup = await exportBoardSnapshot();
+  await saveAnonymousBackup(backup);
+
+  const result = await loginGuestAccount({
+    nickname,
+    password
+  });
+
+  if (result.status === "authenticated") {
+    state.activeSection = SECTION_BOARD;
+    await importBoardSnapshot(result.cloud.snapshot);
+    await clearPendingMutations();
+    await reloadBoardState();
+    await startAuthenticatedSync(result);
+    render();
+  }
+
+  return result;
+}
+
 async function handleCompleteMemberPassword({ confirmPassword, password }) {
   if (password !== confirmPassword) {
     throw new Error("Las contraseñas no coinciden.");
@@ -720,11 +815,31 @@ async function startAuthenticatedSync(result) {
     role: result.role || (accountType === "member" ? "member" : "owner"),
     teamMemberId: result.teamMemberId || "",
     uiPreferences: result.uiPreferences || {},
-    userId: result.user?.id || ""
+    userId: result.user?.id || "",
+    boardId: result.cloud?.boardId || "",
+    workspaceId: result.cloud?.workspaceId || "",
+    guestId: result.guestId || result.cloud?.guest?.id || ""
   };
   state.ownerProfile = getAuthenticatedOwnerProfile(result);
+  if (isGuestAccount()) {
+    state.activeSection = SECTION_BOARD;
+    state.guests = [];
+    await stopCloudSyncSession();
+    await stopChatSession();
+    startGuestRefreshSession();
+    setSyncStatus("synced");
+    updateAccountButton();
+    return;
+  }
+
+  stopGuestRefreshSession();
   await applyAuthenticatedSectionPreference(result);
   await cleanupOwnerLocalResponsible();
+  if (isOwnerAccount()) {
+    await refreshGuests();
+  } else {
+    state.guests = [];
+  }
   updateAccountButton();
   await startCloudSyncSession({
     boardId: result.cloud.boardId,
@@ -742,10 +857,13 @@ async function handleLogoutOwnerAccount() {
   await signOutOwnerAccount();
   await stopCloudSyncSession();
   await stopChatSession();
+  stopGuestRefreshSession();
   await resetLocalBoardAfterLogout();
   await reloadBoardState();
   state.account = null;
   state.ownerProfile = null;
+  state.guests = [];
+  state.activeSection = SECTION_BOARD;
   updateAccountButton();
   updateChatButton();
   setSyncStatus("local");
@@ -812,6 +930,7 @@ async function handleDeleteLocalBoard() {
 function updateAccountButton() {
   const label = accountMenuToggle?.querySelector(".account-menu-label");
   const isAuthenticated = Boolean(state.account?.userId);
+  const isGuest = isGuestAccount();
   const accountLabel = state.account?.email || state.account?.nickname || state.account?.displayName || "";
 
   if (accountMenuToggle && label) {
@@ -827,6 +946,34 @@ function updateAccountButton() {
 
   if (localBoardActions) {
     localBoardActions.hidden = isAuthenticated;
+  }
+
+  if (crmSectionToggle) {
+    crmSectionToggle.hidden = isGuest;
+  }
+
+  if (filterMenuToggle) {
+    filterMenuToggle.hidden = isGuest;
+  }
+
+  if (projectMenuToggle) {
+    projectMenuToggle.hidden = isGuest;
+  }
+
+  if (teamMenuToggle) {
+    teamMenuToggle.hidden = isGuest;
+  }
+
+  if (guestMenuToggle) {
+    guestMenuToggle.hidden = !isOwnerAccount();
+  }
+
+  if (themeToggle) {
+    themeToggle.hidden = isGuest;
+  }
+
+  if (syncStatus) {
+    syncStatus.hidden = isGuest;
   }
 
   if (!sideAccount || !sideAccountEmail) {
@@ -845,6 +992,10 @@ function updateAccountButton() {
 }
 
 function getAccountTypeLabel() {
+  if (state.account?.accountType === "guest") {
+    return state.account.nickname ? `Invitado @${state.account.nickname}` : "Invitado";
+  }
+
   if (state.account?.accountType === "member") {
     return state.account.nickname ? `Miembro @${state.account.nickname}` : "Miembro";
   }
@@ -857,7 +1008,7 @@ function updateChatButton() {
     return;
   }
 
-  const enabled = Boolean(state.account?.userId && state.chat.isEnabled);
+  const enabled = Boolean(state.account?.userId && state.chat.isEnabled && !isGuestAccount());
   const unreadCount = enabled ? buildChatViewModel().totalUnread : 0;
   const showUnread = Boolean(enabled && !state.chat.isOpen && unreadCount > 0);
 
@@ -1407,6 +1558,10 @@ function scheduleMarkActiveChatRead() {
 }
 
 async function handleRemoteSnapshot(snapshot) {
+  if (isGuestAccount()) {
+    return;
+  }
+
   await importBoardSnapshot(snapshot);
   await reloadBoardState();
   if (state.chat.isEnabled) {
@@ -1432,6 +1587,10 @@ function setSyncStatus(status) {
 }
 
 function openProjectModal() {
+  if (isGuestAccount()) {
+    return;
+  }
+
   const root = document.querySelector("#modal-root");
   if (!root) {
     return;
@@ -1439,6 +1598,7 @@ function openProjectModal() {
 
   closeProjectModal({ clearRoot: false });
   closeTeamModal({ clearRoot: false });
+  closeGuestModal({ clearRoot: false });
   closeFilterModal({ clearRoot: false });
   closeSideMenu();
   root.innerHTML = "";
@@ -1863,6 +2023,10 @@ async function handleDeleteProject(projectId) {
 }
 
 function openFilterModal() {
+  if (isGuestAccount()) {
+    return;
+  }
+
   const root = document.querySelector("#modal-root");
   if (!root) {
     return;
@@ -2272,6 +2436,10 @@ function findAssignableTeamMemberByResponsibleName(responsibleName) {
 }
 
 function openTeamModal() {
+  if (isGuestAccount()) {
+    return;
+  }
+
   const root = document.querySelector("#modal-root");
   if (!root) {
     return;
@@ -2334,6 +2502,562 @@ function closeTeamModal(options = {}) {
       root.innerHTML = "";
     }
   }
+}
+
+function openGuestModal() {
+  if (!isOwnerAccount()) {
+    return;
+  }
+
+  const root = document.querySelector("#modal-root");
+  if (!root) {
+    return;
+  }
+
+  closeProjectModal({ clearRoot: false });
+  closeTeamModal({ clearRoot: false });
+  closeGuestModal({ clearRoot: false });
+  closeFilterModal({ clearRoot: false });
+  closeSideMenu();
+  root.innerHTML = "";
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) {
+      closeGuestModal();
+    }
+  });
+
+  const modal = document.createElement("section");
+  modal.className = "modal project-modal team-modal guest-modal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "guest-modal-title");
+
+  const shell = document.createElement("div");
+  shell.className = "modal-form";
+  shell.append(createGuestModalTopbar(), createGuestModalBody());
+
+  modal.append(shell);
+  overlay.append(modal);
+  root.append(overlay);
+
+  guestMenuToggle?.setAttribute("aria-expanded", "true");
+  guestModalKeydownHandler = (event) => {
+    if (event.key === "Escape") {
+      closeGuestModal();
+    }
+  };
+  document.addEventListener("keydown", guestModalKeydownHandler);
+
+  requestAnimationFrame(() => {
+    overlay.querySelector("[data-guest-create-input]")?.focus({ preventScroll: true });
+  });
+}
+
+function closeGuestModal(options = {}) {
+  const { clearRoot = true } = options;
+
+  if (guestModalKeydownHandler) {
+    document.removeEventListener("keydown", guestModalKeydownHandler);
+    guestModalKeydownHandler = null;
+  }
+
+  guestMenuToggle?.setAttribute("aria-expanded", "false");
+  expandedGuestId = "";
+
+  if (clearRoot) {
+    const root = document.querySelector("#modal-root");
+    if (root) {
+      root.innerHTML = "";
+    }
+  }
+}
+
+function createGuestModalTopbar() {
+  const topbar = document.createElement("div");
+  topbar.className = "modal-topbar";
+
+  const title = document.createElement("h2");
+  title.id = "guest-modal-title";
+  title.className = "modal-title";
+  title.textContent = "Invitados";
+
+  const closeButton = document.createElement("button");
+  closeButton.className = "close-button";
+  closeButton.type = "button";
+  closeButton.textContent = "×";
+  closeButton.setAttribute("aria-label", "Cerrar modal de invitados");
+  closeButton.addEventListener("click", closeGuestModal);
+
+  topbar.append(title, closeButton);
+  return topbar;
+}
+
+function createGuestModalBody(message = "", revealedKey = null) {
+  const body = document.createElement("div");
+  body.className = "project-modal-body team-modal-body guest-modal-body";
+  body.dataset.guestModalBody = "true";
+
+  body.append(createGuestListSection(revealedKey), createGuestCreateForm());
+
+  const validation = document.createElement("div");
+  validation.className = `project-menu-message${message ? " is-visible" : ""}`;
+  validation.textContent = message;
+  body.append(validation);
+  return body;
+}
+
+function createGuestListSection(revealedKey) {
+  const section = document.createElement("section");
+  section.className = "team-list-section";
+
+  const title = document.createElement("p");
+  title.className = "project-list-title";
+  title.textContent = "Invitados con acceso";
+
+  const list = document.createElement("ul");
+  list.className = "project-list team-list guest-list";
+
+  if (state.guests.length === 0) {
+    const emptyItem = document.createElement("li");
+    emptyItem.className = "project-list-item is-empty";
+    emptyItem.textContent = "Sin invitados todavía";
+    list.append(emptyItem);
+  } else {
+    state.guests.forEach((guest) => {
+      list.append(createGuestListItem(guest, revealedKey));
+    });
+  }
+
+  section.append(title, list);
+  return section;
+}
+
+function createGuestListItem(guest, revealedKey) {
+  const item = document.createElement("li");
+  item.className = "project-list-item team-list-item guest-list-item";
+
+  const summary = document.createElement("div");
+  summary.className = "team-member-summary";
+
+  const copy = document.createElement("div");
+  copy.className = "team-member-copy";
+
+  const name = document.createElement("strong");
+  name.textContent = guest.name || "Invitado";
+
+  const meta = document.createElement("span");
+  meta.textContent = getGuestMeta(guest);
+
+  copy.append(name, meta);
+
+  const actions = document.createElement("div");
+  actions.className = "team-member-actions";
+
+  const editButton = document.createElement("button");
+  editButton.className = "small-button team-member-edit-button";
+  editButton.type = "button";
+  editButton.textContent = expandedGuestId === guest.id ? "Cerrar" : "Editar";
+  editButton.addEventListener("click", () => {
+    expandedGuestId = expandedGuestId === guest.id ? "" : guest.id;
+    renderGuestModalBody();
+  });
+
+  actions.append(editButton);
+  summary.append(copy, actions);
+  item.append(summary);
+
+  if (revealedKey?.guestId === guest.id) {
+    const keyBox = document.createElement("div");
+    keyBox.className = "member-key-callout guest-key-callout";
+    keyBox.innerHTML = `<span>Clave de invitado</span><strong>${revealedKey.ownerKey}</strong>`;
+    item.append(keyBox);
+  }
+
+  if (expandedGuestId === guest.id) {
+    item.append(createGuestEditPanel(guest));
+  }
+
+  return item;
+}
+
+function createGuestEditPanel(guest) {
+  const form = document.createElement("form");
+  form.className = "team-member-edit-panel guest-edit-panel";
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    await handleUpdateGuestAccess({
+      guestId: guest.id,
+      name: formData.get("name"),
+      nickname: formData.get("nickname"),
+      projectIds: formData.getAll("projectIds"),
+      status: formData.get("status")
+    });
+  });
+
+  const nameInput = document.createElement("input");
+  nameInput.name = "name";
+  nameInput.type = "text";
+  nameInput.value = guest.name || "";
+  nameInput.placeholder = "Nombre";
+
+  const nicknameInput = document.createElement("input");
+  nicknameInput.name = "nickname";
+  nicknameInput.type = "text";
+  nicknameInput.value = guest.nickname || "";
+  nicknameInput.placeholder = "nickname";
+  nicknameInput.autocapitalize = "none";
+  nicknameInput.spellcheck = false;
+
+  const statusSelect = document.createElement("select");
+  statusSelect.name = "status";
+  [
+    ["active", "Activo"],
+    ["inactive", "Inactivo"]
+  ].forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    statusSelect.append(option);
+  });
+  statusSelect.value = guest.status === "inactive" ? "inactive" : "active";
+
+  const fieldsRow = document.createElement("div");
+  fieldsRow.className = "team-member-edit-fields";
+  fieldsRow.append(nameInput, nicknameInput, statusSelect);
+
+  const projects = createGuestProjectOptions(getGuestProjectIds(guest));
+
+  const saveButton = document.createElement("button");
+  saveButton.className = "save-task-button";
+  saveButton.type = "submit";
+  saveButton.textContent = "Guardar";
+
+  const resetKeyButton = document.createElement("button");
+  resetKeyButton.className = "small-button";
+  resetKeyButton.type = "button";
+  resetKeyButton.textContent = "Nueva clave";
+  resetKeyButton.addEventListener("click", () => handleResetGuestKey(guest.id));
+
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "small-button team-member-delete-button";
+  deleteButton.type = "button";
+  deleteButton.textContent = "Eliminar";
+  deleteButton.hidden = guest.status !== "inactive" || statusSelect.value !== "inactive";
+  deleteButton.addEventListener("click", () => handleDeleteCloudGuestAccess(guest));
+
+  statusSelect.addEventListener("change", () => {
+    deleteButton.hidden = guest.status !== "inactive" || statusSelect.value !== "inactive";
+  });
+
+  const actionsRow = document.createElement("div");
+  actionsRow.className = "team-member-edit-actions";
+  actionsRow.append(deleteButton, saveButton, resetKeyButton);
+
+  form.append(fieldsRow, projects, actionsRow);
+  return form;
+}
+
+function createGuestCreateForm() {
+  const form = document.createElement("form");
+  form.className = "team-access-create-form guest-create-form";
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    await handleCreateGuestAccess({
+      name: formData.get("name"),
+      nickname: formData.get("nickname"),
+      projectIds: formData.getAll("projectIds")
+    });
+  });
+
+  const input = document.createElement("input");
+  input.className = "project-create-input";
+  input.dataset.guestCreateInput = "true";
+  input.name = "name";
+  input.placeholder = "Nombre del invitado";
+  input.type = "text";
+
+  const nicknameInput = document.createElement("input");
+  nicknameInput.className = "project-create-input";
+  nicknameInput.name = "nickname";
+  nicknameInput.placeholder = "nickname";
+  nicknameInput.type = "text";
+  nicknameInput.autocapitalize = "none";
+  nicknameInput.spellcheck = false;
+
+  const createButton = document.createElement("button");
+  createButton.className = "project-create-button";
+  createButton.type = "submit";
+  createButton.textContent = "Crear invitado";
+
+  form.append(input, nicknameInput, createGuestProjectOptions([]), createButton);
+  return form;
+}
+
+function createGuestProjectOptions(selectedProjectIds = []) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "guest-project-options";
+
+  const label = document.createElement("p");
+  label.className = "guest-project-options-title";
+  label.textContent = "Proyectos visibles";
+  wrapper.append(label);
+
+  const selected = new Set(selectedProjectIds);
+  if (state.projects.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "guest-project-empty";
+    empty.textContent = "Crea al menos un proyecto para dar acceso.";
+    wrapper.append(empty);
+    return wrapper;
+  }
+
+  state.projects.forEach((project) => {
+    const option = document.createElement("label");
+    option.className = "guest-project-option";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.name = "projectIds";
+    checkbox.value = project.id;
+    checkbox.checked = selected.has(project.id);
+
+    option.append(checkbox, document.createTextNode(project.name));
+    wrapper.append(option);
+  });
+
+  return wrapper;
+}
+
+function renderGuestModalBody(message = "", revealedKey = null) {
+  const currentBody = document.querySelector("[data-guest-modal-body]");
+  if (!currentBody) {
+    return;
+  }
+
+  const nextBody = createGuestModalBody(message, revealedKey);
+  currentBody.replaceWith(nextBody);
+}
+
+async function refreshGuests() {
+  if (!isOwnerAccount()) {
+    state.guests = [];
+    return;
+  }
+
+  const boardId = getCloudSyncContext()?.boardId || state.account?.boardId;
+  if (!boardId) {
+    state.guests = [];
+    return;
+  }
+
+  try {
+    const result = await listCloudGuests({ boardId });
+    state.guests = Array.isArray(result.guests) ? result.guests : [];
+  } catch (error) {
+    console.warn("No se pudieron cargar invitados.", error);
+    state.guests = [];
+  }
+}
+
+function startGuestRefreshSession() {
+  stopGuestRefreshSession();
+  guestFocusRefreshHandler = () => refreshGuestSnapshot({ silent: true });
+  window.addEventListener("focus", guestFocusRefreshHandler);
+  guestRefreshInterval = window.setInterval(() => refreshGuestSnapshot({ silent: true }), 15000);
+}
+
+function stopGuestRefreshSession() {
+  if (guestRefreshInterval) {
+    window.clearInterval(guestRefreshInterval);
+    guestRefreshInterval = null;
+  }
+
+  if (guestFocusRefreshHandler) {
+    window.removeEventListener("focus", guestFocusRefreshHandler);
+    guestFocusRefreshHandler = null;
+  }
+}
+
+async function refreshGuestSnapshot({ silent = false } = {}) {
+  if (!isGuestAccount()) {
+    return;
+  }
+
+  try {
+    if (!silent) {
+      setSyncStatus("syncing");
+    }
+    const supabase = await getSupabaseClient();
+    const cloud = await pullGuestBoardSnapshot({ supabase });
+    await importBoardSnapshot(cloud.snapshot);
+    await reloadBoardState();
+    setSyncStatus("synced");
+    render();
+  } catch (error) {
+    setSyncStatus("error", error.message);
+  }
+}
+
+async function handleCreateGuestAccess({ name, nickname, projectIds }) {
+  const normalizedName = normalizeTeamMemberName(name);
+  const normalizedNickname = normalizeNickname(nickname);
+  const selectedProjectIds = normalizeGuestProjectIds(projectIds);
+
+  if (!normalizedName) {
+    renderGuestModalBody("Escribe el nombre del invitado.");
+    return;
+  }
+
+  if (!isValidMemberNickname(normalizedNickname)) {
+    renderGuestModalBody("El nickname debe ir en minúsculas, sin espacios, mínimo 3 caracteres.");
+    return;
+  }
+
+  if (guestNicknameExists(normalizedNickname)) {
+    renderGuestModalBody("Ese nickname de invitado ya existe.");
+    return;
+  }
+
+  if (selectedProjectIds.length === 0) {
+    renderGuestModalBody("Selecciona al menos un proyecto.");
+    return;
+  }
+
+  const boardId = getCloudSyncContext()?.boardId || state.account?.boardId;
+  if (!boardId) {
+    renderGuestModalBody("No encontramos el tablero cloud para crear el invitado.");
+    return;
+  }
+
+  try {
+    const result = await createCloudGuest({
+      boardId,
+      clientId,
+      name: normalizedName,
+      nickname: normalizedNickname,
+      projectIds: selectedProjectIds
+    });
+    state.guests = upsertGuestList(result.guest);
+    renderGuestModalBody("", {
+      guestId: result.guest.id,
+      ownerKey: result.guest.ownerKey
+    });
+  } catch (error) {
+    renderGuestModalBody(error.message || "No se pudo crear el invitado.");
+  }
+}
+
+async function handleUpdateGuestAccess({ guestId, name, nickname, projectIds, status }) {
+  const normalizedName = normalizeTeamMemberName(name);
+  const normalizedNickname = normalizeNickname(nickname);
+  const selectedProjectIds = normalizeGuestProjectIds(projectIds);
+
+  if (!normalizedName) {
+    renderGuestModalBody("Escribe el nombre del invitado.");
+    return;
+  }
+
+  if (!isValidMemberNickname(normalizedNickname)) {
+    renderGuestModalBody("El nickname debe ir en minúsculas, sin espacios, mínimo 3 caracteres.");
+    return;
+  }
+
+  if (guestNicknameExists(normalizedNickname, guestId)) {
+    renderGuestModalBody("Ese nickname de invitado ya existe.");
+    return;
+  }
+
+  if (selectedProjectIds.length === 0) {
+    renderGuestModalBody("Selecciona al menos un proyecto.");
+    return;
+  }
+
+  try {
+    const result = await updateCloudGuest({
+      clientId,
+      guestId,
+      name: normalizedName,
+      nickname: normalizedNickname,
+      projectIds: selectedProjectIds,
+      status
+    });
+    state.guests = upsertGuestList(result.guest);
+    renderGuestModalBody("Cambios guardados.");
+  } catch (error) {
+    renderGuestModalBody(error.message || "No se pudo actualizar el invitado.");
+  }
+}
+
+async function handleResetGuestKey(guestId) {
+  try {
+    const result = await resetCloudGuestKey({ clientId, guestId });
+    state.guests = upsertGuestList(result.guest);
+    renderGuestModalBody("", {
+      guestId,
+      ownerKey: result.guest.ownerKey
+    });
+  } catch (error) {
+    renderGuestModalBody(error.message || "No se pudo generar una nueva clave.");
+  }
+}
+
+async function handleDeleteCloudGuestAccess(guest) {
+  if (!guest || guest.status !== "inactive") {
+    renderGuestModalBody("Primero guarda el invitado como inactivo.");
+    return;
+  }
+
+  const displayName = guest.nickname ? `@${guest.nickname}` : guest.name;
+  if (!window.confirm(`¿Eliminar el acceso de ${displayName}?`)) {
+    return;
+  }
+
+  try {
+    await deleteCloudGuest({ clientId, guestId: guest.id });
+    state.guests = state.guests.filter((item) => item.id !== guest.id);
+    expandedGuestId = "";
+    renderGuestModalBody("Invitado eliminado.");
+  } catch (error) {
+    renderGuestModalBody(error.message || "No se pudo eliminar el invitado.");
+  }
+}
+
+function upsertGuestList(nextGuest) {
+  const existingIndex = state.guests.findIndex((guest) => guest.id === nextGuest.id);
+  const guests = existingIndex >= 0
+    ? state.guests.map((guest, index) => index === existingIndex ? nextGuest : guest)
+    : [...state.guests, nextGuest];
+
+  return guests.sort((a, b) => String(a.name).localeCompare(String(b.name), "es-MX"));
+}
+
+function normalizeGuestProjectIds(projectIds = []) {
+  const validIds = new Set(state.projects.map((project) => project.id));
+  return [...new Set(projectIds)].filter((projectId) => validIds.has(projectId));
+}
+
+function getGuestProjectIds(guest) {
+  return Array.isArray(guest.projectIds)
+    ? guest.projectIds
+    : Array.isArray(guest.allowedProjectIds)
+      ? guest.allowedProjectIds
+      : [];
+}
+
+function getGuestMeta(guest) {
+  const statusLabel = guest.status === "inactive" ? "Inactivo" : "Activo";
+  const projectCount = getGuestProjectIds(guest).length;
+  const projectLabel = projectCount === 1 ? "1 proyecto" : `${projectCount} proyectos`;
+  return guest.nickname ? `@${guest.nickname} · ${statusLabel} · ${projectLabel}` : `${statusLabel} · ${projectLabel}`;
+}
+
+function guestNicknameExists(nickname, exceptGuestId = "") {
+  return state.guests.some((guest) => guest.id !== exceptGuestId && guest.nickname === nickname);
 }
 
 function createTeamModalTopbar() {
@@ -3292,6 +4016,10 @@ function isMemberAccount() {
   return state.account?.accountType === "member";
 }
 
+function isGuestAccount() {
+  return state.account?.accountType === "guest";
+}
+
 function isDefaultResponsible(name) {
   return name.toLocaleLowerCase("es-MX") === DEFAULT_RESPONSIBLE_NAME.toLocaleLowerCase("es-MX");
 }
@@ -3343,6 +4071,10 @@ function buildTaskEventPayload({ currentTask, eventType, metadata = {}, occurred
 }
 
 function handleAddCRMProspect() {
+  if (isGuestAccount()) {
+    return;
+  }
+
   const prospect = createCRMProspectModel({
     order: state.crmProspects.length
   });
@@ -3357,6 +4089,10 @@ function handleAddCRMProspect() {
 }
 
 function handleOpenCRMProspect(prospectId) {
+  if (isGuestAccount()) {
+    return;
+  }
+
   const prospect = state.crmProspects.find((item) => item.id === prospectId);
   if (!prospect) {
     return;
@@ -3373,6 +4109,10 @@ function handleOpenCRMProspect(prospectId) {
 }
 
 async function handleSaveCRMProspect(prospect, options = {}) {
+  if (isGuestAccount()) {
+    return null;
+  }
+
   const previousProspect = state.crmProspects.find((item) => item.id === prospect.id);
   const normalizedProspect = normalizeCRMProspect({
     ...prospect,
@@ -3402,6 +4142,10 @@ async function handleSaveCRMProspect(prospect, options = {}) {
 }
 
 async function handleDeleteCRMProspect(prospectId) {
+  if (isGuestAccount()) {
+    return;
+  }
+
   const prospect = state.crmProspects.find((item) => item.id === prospectId);
   if (!prospect) {
     return;
@@ -3480,6 +4224,10 @@ async function recordTaskFieldEvents(previousTask, nextTask) {
 }
 
 async function handleAddTask(columnId) {
+  if (isGuestAccount()) {
+    return;
+  }
+
   const project = getDefaultProjectName();
   const folio = await createFolio(project);
   const task = createTaskModel({
@@ -3532,6 +4280,8 @@ function handleOpenTask(taskId) {
   }
 
   openTaskModal({
+    hideSensitiveFields: isGuestAccount(),
+    readOnly: isGuestAccount(),
     task,
     projects: state.projects,
     teamMembers: getAssignableTeamMembers(),
@@ -3542,6 +4292,10 @@ function handleOpenTask(taskId) {
 }
 
 async function handleSaveTask(task) {
+  if (isGuestAccount()) {
+    return null;
+  }
+
   const previousTask = state.tasks.find((currentTask) => currentTask.id === task.id);
   const savedTask = await updateTask(task);
   state.tasks = sortByOrder(
@@ -3560,6 +4314,10 @@ async function handleSaveTask(task) {
 }
 
 async function handleUpdateChartCard(chartCard) {
+  if (isGuestAccount()) {
+    return null;
+  }
+
   const savedChartCard = await updateChartCard(chartCard);
   state.chartCards = sortByOrder(
     state.chartCards.map((currentChartCard) =>
@@ -3607,6 +4365,10 @@ function getTaskPatch(previousTask, nextTask) {
 }
 
 async function handleMoveCard(cardType, cardId, targetColumnId) {
+  if (isGuestAccount()) {
+    return;
+  }
+
   if (cardType === TASK_CARD_TYPE) {
     await handleMoveTask(cardId, targetColumnId);
     return;
@@ -3708,6 +4470,10 @@ async function handleMoveChartCard(chartCardId, targetColumnId) {
 }
 
 async function handleDeleteTask(taskId) {
+  if (isGuestAccount()) {
+    return;
+  }
+
   const taskToDelete = state.tasks.find((task) => task.id === taskId);
   const nextTasks = state.tasks.filter((task) => task.id !== taskId);
   const normalizedCards = normalizeOrdersByColumn(nextTasks, state.chartCards);
