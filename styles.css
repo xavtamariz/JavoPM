@@ -2922,11 +2922,6 @@ body[data-section="crm"] .side-menu .team-menu-button {
     grid-template-columns: 1fr;
   }
 
-  .crm-view-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
   .crm-add-prospect-button {
     width: 100%;
     min-width: 0;

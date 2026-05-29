@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260529-crm-header";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260529-crm-header-align";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");
