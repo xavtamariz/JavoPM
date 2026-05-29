@@ -22,7 +22,7 @@
         supabaseUrl: "https://scoacquwvbchdsldxaep.supabase.co"
       };
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260528-team-side-menu" />
+    <link rel="stylesheet" href="./styles.css?v=20260528-projects-side-menu" />
   </head>
   <body>
     <div class="app-shell">
@@ -57,17 +57,6 @@
                 hidden
               ></span>
             </button>
-            <div class="project-menu" data-project-menu>
-              <button
-                class="project-menu-button"
-                type="button"
-                data-project-menu-toggle
-                aria-expanded="false"
-                aria-haspopup="dialog"
-              >
-                <span class="project-menu-label">Proyectos</span>
-              </button>
-            </div>
             <button
               class="filter-menu-button"
               type="button"
@@ -118,6 +107,15 @@
               <span data-theme-label>Tema claro</span>
             </button>
             <button
+              class="project-menu-button"
+              type="button"
+              data-project-menu-toggle
+              aria-expanded="false"
+              aria-haspopup="dialog"
+            >
+              <span class="project-menu-label">Proyectos</span>
+            </button>
+            <button
               class="team-menu-button"
               type="button"
               data-team-menu-toggle
@@ -148,6 +146,6 @@
 
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260528-team-side-menu"></script>
+    <script type="module" src="./app.js?v=20260528-projects-side-menu"></script>
   </body>
 </html>
