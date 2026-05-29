@@ -14,7 +14,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260529-crm-contacts";
+} from "./models.js?v=20260529-crm-position-fields";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",
@@ -450,7 +450,6 @@ function rowsToLocalSnapshot(rows) {
       contactName: row.contact_name || "",
       contacts: sortByOrder((crmContactsByProspect.get(row.id) || []).map((contactRow) => ({
         createdAt: contactRow.created_at,
-        extension: contactRow.extension || "",
         fullName: contactRow.full_name || "",
         id: contactRow.id,
         mobilePhone: contactRow.mobile_phone || "",
@@ -461,7 +460,6 @@ function rowsToLocalSnapshot(rows) {
       }))),
       createdAt: row.created_at,
       email: row.email || "",
-      extension: row.extension || "",
       id: row.id,
       interactions: sortByOrder((crmInteractionsByProspect.get(row.id) || []).map((interactionRow) => ({
         authorName: interactionRow.author_name || "",
@@ -475,6 +473,7 @@ function rowsToLocalSnapshot(rows) {
       mobilePhone: row.mobile_phone || "",
       order: row.order_index || 0,
       phone: row.phone || "",
+      position: row.position || "",
       rfc: row.rfc || "",
       status: row.status || DEFAULT_CRM_STATUS,
       updatedAt: row.updated_at
@@ -811,11 +810,11 @@ function crmProspectToRow(prospect, { boardId, clientId }) {
     company_name: prospect.companyName,
     contact_name: prospect.contactName || "",
     email: prospect.email || "",
-    extension: prospect.extension || "",
     id: prospect.id,
     mobile_phone: prospect.mobilePhone || "",
     order_index: prospect.order,
     phone: prospect.phone || "",
+    position: prospect.position || "",
     rfc: prospect.rfc || "",
     sort_key: getSortKey(prospect.order),
     status: prospect.status || DEFAULT_CRM_STATUS
@@ -825,7 +824,6 @@ function crmProspectToRow(prospect, { boardId, clientId }) {
 function crmProspectContactToRow(contact, { boardId, clientId, order, prospectId }) {
   const orderIndex = Number.isFinite(Number(contact.order)) ? Number(contact.order) : order || 0;
   return withBoardFields({
-    extension: contact.extension || "",
     full_name: contact.fullName || "",
     id: contact.id,
     mobile_phone: contact.mobilePhone || "",

@@ -1,11 +1,11 @@
-import { renderChecklists } from "./checklist.js?v=20260529-crm-contacts";
+import { renderChecklists } from "./checklist.js?v=20260529-crm-position-fields";
 import {
   CRM_STATUSES,
   createCRMContact,
   createCRMInteraction,
   normalizeCRMProspect,
   sortByOrder
-} from "./models.js?v=20260529-crm-contacts";
+} from "./models.js?v=20260529-crm-position-fields";
 
 let crmModalKeydownHandler;
 
@@ -78,10 +78,10 @@ export function openCRMProspectModal({
     fields.append(
       createInputField("Empresa / persona física o moral", "companyName", draft.companyName),
       createInputField("Nombre completo", "contactName", draft.contactName),
-      createInputField("Celular", "mobilePhone", draft.mobilePhone, "tel"),
+      createInputField("Puesto", "position", draft.position),
       createInputField("Correo", "email", draft.email, "email"),
+      createInputField("Celular", "mobilePhone", draft.mobilePhone, "tel"),
       createInputField("Teléfono", "phone", draft.phone, "tel"),
-      createInputField("Extensión", "extension", draft.extension),
       createInputField("RFC", "rfc", draft.rfc),
       createTextareaField("Dirección", "address", draft.address, "crm-address-field"),
       createStatusField()
@@ -230,8 +230,7 @@ export function openCRMProspectModal({
       createContactInput("Nombre completo", contactIndex, "fullName", contact.fullName),
       createContactInput("Puesto", contactIndex, "position", contact.position),
       createContactInput("Celular", contactIndex, "mobilePhone", contact.mobilePhone, "tel"),
-      createContactInput("Teléfono", contactIndex, "phone", contact.phone, "tel"),
-      createContactInput("Extensión", contactIndex, "extension", contact.extension)
+      createContactInput("Teléfono", contactIndex, "phone", contact.phone, "tel")
     );
 
     const deleteButton = document.createElement("button");

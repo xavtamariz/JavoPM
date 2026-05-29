@@ -147,7 +147,6 @@ export function createCRMInteraction({
 }
 
 export function createCRMContact({
-  extension = "",
   fullName = "",
   mobilePhone = "",
   order = 0,
@@ -158,7 +157,6 @@ export function createCRMContact({
 
   return {
     id: createId("crm_contact"),
-    extension: sanitizeText(extension),
     fullName: normalizeTeamMemberName(fullName),
     mobilePhone: sanitizeText(mobilePhone),
     phone: sanitizeText(phone),
@@ -174,10 +172,10 @@ export function createCRMProspectModel({
   contactName = "",
   address = "",
   email = "",
-  extension = "",
   mobilePhone = "",
   order = 0,
   phone = "",
+  position = "",
   rfc = "",
   status = DEFAULT_CRM_STATUS
 } = {}) {
@@ -187,10 +185,10 @@ export function createCRMProspectModel({
     id: createId("crm_prospect"),
     companyName: normalizeTeamMemberName(companyName) || "Nuevo prospecto",
     contactName: normalizeTeamMemberName(contactName),
+    position: normalizeTeamMemberName(position),
     mobilePhone: sanitizeText(mobilePhone),
     email: sanitizeText(email),
     phone: sanitizeText(phone),
-    extension: sanitizeText(extension),
     rfc: sanitizeText(rfc),
     address: sanitizeText(address),
     comments: "",
@@ -350,10 +348,10 @@ export function normalizeCRMProspect(prospect = {}, prospectIndex = 0) {
     id: prospect.id || createId("crm_prospect"),
     companyName: normalizeTeamMemberName(prospect.companyName) || "Nuevo prospecto",
     contactName: normalizeTeamMemberName(prospect.contactName),
+    position: normalizeTeamMemberName(prospect.position),
     mobilePhone: sanitizeText(prospect.mobilePhone),
     email: sanitizeText(prospect.email),
     phone: sanitizeText(prospect.phone),
-    extension: sanitizeText(prospect.extension),
     rfc: sanitizeText(prospect.rfc),
     address: sanitizeText(prospect.address),
     comments: typeof prospect.comments === "string" ? prospect.comments : "",
@@ -372,7 +370,6 @@ export function normalizeCRMContact(contact = {}, contactIndex = 0) {
 
   return {
     id: contact.id || createId("crm_contact"),
-    extension: sanitizeText(contact.extension),
     fullName: normalizeTeamMemberName(contact.fullName),
     mobilePhone: sanitizeText(contact.mobilePhone),
     phone: sanitizeText(contact.phone),
@@ -459,8 +456,7 @@ export function normalizeCRMContacts(contacts) {
       contact.fullName ||
       contact.position ||
       contact.mobilePhone ||
-      contact.phone ||
-      contact.extension
+      contact.phone
     )
     .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
 }

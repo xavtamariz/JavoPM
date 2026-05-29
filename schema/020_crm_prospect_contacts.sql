@@ -8,7 +8,6 @@ create table if not exists public.crm_prospect_contacts (
   position text not null default '',
   mobile_phone text not null default '',
   phone text not null default '',
-  extension text not null default '',
   order_index integer not null default 0,
   sort_key text not null default '000000',
   client_id text,

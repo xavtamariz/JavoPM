@@ -34,7 +34,7 @@ import {
   updateChartCard,
   updateCRMProspect,
   updateTask
-} from "./db.js?v=20260529-crm-contacts";
+} from "./db.js?v=20260529-crm-position-fields";
 import {
   bootstrapChat,
   createChatGroup,
@@ -43,7 +43,7 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260529-crm-contacts";
+} from "./chatRepository.js?v=20260529-crm-position-fields";
 import {
   CHART_CARD_TYPE,
   DEFAULT_RESPONSIBLE_NAME,
@@ -65,8 +65,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260529-crm-contacts";
-import { initAccountModal } from "./accountModal.js?v=20260529-crm-contacts";
+} from "./models.js?v=20260529-crm-position-fields";
+import { initAccountModal } from "./accountModal.js?v=20260529-crm-position-fields";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -74,7 +74,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260529-crm-contacts";
+} from "./auth.js?v=20260529-crm-position-fields";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -82,8 +82,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260529-crm-contacts";
-import { openTaskModal } from "./modal.js?v=20260529-crm-contacts";
+} from "./memberApi.js?v=20260529-crm-position-fields";
+import { openTaskModal } from "./modal.js?v=20260529-crm-position-fields";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -91,10 +91,10 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260529-crm-contacts";
-import { renderBoard } from "./ui.js?v=20260529-crm-contacts";
-import { renderCRM } from "./crm.js?v=20260529-crm-contacts";
-import { openCRMProspectModal } from "./crmModal.js?v=20260529-crm-contacts";
+} from "./syncEngine.js?v=20260529-crm-position-fields";
+import { renderBoard } from "./ui.js?v=20260529-crm-position-fields";
+import { renderCRM } from "./crm.js?v=20260529-crm-position-fields";
+import { openCRMProspectModal } from "./crmModal.js?v=20260529-crm-position-fields";
 
 const state = {
   activeSection: "board",
