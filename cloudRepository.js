@@ -14,7 +14,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260529-crm-footer";
+} from "./models.js?v=20260529-crm-chat-column";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",

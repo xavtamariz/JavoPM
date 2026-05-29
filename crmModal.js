@@ -1,10 +1,10 @@
-import { renderChecklists } from "./checklist.js?v=20260529-crm-footer";
+import { renderChecklists } from "./checklist.js?v=20260529-crm-chat-column";
 import {
   CRM_STATUSES,
   createCRMInteraction,
   normalizeCRMProspect,
   sortByOrder
-} from "./models.js?v=20260529-crm-footer";
+} from "./models.js?v=20260529-crm-chat-column";
 
 let crmModalKeydownHandler;
 

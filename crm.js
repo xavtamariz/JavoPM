@@ -1,12 +1,36 @@
-import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-footer";
+import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-chat-column";
+import { createChatColumn } from "./ui.js?v=20260529-crm-chat-column";
 
 export function renderCRM({
   boardElement,
+  chat = {},
+  onBackChatList,
+  onCreateChatGroup,
   onAddProspect,
+  onOpenChatConversation,
   onOpenProspect,
+  onSendChatMessage,
+  onShowChatGroupForm,
+  onUpdateChatDraft,
   prospects = []
 }) {
   boardElement.innerHTML = "";
+  boardElement.style.gridTemplateColumns = "";
+
+  if (chat.isOpen) {
+    boardElement.append(
+      createChatColumn({
+        chat,
+        onBackChatList,
+        onCreateChatGroup,
+        onOpenChatConversation,
+        onSendChatMessage,
+        onShowChatGroupForm,
+        onUpdateChatDraft
+      })
+    );
+  }
+
   const section = document.createElement("section");
   section.className = "crm-view";
 

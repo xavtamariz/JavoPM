@@ -1092,8 +1092,17 @@ body[data-section="crm"] .side-menu .team-menu-button {
 }
 
 .crm-board {
+  display: grid;
   width: 100%;
+  min-width: 0;
   min-height: calc(100dvh - 84px);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+
+.crm-board.is-chat-open {
+  grid-template-columns: var(--column-width) minmax(0, 1fr);
 }
 
 .crm-view {
@@ -2844,6 +2853,12 @@ body[data-section="crm"] .side-menu .team-menu-button {
   .crm-board,
   .crm-view {
     min-height: calc(100dvh - 84px);
+  }
+
+  .crm-board.is-chat-open {
+    width: max-content;
+    min-width: max-content;
+    grid-template-columns: repeat(2, var(--column-width));
   }
 
   .crm-field-grid,

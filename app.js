@@ -34,7 +34,7 @@ import {
   updateChartCard,
   updateCRMProspect,
   updateTask
-} from "./db.js?v=20260529-crm-footer";
+} from "./db.js?v=20260529-crm-chat-column";
 import {
   bootstrapChat,
   createChatGroup,
@@ -43,7 +43,7 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260529-crm-footer";
+} from "./chatRepository.js?v=20260529-crm-chat-column";
 import {
   CHART_CARD_TYPE,
   DEFAULT_RESPONSIBLE_NAME,
@@ -65,8 +65,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260529-crm-footer";
-import { initAccountModal } from "./accountModal.js?v=20260529-crm-footer";
+} from "./models.js?v=20260529-crm-chat-column";
+import { initAccountModal } from "./accountModal.js?v=20260529-crm-chat-column";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -74,7 +74,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260529-crm-footer";
+} from "./auth.js?v=20260529-crm-chat-column";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -82,8 +82,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260529-crm-footer";
-import { openTaskModal } from "./modal.js?v=20260529-crm-footer";
+} from "./memberApi.js?v=20260529-crm-chat-column";
+import { openTaskModal } from "./modal.js?v=20260529-crm-chat-column";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -91,10 +91,10 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260529-crm-footer";
-import { renderBoard } from "./ui.js?v=20260529-crm-footer";
-import { renderCRM } from "./crm.js?v=20260529-crm-footer";
-import { openCRMProspectModal } from "./crmModal.js?v=20260529-crm-footer";
+} from "./syncEngine.js?v=20260529-crm-chat-column";
+import { renderBoard } from "./ui.js?v=20260529-crm-chat-column";
+import { renderCRM } from "./crm.js?v=20260529-crm-chat-column";
+import { openCRMProspectModal } from "./crmModal.js?v=20260529-crm-chat-column";
 
 const state = {
   activeSection: "board",
@@ -341,12 +341,19 @@ function render() {
   updateFilterButton();
 
   if (state.activeSection === "crm") {
-    boardElement.className = "crm-board";
+    boardElement.className = `crm-board${state.chat.isOpen ? " is-chat-open" : ""}`;
     renderCRM({
       boardElement,
+      chat: buildChatViewModel(),
       prospects: state.crmProspects,
       onAddProspect: handleAddCRMProspect,
-      onOpenProspect: handleOpenCRMProspect
+      onBackChatList: handleBackChatList,
+      onCreateChatGroup: handleCreateChatGroup,
+      onOpenChatConversation: handleOpenChatConversation,
+      onOpenProspect: handleOpenCRMProspect,
+      onSendChatMessage: handleSendChatMessage,
+      onShowChatGroupForm: handleShowChatGroupForm,
+      onUpdateChatDraft: handleUpdateChatDraft
     });
     return;
   }
@@ -440,7 +447,6 @@ function initChatMenu() {
       return;
     }
 
-    state.activeSection = "board";
     state.chat.isOpen = !state.chat.isOpen;
     state.chat.view = state.chat.isOpen ? state.chat.view || "list" : "list";
     state.chat.error = "";

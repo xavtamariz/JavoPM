@@ -14,7 +14,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260529-crm-footer";
+} from "./models.js?v=20260529-crm-chat-column";
 
 const AXIS_LABELS = {
   frozen: "C",
@@ -230,7 +230,7 @@ function createColumn({
   return section;
 }
 
-function createChatColumn({
+export function createChatColumn({
   chat,
   onBackChatList,
   onCreateChatGroup,
