@@ -34,7 +34,7 @@ import {
   updateChartCard,
   updateCRMProspect,
   updateTask
-} from "./db.js?v=20260529-crm-header-stats";
+} from "./db.js?v=20260529-section-aware-filters";
 import {
   bootstrapChat,
   createChatGroup,
@@ -43,9 +43,10 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260529-crm-header-stats";
+} from "./chatRepository.js?v=20260529-section-aware-filters";
 import {
   CHART_CARD_TYPE,
+  CRM_STATUSES,
   DEFAULT_RESPONSIBLE_NAME,
   TASK_CARD_TYPE,
   UNASSIGNED_PROJECT_NAME,
@@ -65,8 +66,8 @@ import {
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260529-crm-header-stats";
-import { initAccountModal } from "./accountModal.js?v=20260529-crm-header-stats";
+} from "./models.js?v=20260529-section-aware-filters";
+import { initAccountModal } from "./accountModal.js?v=20260529-section-aware-filters";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -74,7 +75,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260529-crm-header-stats";
+} from "./auth.js?v=20260529-section-aware-filters";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -82,8 +83,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260529-crm-header-stats";
-import { openTaskModal } from "./modal.js?v=20260529-crm-header-stats";
+} from "./memberApi.js?v=20260529-section-aware-filters";
+import { openTaskModal } from "./modal.js?v=20260529-section-aware-filters";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -91,10 +92,10 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260529-crm-header-stats";
-import { renderBoard } from "./ui.js?v=20260529-crm-header-stats";
-import { renderCRM } from "./crm.js?v=20260529-crm-header-stats";
-import { openCRMProspectModal } from "./crmModal.js?v=20260529-crm-header-stats";
+} from "./syncEngine.js?v=20260529-section-aware-filters";
+import { renderBoard } from "./ui.js?v=20260529-section-aware-filters";
+import { renderCRM } from "./crm.js?v=20260529-section-aware-filters";
+import { openCRMProspectModal } from "./crmModal.js?v=20260529-section-aware-filters";
 
 const state = {
   activeSection: "board",
@@ -104,6 +105,7 @@ const state = {
   account: null,
   ownerProfile: null,
   filters: {
+    crmStatus: "all",
     project: "all",
     responsible: "all"
   },
@@ -345,7 +347,7 @@ function render() {
     renderCRM({
       boardElement,
       chat: buildChatViewModel(),
-      prospects: state.crmProspects,
+      prospects: getVisibleCRMProspects(),
       onAddProspect: handleAddCRMProspect,
       onBackChatList: handleBackChatList,
       onCreateChatGroup: handleCreateChatGroup,
@@ -693,6 +695,7 @@ async function handleDeleteLocalBoard() {
     await resetLocalBoardAfterLogout();
     await reloadBoardState();
     state.filters = {
+      crmStatus: "all",
       project: "all",
       responsible: "all"
     };
@@ -1801,7 +1804,7 @@ function openFilterModal() {
   document.addEventListener("keydown", filterModalKeydownHandler);
 
   requestAnimationFrame(() => {
-    overlay.querySelector("[data-filter-project-select]")?.focus({ preventScroll: true });
+    overlay.querySelector("[data-filter-crm-status-select], [data-filter-project-select]")?.focus({ preventScroll: true });
   });
 }
 
@@ -1847,6 +1850,33 @@ function createFilterModalBody() {
   const body = document.createElement("div");
   body.className = "filter-modal-body";
 
+  if (state.activeSection === "crm") {
+    const statusField = createFilterSelectField({
+      id: "filter-crm-status",
+      label: "Estatus",
+      options: getCRMStatusFilterOptions(),
+      selectDatasetKey: "filterCrmStatusSelect",
+      value: getValidFilterValue(state.filters.crmStatus, getCRMStatusFilterOptions()),
+      onChange: (value) => {
+        state.filters = {
+          ...state.filters,
+          crmStatus: value
+        };
+        render();
+      }
+    });
+
+    const actions = createFilterActions({
+      onClear: () => {
+        clearCRMFilters();
+        closeFilterModal();
+      }
+    });
+
+    body.append(statusField, actions);
+    return body;
+  }
+
   const projectField = createFilterSelectField({
     id: "filter-project",
     label: "Proyecto",
@@ -1877,6 +1907,18 @@ function createFilterModalBody() {
     }
   });
 
+  const actions = createFilterActions({
+    onClear: () => {
+      clearBoardFilters();
+      closeFilterModal();
+    }
+  });
+
+  body.append(projectField, responsibleField, actions);
+  return body;
+}
+
+function createFilterActions({ onClear }) {
   const actions = document.createElement("div");
   actions.className = "filter-actions";
 
@@ -1884,10 +1926,7 @@ function createFilterModalBody() {
   clearButton.className = "project-secondary-button";
   clearButton.type = "button";
   clearButton.textContent = "Limpiar";
-  clearButton.addEventListener("click", () => {
-    clearBoardFilters();
-    closeFilterModal();
-  });
+  clearButton.addEventListener("click", onClear);
 
   const closeButton = document.createElement("button");
   closeButton.className = "project-create-button filter-done-button";
@@ -1896,8 +1935,7 @@ function createFilterModalBody() {
   closeButton.addEventListener("click", closeFilterModal);
 
   actions.append(clearButton, closeButton);
-  body.append(projectField, responsibleField, actions);
-  return body;
+  return actions;
 }
 
 function createFilterSelectField({ id, label, onChange, options, selectDatasetKey, value }) {
@@ -1980,6 +2018,16 @@ function getResponsibleFilterOptions() {
   return options;
 }
 
+function getCRMStatusFilterOptions() {
+  return [
+    { label: "Todos los estatus", value: "all" },
+    ...CRM_STATUSES.map((status) => ({
+      label: status,
+      value: status
+    }))
+  ];
+}
+
 function getResponsibleFilterValue(teamMember) {
   if (teamMember?.status !== "local" && teamMember?.nickname) {
     return teamMember.nickname;
@@ -2007,6 +2055,7 @@ function getValidFilterValue(value, options) {
 
 function clearBoardFilters() {
   state.filters = {
+    ...state.filters,
     project: "all",
     responsible: "all"
   };
@@ -2015,9 +2064,19 @@ function clearBoardFilters() {
 
 function normalizeBoardFilters() {
   state.filters = {
+    ...state.filters,
     project: getValidFilterValue(state.filters.project, getProjectFilterOptions()),
-    responsible: getValidFilterValue(state.filters.responsible, getResponsibleFilterOptions())
+    responsible: getValidFilterValue(state.filters.responsible, getResponsibleFilterOptions()),
+    crmStatus: getValidFilterValue(state.filters.crmStatus, getCRMStatusFilterOptions())
   };
+}
+
+function clearCRMFilters() {
+  state.filters = {
+    ...state.filters,
+    crmStatus: "all"
+  };
+  render();
 }
 
 function updateFilterButton() {
@@ -2026,19 +2085,36 @@ function updateFilterButton() {
   }
 
   const activeCount = getActiveFilterCount();
+  const sectionLabel = state.activeSection === "crm" ? "CRM" : "tablero";
   filterMenuToggle.dataset.active = activeCount > 0 ? "true" : "false";
   filterMenuToggle.setAttribute(
     "aria-label",
-    activeCount > 0 ? `Filtros activos: ${activeCount}` : "Abrir filtros"
+    activeCount > 0 ? `Filtros activos en ${sectionLabel}: ${activeCount}` : `Abrir filtros de ${sectionLabel}`
   );
 }
 
 function getActiveFilterCount() {
+  if (state.activeSection === "crm") {
+    return Number(state.filters.crmStatus !== "all");
+  }
+
   return Number(state.filters.project !== "all") + Number(state.filters.responsible !== "all");
 }
 
 function getVisibleTasks() {
   return state.tasks.filter((task) => matchesProjectFilter(task) && matchesResponsibleFilter(task));
+}
+
+function getVisibleCRMProspects() {
+  return state.crmProspects.filter((prospect) => matchesCRMStatusFilter(prospect));
+}
+
+function matchesCRMStatusFilter(prospect) {
+  if (state.filters.crmStatus === "all") {
+    return true;
+  }
+
+  return prospect.status === state.filters.crmStatus;
 }
 
 function matchesProjectFilter(task) {

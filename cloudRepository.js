@@ -14,7 +14,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260529-crm-header-stats";
+} from "./models.js?v=20260529-section-aware-filters";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",

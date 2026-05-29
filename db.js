@@ -14,7 +14,7 @@ import {
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260529-crm-header-stats";
+} from "./models.js?v=20260529-section-aware-filters";
 
 const DB_NAME = "JavoPM";
 const DB_VERSION = 9;

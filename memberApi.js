@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260529-crm-header-stats";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260529-section-aware-filters";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({

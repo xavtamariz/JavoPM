@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260529-crm-header-stats";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260529-section-aware-filters";
 
 let clientPromise;
 
