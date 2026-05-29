@@ -381,8 +381,7 @@ h1 {
   color: var(--accent);
 }
 
-body[data-section="crm"] .side-menu .project-menu-button,
-body[data-section="crm"] .side-menu .team-menu-button {
+body[data-section="crm"] .side-menu .project-menu-button {
   display: none;
 }
 
