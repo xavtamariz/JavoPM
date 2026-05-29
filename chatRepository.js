@@ -1,5 +1,5 @@
-import { createId } from "./models.js?v=20260529-crm-toggle-neutral";
-import { getSupabaseClient } from "./supabaseClient.js?v=20260529-crm-toggle-neutral";
+import { createId } from "./models.js?v=20260529-crm-header";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260529-crm-header";
 
 const CHAT_IMAGE_BUCKET = "chat-images";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;

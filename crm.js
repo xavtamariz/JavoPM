@@ -1,5 +1,5 @@
-import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-toggle-neutral";
-import { createChatColumn } from "./ui.js?v=20260529-crm-toggle-neutral";
+import { DEFAULT_CRM_STATUS, CRM_STATUSES, sortByOrder } from "./models.js?v=20260529-crm-header";
+import { createChatColumn } from "./ui.js?v=20260529-crm-header";
 
 export function renderCRM({
   boardElement,
@@ -37,14 +37,10 @@ export function renderCRM({
   const header = document.createElement("header");
   header.className = "crm-view-header";
 
-  const copy = document.createElement("div");
   const title = document.createElement("h2");
-  title.textContent = "CRM";
-  const subtitle = document.createElement("p");
-  subtitle.textContent = "Prospectos";
-  copy.append(title, subtitle);
+  title.textContent = "Prospectos - Clientes";
 
-  header.append(copy);
+  header.append(title);
   section.append(header);
 
   const content = document.createElement("div");

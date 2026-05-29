@@ -1,4 +1,4 @@
-import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260529-crm-toggle-neutral";
+import { createChecklistItem, createDefaultChecklist } from "./models.js?v=20260529-crm-header";
 
 export function renderChecklists(task, callbacks) {
   const section = document.createElement("section");

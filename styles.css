@@ -1113,26 +1113,18 @@ body[data-section="crm"] .side-menu .team-menu-button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  min-height: 66px;
-  padding: 16px;
+  gap: 10px;
+  min-height: 54px;
+  padding: 14px;
   border-bottom: 1px solid var(--line);
 }
 
 .crm-view-header h2 {
+  min-width: 0;
   margin: 0;
   color: var(--ink);
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1.1;
-}
-
-.crm-view-header p {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 720;
-  text-transform: uppercase;
+  font-size: 15px;
+  font-weight: 780;
 }
 
 .crm-view-content {
