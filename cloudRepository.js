@@ -14,7 +14,7 @@ import {
   normalizeTaskEvent,
   normalizeTeamMember,
   sortByOrder
-} from "./models.js?v=20260529-crm-primary-contact-label";
+} from "./models.js?v=20260529-crm-prospect-gutters";
 
 export const BOARD_SCOPED_TABLES = [
   "columns",

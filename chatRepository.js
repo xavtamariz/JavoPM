@@ -1,5 +1,5 @@
-import { createId } from "./models.js?v=20260529-crm-primary-contact-label";
-import { getSupabaseClient } from "./supabaseClient.js?v=20260529-crm-primary-contact-label";
+import { createId } from "./models.js?v=20260529-crm-prospect-gutters";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260529-crm-prospect-gutters";
 
 const CHAT_IMAGE_BUCKET = "chat-images";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;

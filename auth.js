@@ -2,8 +2,8 @@ import {
   createOwnerWorkspaceFromSnapshot,
   importSnapshotRows,
   pullOwnerBoardSnapshot
-} from "./cloudRepository.js?v=20260529-crm-primary-contact-label";
-import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260529-crm-primary-contact-label";
+} from "./cloudRepository.js?v=20260529-crm-prospect-gutters";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js?v=20260529-crm-prospect-gutters";
 
 export function canUseAccounts() {
   return isSupabaseConfigured();

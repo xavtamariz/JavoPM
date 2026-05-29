@@ -4,14 +4,14 @@ import {
   getPendingMutations,
   saveCloudMeta,
   updatePendingMutation
-} from "./db.js?v=20260529-crm-primary-contact-label";
+} from "./db.js?v=20260529-crm-prospect-gutters";
 import {
   BOARD_SCOPED_TABLES,
   allocateCloudFolioNumber,
   fetchBoardSnapshot,
   pushMutationToCloud
-} from "./cloudRepository.js?v=20260529-crm-primary-contact-label";
-import { getSupabaseClient } from "./supabaseClient.js?v=20260529-crm-primary-contact-label";
+} from "./cloudRepository.js?v=20260529-crm-prospect-gutters";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260529-crm-prospect-gutters";
 
 const REMOTE_TABLES = BOARD_SCOPED_TABLES.filter((tableName) => tableName !== "client_mutations");
 

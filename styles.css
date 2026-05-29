@@ -1132,7 +1132,7 @@ body[data-section="crm"] .side-menu .team-menu-button {
   flex: 1;
   min-height: 0;
   flex-direction: column;
-  padding: 16px;
+  padding: 12px;
 }
 
 .crm-empty-state {

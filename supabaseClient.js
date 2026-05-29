@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260529-crm-primary-contact-label";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260529-crm-prospect-gutters";
 
 let clientPromise;
 
