@@ -1,16 +1,19 @@
 import {
   createProject,
+  createCRMProspect,
   createTask,
   createTeamMember,
   createTaskEvent,
   clearPendingMutations,
   clearChatSnapshot,
+  deleteCRMProspect,
   deleteTask,
   deleteTeamMember,
   exportBoardSnapshot,
   getCachedChatSnapshot,
   getChartCards,
   getColumns,
+  getCRMProspects,
   getMetaValue,
   getProjects,
   getTeamMembers,
@@ -23,13 +26,15 @@ import {
   resetLocalBoardAfterLogout,
   saveAnonymousBackup,
   saveChartCards,
+  saveCRMProspects,
   setMetaValue,
   saveProjects,
   saveTeamMembers,
   saveTaskOrder,
   updateChartCard,
+  updateCRMProspect,
   updateTask
-} from "./db.js?v=20260528-projects-side-menu";
+} from "./db.js?v=20260528-crm-section";
 import {
   bootstrapChat,
   createChatGroup,
@@ -38,13 +43,14 @@ import {
   sendChatMessage,
   startChatRealtime,
   stopChatRealtime
-} from "./chatRepository.js?v=20260528-projects-side-menu";
+} from "./chatRepository.js?v=20260528-crm-section";
 import {
   CHART_CARD_TYPE,
   DEFAULT_RESPONSIBLE_NAME,
   TASK_CARD_TYPE,
   UNASSIGNED_PROJECT_NAME,
   createId,
+  createCRMProspectModel,
   createProjectModel,
   createTeamMemberModel,
   createTaskModel,
@@ -53,13 +59,14 @@ import {
   getFolioNumber,
   getNextGlobalFolioNumber,
   isValidMemberNickname,
+  normalizeCRMProspect,
   normalizeNickname,
   normalizeProjectName,
   normalizeTeamMemberName,
   sortByOrder,
   updateFolioProjectName
-} from "./models.js?v=20260528-projects-side-menu";
-import { initAccountModal } from "./accountModal.js?v=20260528-projects-side-menu";
+} from "./models.js?v=20260528-crm-section";
+import { initAccountModal } from "./accountModal.js?v=20260528-crm-section";
 import {
   canUseAccounts,
   createOwnerAccount,
@@ -67,7 +74,7 @@ import {
   loginOwnerAccount,
   restoreOwnerSession,
   signOutOwnerAccount
-} from "./auth.js?v=20260528-projects-side-menu";
+} from "./auth.js?v=20260528-crm-section";
 import {
   completeMemberPassword,
   createCloudTeamMember,
@@ -75,8 +82,8 @@ import {
   resetCloudTeamMemberKey,
   updateCloudOwnerProfile,
   updateCloudTeamMember
-} from "./memberApi.js?v=20260528-projects-side-menu";
-import { openTaskModal } from "./modal.js?v=20260528-projects-side-menu";
+} from "./memberApi.js?v=20260528-crm-section";
+import { openTaskModal } from "./modal.js?v=20260528-crm-section";
 import {
   allocateNextCloudFolioNumber,
   getCloudSyncContext,
@@ -84,12 +91,16 @@ import {
   recordCloudMutation,
   startCloudSyncSession,
   stopCloudSyncSession
-} from "./syncEngine.js?v=20260528-projects-side-menu";
-import { renderBoard } from "./ui.js?v=20260528-projects-side-menu";
+} from "./syncEngine.js?v=20260528-crm-section";
+import { renderBoard } from "./ui.js?v=20260528-crm-section";
+import { renderCRM } from "./crm.js?v=20260528-crm-section";
+import { openCRMProspectModal } from "./crmModal.js?v=20260528-crm-section";
 
 const state = {
+  activeSection: "board",
   chartCards: [],
   columns: [],
+  crmProspects: [],
   account: null,
   ownerProfile: null,
   filters: {
@@ -125,6 +136,7 @@ const boardElement = document.querySelector("#board");
 const accountMenuToggle = document.querySelector("[data-account-menu-toggle]");
 const chatMenuToggle = document.querySelector("[data-chat-menu-toggle]");
 const chatMenuUnread = document.querySelector("[data-chat-menu-unread]");
+const crmSectionToggle = document.querySelector("[data-crm-section-toggle]");
 const projectMenuToggle = document.querySelector("[data-project-menu-toggle]");
 const teamMenuToggle = document.querySelector("[data-team-menu-toggle]");
 const filterMenuToggle = document.querySelector("[data-filter-menu-toggle]");
@@ -167,6 +179,7 @@ async function startApp() {
     });
     initAccountMenu();
     initChatMenu();
+    initCRMSectionToggle();
     initProjectMenu();
     initTeamMenu();
     initFilterMenu();
@@ -277,13 +290,14 @@ function applyTheme(theme, options = {}) {
 }
 
 async function loadState() {
-  const [columns, tasks, projects, teamMembers, chartCards, taskEvents] = await Promise.all([
+  const [columns, tasks, projects, teamMembers, chartCards, taskEvents, crmProspects] = await Promise.all([
     getColumns(),
     getTasks(),
     getProjects(),
     getTeamMembers(),
     getChartCards(),
-    getTaskEvents()
+    getTaskEvents(),
+    getCRMProspects()
   ]);
   const syncedProjects = await syncProjectsWithTasks(projects, tasks);
   const syncedTeamMembers = await syncTeamMembersWithTasks(teamMembers, tasks);
@@ -293,18 +307,20 @@ async function loadState() {
   state.projects = syncedProjects;
   state.teamMembers = syncedTeamMembers;
   state.chartCards = sortByOrder(chartCards);
+  state.crmProspects = sortByOrder(crmProspects);
   state.taskEvents = taskEvents;
   state.tasks = syncedTasks;
 }
 
 async function reloadBoardState() {
-  const [columns, tasks, projects, teamMembers, chartCards, taskEvents] = await Promise.all([
+  const [columns, tasks, projects, teamMembers, chartCards, taskEvents, crmProspects] = await Promise.all([
     getColumns(),
     getTasks(),
     getProjects(),
     getTeamMembers(),
     getChartCards(),
-    getTaskEvents()
+    getTaskEvents(),
+    getCRMProspects()
   ]);
   const syncedProjects = await syncProjectsWithTasks(projects, tasks);
   const syncedTeamMembers = await syncTeamMembersWithTasks(teamMembers, tasks);
@@ -314,13 +330,28 @@ async function reloadBoardState() {
   state.projects = syncedProjects;
   state.teamMembers = syncedTeamMembers;
   state.chartCards = sortByOrder(chartCards);
+  state.crmProspects = sortByOrder(crmProspects);
   state.taskEvents = taskEvents;
   state.tasks = syncedTasks;
 }
 
 function render() {
+  updateSectionState();
   normalizeBoardFilters();
   updateFilterButton();
+
+  if (state.activeSection === "crm") {
+    boardElement.className = "crm-board";
+    renderCRM({
+      boardElement,
+      prospects: state.crmProspects,
+      onAddProspect: handleAddCRMProspect,
+      onOpenProspect: handleOpenCRMProspect
+    });
+    return;
+  }
+
+  boardElement.className = "board";
   renderBoard({
     boardElement,
     chartCards: state.chartCards,
@@ -341,6 +372,23 @@ function render() {
     onUpdateChatDraft: handleUpdateChatDraft,
     onUpdateChartCard: handleUpdateChartCard
   });
+}
+
+function updateSectionState() {
+  const section = state.activeSection === "crm" ? "crm" : "board";
+  document.body.dataset.section = section;
+
+  if (crmSectionToggle) {
+    crmSectionToggle.textContent = section === "crm" ? "Tablero" : "CRM";
+    crmSectionToggle.setAttribute(
+      "aria-label",
+      section === "crm" ? "Volver al tablero" : "Abrir CRM"
+    );
+  }
+
+  if (localBoardDelete) {
+    localBoardDelete.textContent = "Eliminar datos locales";
+  }
 }
 
 function initProjectMenu() {
@@ -367,6 +415,21 @@ function initFilterMenu() {
   filterMenuToggle.addEventListener("click", openFilterModal);
 }
 
+function initCRMSectionToggle() {
+  if (!crmSectionToggle) {
+    return;
+  }
+
+  crmSectionToggle.addEventListener("click", () => {
+    state.activeSection = state.activeSection === "crm" ? "board" : "crm";
+    closeProjectModal({ clearRoot: false });
+    closeTeamModal({ clearRoot: false });
+    closeFilterModal({ clearRoot: false });
+    closeSideMenu();
+    render();
+  });
+}
+
 function initChatMenu() {
   if (!chatMenuToggle) {
     return;
@@ -377,6 +440,7 @@ function initChatMenu() {
       return;
     }
 
+    state.activeSection = "board";
     state.chat.isOpen = !state.chat.isOpen;
     state.chat.view = state.chat.isOpen ? state.chat.view || "list" : "list";
     state.chat.error = "";
@@ -607,7 +671,7 @@ async function handleDeleteLocalBoard() {
   }
 
   const confirmed = window.confirm(
-    "¿Eliminar todo el tablero local de este navegador? Esta acción no se puede deshacer."
+    "¿Eliminar todos los datos locales de este navegador? Se borrarán tablero, CRM y cachés locales. Esta acción no se puede deshacer."
   );
 
   if (!confirmed) {
@@ -626,6 +690,7 @@ async function handleDeleteLocalBoard() {
       project: "all",
       responsible: "all"
     };
+    state.activeSection = "board";
     setSyncStatus("local");
     closeSideMenu();
     render();
@@ -3091,6 +3156,116 @@ function buildTaskEventPayload({ currentTask, eventType, metadata = {}, occurred
     pointsSnapshot: Number.isFinite(Number(task.points)) ? Number(task.points) : 0,
     folio: task.folio || "",
     metadata
+  };
+}
+
+function handleAddCRMProspect() {
+  const prospect = createCRMProspectModel({
+    order: state.crmProspects.length
+  });
+  openCRMProspectModal({
+    author: getCRMInteractionAuthor(),
+    isNew: true,
+    prospect,
+    onDelete: handleDeleteCRMProspect,
+    onSave: handleSaveCRMProspect,
+    onClose: () => render()
+  });
+}
+
+function handleOpenCRMProspect(prospectId) {
+  const prospect = state.crmProspects.find((item) => item.id === prospectId);
+  if (!prospect) {
+    return;
+  }
+
+  openCRMProspectModal({
+    author: getCRMInteractionAuthor(),
+    isNew: false,
+    prospect,
+    onDelete: handleDeleteCRMProspect,
+    onSave: handleSaveCRMProspect,
+    onClose: () => render()
+  });
+}
+
+async function handleSaveCRMProspect(prospect, options = {}) {
+  const previousProspect = state.crmProspects.find((item) => item.id === prospect.id);
+  const normalizedProspect = normalizeCRMProspect({
+    ...prospect,
+    order: previousProspect?.order ?? prospect.order ?? state.crmProspects.length,
+    updatedAt: new Date().toISOString()
+  });
+  const savedProspect = options.isNew || !previousProspect
+    ? await createCRMProspect(normalizedProspect)
+    : await updateCRMProspect(normalizedProspect);
+
+  state.crmProspects = sortByOrder(
+    previousProspect
+      ? state.crmProspects.map((item) => item.id === savedProspect.id ? savedProspect : item)
+      : [...state.crmProspects, savedProspect]
+  );
+
+  await recordCloudMutation({
+    critical: true,
+    entity: savedProspect,
+    entityId: savedProspect.id,
+    entityType: "crmProspect",
+    operation: previousProspect ? "update" : "insert",
+    patch: getCRMProspectPatch(previousProspect, savedProspect)
+  });
+  render();
+  return savedProspect;
+}
+
+async function handleDeleteCRMProspect(prospectId) {
+  const prospect = state.crmProspects.find((item) => item.id === prospectId);
+  if (!prospect) {
+    return;
+  }
+
+  await deleteCRMProspect(prospectId);
+  const nextProspects = state.crmProspects
+    .filter((item) => item.id !== prospectId)
+    .map((item, index) => ({
+      ...item,
+      order: index
+    }));
+  state.crmProspects = await saveCRMProspects(nextProspects);
+  await recordCloudMutation({
+    critical: true,
+    entityId: prospectId,
+    entityType: "crmProspect",
+    operation: "delete",
+    patch: { deletedAt: new Date().toISOString() }
+  });
+  render();
+}
+
+function getCRMProspectPatch(previousProspect, nextProspect) {
+  if (!previousProspect) {
+    return nextProspect;
+  }
+
+  return Object.entries(nextProspect).reduce((patch, [key, value]) => {
+    if (JSON.stringify(previousProspect[key]) !== JSON.stringify(value)) {
+      patch[key] = value;
+    }
+    return patch;
+  }, {});
+}
+
+function getCRMInteractionAuthor() {
+  if (!state.account?.userId) {
+    return {
+      name: "Local",
+      userId: ""
+    };
+  }
+
+  return {
+    name: state.account.nickname ? `@${state.account.nickname}` : state.account.displayName || "Cuenta",
+    userId: state.account.userId
   };
 }
 

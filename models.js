@@ -23,6 +23,16 @@ export const DEFAULT_CHART_PERIOD = "1D";
 export const DEFAULT_CHART_TEAM = "all";
 export const DEFAULT_LEADERBOARD_METRIC = "tasks";
 export const LEADERBOARD_METRICS = ["tasks", "points"];
+export const CRM_STATUSES = [
+  "Nuevo",
+  "Contactado",
+  "Calificado",
+  "Propuesta",
+  "Seguimiento",
+  "Cerrado",
+  "Descartado"
+];
+export const DEFAULT_CRM_STATUS = CRM_STATUSES[0];
 export const CHART_PERIODS = [
   { label: "1D", value: "1D", days: 1 },
   { label: "1W", value: "1W", days: 7 },
@@ -110,6 +120,56 @@ export function createChartCardModel({
     title: sanitizeText(title) || "Tareas por columna",
     chartType,
     settings: normalizeChartSettings(settings),
+    createdAt: now,
+    updatedAt: now,
+    order
+  };
+}
+
+export function createCRMInteraction({
+  authorName = "",
+  authorUserId = "",
+  comment = "",
+  occurredAt,
+  order = 0
+} = {}) {
+  const now = occurredAt || new Date().toISOString();
+
+  return {
+    id: createId("crm_interaction"),
+    authorName: normalizeTeamMemberName(authorName),
+    authorUserId: sanitizeText(authorUserId),
+    comment: sanitizeText(comment),
+    createdAt: now,
+    occurredAt: now,
+    order
+  };
+}
+
+export function createCRMProspectModel({
+  companyName = "Nuevo prospecto",
+  contactName = "",
+  email = "",
+  extension = "",
+  mobilePhone = "",
+  order = 0,
+  phone = "",
+  status = DEFAULT_CRM_STATUS
+} = {}) {
+  const now = new Date().toISOString();
+
+  return {
+    id: createId("crm_prospect"),
+    companyName: normalizeTeamMemberName(companyName) || "Nuevo prospecto",
+    contactName: normalizeTeamMemberName(contactName),
+    mobilePhone: sanitizeText(mobilePhone),
+    email: sanitizeText(email),
+    phone: sanitizeText(phone),
+    extension: sanitizeText(extension),
+    comments: "",
+    status: CRM_STATUSES.includes(status) ? status : DEFAULT_CRM_STATUS,
+    interactions: [],
+    checklists: [createDefaultChecklist()],
     createdAt: now,
     updatedAt: now,
     order
@@ -255,6 +315,41 @@ export function normalizeChartCard(chartCard, chartCardIndex = 0) {
   };
 }
 
+export function normalizeCRMProspect(prospect = {}, prospectIndex = 0) {
+  const now = new Date().toISOString();
+
+  return {
+    id: prospect.id || createId("crm_prospect"),
+    companyName: normalizeTeamMemberName(prospect.companyName) || "Nuevo prospecto",
+    contactName: normalizeTeamMemberName(prospect.contactName),
+    mobilePhone: sanitizeText(prospect.mobilePhone),
+    email: sanitizeText(prospect.email),
+    phone: sanitizeText(prospect.phone),
+    extension: sanitizeText(prospect.extension),
+    comments: typeof prospect.comments === "string" ? prospect.comments : "",
+    status: CRM_STATUSES.includes(prospect.status) ? prospect.status : DEFAULT_CRM_STATUS,
+    interactions: normalizeCRMInteractions(prospect.interactions),
+    checklists: normalizeChecklists(prospect.checklists),
+    createdAt: prospect.createdAt || now,
+    updatedAt: prospect.updatedAt || now,
+    order: Number.isFinite(Number(prospect.order)) ? Number(prospect.order) : prospectIndex
+  };
+}
+
+export function normalizeCRMInteraction(interaction = {}, interactionIndex = 0) {
+  const occurredAt = interaction.occurredAt || interaction.createdAt || new Date().toISOString();
+
+  return {
+    id: interaction.id || createId("crm_interaction"),
+    authorName: normalizeTeamMemberName(interaction.authorName),
+    authorUserId: sanitizeText(interaction.authorUserId),
+    comment: sanitizeText(interaction.comment),
+    createdAt: interaction.createdAt || occurredAt,
+    occurredAt,
+    order: Number.isFinite(Number(interaction.order)) ? Number(interaction.order) : interactionIndex
+  };
+}
+
 export function normalizeTaskEvent(taskEvent) {
   const columnId = sanitizeText(taskEvent.toColumnId) || sanitizeText(taskEvent.columnId);
   const occurredAt = taskEvent.occurredAt || taskEvent.createdAt || new Date().toISOString();
@@ -304,6 +399,23 @@ export function normalizeChecklists(checklists) {
       items: normalizeChecklistItems(checklist.items)
     }))
     .sort((a, b) => a.order - b.order);
+}
+
+export function normalizeCRMInteractions(interactions) {
+  if (!Array.isArray(interactions)) {
+    return [];
+  }
+
+  return interactions
+    .map(normalizeCRMInteraction)
+    .filter((interaction) => interaction.comment)
+    .sort((a, b) => {
+      const orderDiff = Number(a.order || 0) - Number(b.order || 0);
+      if (orderDiff !== 0) {
+        return orderDiff;
+      }
+      return String(a.occurredAt || "").localeCompare(String(b.occurredAt || ""));
+    });
 }
 
 export function normalizeChecklistItems(items) {

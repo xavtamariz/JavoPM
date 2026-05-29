@@ -159,17 +159,23 @@ button {
 }
 
 .app-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
-  justify-content: space-between;
   gap: 20px;
   width: 100%;
   margin: 0 0 20px;
 }
 
 .brand-block {
-  flex: 1 1 auto;
+  justify-self: center;
   min-width: 0;
+}
+
+.header-left-actions {
+  display: flex;
+  align-items: center;
+  transform: translateY(4px);
 }
 
 .header-actions {
@@ -229,6 +235,7 @@ h1 {
 .header-status,
 .account-menu-button,
 .chat-menu-button,
+.crm-section-toggle,
 .project-menu-button,
 .team-menu-button,
 .filter-menu-button,
@@ -253,6 +260,7 @@ h1 {
 
 .account-menu-button,
 .chat-menu-button,
+.crm-section-toggle,
 .project-menu-button,
 .team-menu-button,
 .filter-menu-button,
@@ -268,6 +276,7 @@ h1 {
 
 .account-menu-label,
 .chat-menu-label,
+.crm-section-toggle,
 .project-menu-label,
 .team-menu-label,
 .filter-menu-label {
@@ -309,6 +318,8 @@ h1 {
 .account-menu-button:focus-visible,
 .chat-menu-button:hover,
 .chat-menu-button:focus-visible,
+.crm-section-toggle:hover,
+.crm-section-toggle:focus-visible,
 .project-menu-button:hover,
 .project-menu-button:focus-visible,
 .team-menu-button:hover,
@@ -327,6 +338,7 @@ h1 {
 
 .account-menu-button:focus-visible,
 .chat-menu-button:focus-visible,
+.crm-section-toggle:focus-visible,
 .project-menu-button:focus-visible,
 .team-menu-button:focus-visible,
 .filter-menu-button:focus-visible,
@@ -338,6 +350,7 @@ h1 {
 
 .account-menu-button:active,
 .chat-menu-button:active,
+.crm-section-toggle:active,
 .project-menu-button:active,
 .team-menu-button:active,
 .filter-menu-button:active,
@@ -362,6 +375,17 @@ h1 {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent);
+}
+
+body[data-section="crm"] .crm-section-toggle {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+body[data-section="crm"] .side-menu .project-menu-button,
+body[data-section="crm"] .side-menu .team-menu-button {
+  display: none;
 }
 
 .account-menu-button[hidden],
@@ -1065,6 +1089,132 @@ h1 {
   align-items: start;
   gap: 14px;
   min-height: calc(100dvh - 84px);
+}
+
+.crm-board {
+  width: 100%;
+  min-height: calc(100dvh - 84px);
+}
+
+.crm-view {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  min-height: calc(100dvh - 84px);
+  align-content: start;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--column-bg);
+}
+
+.crm-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 66px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.crm-view-header h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.crm-view-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 720;
+  text-transform: uppercase;
+}
+
+.crm-add-prospect-button {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 190px;
+}
+
+.crm-empty-state {
+  display: grid;
+  min-height: min(420px, calc(100dvh - 200px));
+  place-items: center;
+  padding: 18px;
+}
+
+.crm-prospect-list {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.crm-prospect-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 58px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  box-shadow: var(--task-shadow);
+  transition:
+    border-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.crm-prospect-row:hover,
+.crm-prospect-row:focus-visible {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.crm-prospect-row:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.crm-prospect-company,
+.crm-prospect-contact {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crm-prospect-company {
+  font-size: 15px;
+  font-weight: 820;
+}
+
+.crm-prospect-contact {
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.crm-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--save-border);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 780;
+  white-space: nowrap;
 }
 
 .column {
@@ -2441,6 +2591,89 @@ h1 {
   padding: 20px;
 }
 
+.crm-prospect-modal {
+  width: min(980px, 100%);
+}
+
+.crm-modal-body {
+  gap: 20px;
+}
+
+.crm-field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.crm-comments-field {
+  grid-column: 1 / -1;
+}
+
+.crm-interactions-section {
+  display: grid;
+  gap: 12px;
+}
+
+.crm-interaction-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.crm-interaction-form textarea {
+  width: 100%;
+  min-height: 76px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+  padding: 10px;
+  resize: vertical;
+}
+
+.crm-interaction-form textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.crm-interaction-list {
+  display: grid;
+  gap: 8px;
+}
+
+.crm-interaction-item,
+.crm-interaction-empty {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--checklist-bg);
+}
+
+.crm-interaction-meta {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.crm-interaction-comment {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.crm-interaction-empty {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .modal-footer {
   display: flex;
   gap: 12px;
@@ -2598,6 +2831,25 @@ h1 {
     min-height: calc(100dvh - 84px);
   }
 
+  .crm-board,
+  .crm-view {
+    min-height: calc(100dvh - 84px);
+  }
+
+  .crm-field-grid,
+  .crm-interaction-form {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-prospect-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .crm-status-pill {
+    justify-self: start;
+  }
+
   .column {
     min-height: calc(100dvh - 84px);
   }
@@ -2659,6 +2911,16 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .crm-view-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .crm-add-prospect-button {
+    width: 100%;
+    min-width: 0;
+  }
+
   .project-item-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2691,6 +2953,7 @@ h1 {
   .header-status,
   .account-menu-button,
   .chat-menu-button,
+  .crm-section-toggle,
   .project-menu-button,
   .team-menu-button,
   .filter-menu-button,
@@ -2708,6 +2971,7 @@ h1 {
 
   .account-menu-button,
   .chat-menu-button,
+  .crm-section-toggle,
   .project-menu-button,
   .team-menu-button,
   .filter-menu-button {
@@ -2720,6 +2984,7 @@ h1 {
 
   .account-menu-label,
   .chat-menu-label,
+  .crm-section-toggle,
   .project-menu-label,
   .team-menu-label,
   .filter-menu-label {
@@ -2736,6 +3001,7 @@ h1 {
   .header-status,
   .account-menu-button,
   .chat-menu-button,
+  .crm-section-toggle,
   .project-menu-button,
   .team-menu-button,
   .filter-menu-button,
@@ -2753,6 +3019,7 @@ h1 {
 
   .account-menu-button,
   .chat-menu-button,
+  .crm-section-toggle,
   .project-menu-button,
   .team-menu-button,
   .filter-menu-button {

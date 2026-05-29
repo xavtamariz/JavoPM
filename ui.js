@@ -14,7 +14,7 @@ import {
   formatDateRange,
   normalizeTeamMemberName,
   sortByOrder
-} from "./models.js?v=20260528-projects-side-menu";
+} from "./models.js?v=20260528-crm-section";
 
 const AXIS_LABELS = {
   frozen: "C",

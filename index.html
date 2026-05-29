@@ -22,11 +22,16 @@
         supabaseUrl: "https://scoacquwvbchdsldxaep.supabase.co"
       };
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260528-projects-side-menu" />
+    <link rel="stylesheet" href="./styles.css?v=20260528-crm-section" />
   </head>
   <body>
     <div class="app-shell">
       <header class="app-header" aria-label="Encabezado del tablero">
+        <div class="header-left-actions">
+          <button class="crm-section-toggle" type="button" data-crm-section-toggle>
+            CRM
+          </button>
+        </div>
         <div class="brand-block">
           <p class="eyebrow">Local-first Kanban</p>
           <h1 class="visually-hidden">JavoPM</h1>
@@ -131,7 +136,7 @@
           </div>
         </div>
         <div class="side-menu-local-actions" data-local-board-actions hidden>
-          <button class="side-local-delete" type="button" data-local-board-delete>Eliminar Tablero</button>
+          <button class="side-local-delete" type="button" data-local-board-delete>Eliminar datos locales</button>
         </div>
         <div class="side-menu-account" data-side-account hidden>
           <div class="side-account-copy">
@@ -146,6 +151,6 @@
 
     <div id="modal-root"></div>
 
-    <script type="module" src="./app.js?v=20260528-projects-side-menu"></script>
+    <script type="module" src="./app.js?v=20260528-crm-section"></script>
   </body>
 </html>

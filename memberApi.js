@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabaseClient.js?v=20260528-projects-side-menu";
+import { getSupabaseClient } from "./supabaseClient.js?v=20260528-crm-section";
 
 export async function createCloudTeamMember({ boardId, clientId, name, nickname }) {
   return invokeOwnerMembers({

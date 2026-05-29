@@ -1,4 +1,4 @@
-const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260528-projects-side-menu";
+const SUPABASE_JS_URL = "./vendor/supabase-js.js?v=20260528-crm-section";
 
 let clientPromise;
 

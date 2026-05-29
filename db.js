@@ -8,15 +8,16 @@ import {
   createTaskEventModel,
   normalizeChartCard,
   normalizeColumn,
+  normalizeCRMProspect,
   normalizeProject,
   normalizeTeamMember,
   normalizeTaskEvent,
   normalizeTask,
   sortByOrder
-} from "./models.js?v=20260528-projects-side-menu";
+} from "./models.js?v=20260528-crm-section";
 
 const DB_NAME = "JavoPM";
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 const STORES = {
   chartCards: "chartCards",
   chatAttachments: "chatAttachments",
@@ -24,6 +25,7 @@ const STORES = {
   chatMessages: "chatMessages",
   chatParticipants: "chatParticipants",
   columns: "columns",
+  crmProspects: "crmProspects",
   projects: "projects",
   teamMembers: "teamMembers",
   taskEvents: "taskEvents",
@@ -113,6 +115,13 @@ export function initDB() {
           chatAttachmentStore.createIndex("messageId", "messageId", { unique: false });
           chatAttachmentStore.createIndex("conversationId", "conversationId", { unique: false });
         }
+
+        if (!db.objectStoreNames.contains(STORES.crmProspects)) {
+          const crmProspectStore = db.createObjectStore(STORES.crmProspects, { keyPath: "id" });
+          crmProspectStore.createIndex("status", "status", { unique: false });
+          crmProspectStore.createIndex("order", "order", { unique: false });
+          crmProspectStore.createIndex("updatedAt", "updatedAt", { unique: false });
+        }
       };
 
       request.onsuccess = () => resolve(request.result);
@@ -196,6 +205,39 @@ export async function saveTeamMembers(teamMembers) {
     .filter((teamMember) => teamMember.name);
   await writeMany(db, STORES.teamMembers, normalizedTeamMembers);
   return sortByOrder(normalizedTeamMembers);
+}
+
+export async function getCRMProspects() {
+  const db = await initDB();
+  const prospects = await getAllFromStore(db, STORES.crmProspects);
+  return sortByOrder(prospects.map(normalizeCRMProspect));
+}
+
+export async function createCRMProspect(prospect) {
+  const db = await initDB();
+  const existingProspects = await getCRMProspects();
+  const normalizedProspect = normalizeCRMProspect(prospect, existingProspects.length);
+  await putValue(db, STORES.crmProspects, normalizedProspect);
+  return normalizedProspect;
+}
+
+export async function updateCRMProspect(prospect) {
+  const normalizedProspect = normalizeCRMProspect(prospect);
+  const db = await initDB();
+  await putValue(db, STORES.crmProspects, normalizedProspect);
+  return normalizedProspect;
+}
+
+export async function deleteCRMProspect(id) {
+  const db = await initDB();
+  await deleteValue(db, STORES.crmProspects, id);
+}
+
+export async function saveCRMProspects(prospects) {
+  const normalizedProspects = prospects.map(normalizeCRMProspect);
+  const db = await initDB();
+  await writeMany(db, STORES.crmProspects, normalizedProspects);
+  return sortByOrder(normalizedProspects);
 }
 
 export async function getChartCards() {
@@ -393,13 +435,14 @@ export async function clearChatSnapshot() {
 }
 
 export async function exportBoardSnapshot() {
-  const [columns, tasks, projects, teamMembers, chartCards, taskEvents] = await Promise.all([
+  const [columns, tasks, projects, teamMembers, chartCards, taskEvents, crmProspects] = await Promise.all([
     getColumns(),
     getTasks(),
     getProjects(),
     getTeamMembers(),
     getChartCards(),
-    getTaskEvents()
+    getTaskEvents(),
+    getCRMProspects()
   ]);
 
   return {
@@ -409,7 +452,8 @@ export async function exportBoardSnapshot() {
     projects,
     teamMembers,
     chartCards,
-    taskEvents
+    taskEvents,
+    crmProspects
   };
 }
 
@@ -423,6 +467,7 @@ export async function importBoardSnapshot(snapshot = {}) {
   const teamMembers = Array.isArray(snapshot.teamMembers) ? snapshot.teamMembers : [];
   const chartCards = Array.isArray(snapshot.chartCards) ? snapshot.chartCards : [];
   const taskEvents = Array.isArray(snapshot.taskEvents) ? snapshot.taskEvents : [];
+  const crmProspects = Array.isArray(snapshot.crmProspects) ? snapshot.crmProspects : [];
 
   await Promise.all([
     replaceStore(db, STORES.columns, columns.map(normalizeColumn)),
@@ -430,7 +475,8 @@ export async function importBoardSnapshot(snapshot = {}) {
     replaceStore(db, STORES.projects, projects.map(normalizeProject)),
     replaceStore(db, STORES.teamMembers, teamMembers.map(normalizeTeamMember).filter((item) => item.name)),
     replaceStore(db, STORES.chartCards, chartCards.map(normalizeChartCard)),
-    replaceStore(db, STORES.taskEvents, taskEvents.map(normalizeTaskEvent))
+    replaceStore(db, STORES.taskEvents, taskEvents.map(normalizeTaskEvent)),
+    replaceStore(db, STORES.crmProspects, crmProspects.map(normalizeCRMProspect))
   ]);
 
   await setValue(db, STORES.meta, { key: "seeded", value: true });
@@ -450,6 +496,7 @@ export async function resetLocalBoardAfterLogout() {
     replaceStore(db, STORES.tasks, []),
     replaceStore(db, STORES.projects, []),
     replaceStore(db, STORES.teamMembers, []),
+    replaceStore(db, STORES.crmProspects, []),
     replaceStore(db, STORES.chartCards, createDefaultChartCards().map(normalizeChartCard)),
     replaceStore(db, STORES.chatConversations, []),
     replaceStore(db, STORES.chatParticipants, []),
